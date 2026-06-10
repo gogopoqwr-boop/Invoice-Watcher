@@ -4,8 +4,6 @@ import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
 import WatchModel from '@/components/WatchModel';
 import WatchSVG from '@/components/WatchSVG';
 import { WebGLErrorBoundary } from '@/components/WebGLErrorBoundary';
-import { GlassPanel } from '@/components/ui/glass-panel';
-import { LiquidButton } from '@/components/ui/liquid-button';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import {
   useCreateConfiguration,
@@ -30,6 +28,14 @@ function isWebGLAvailable(): boolean {
     return false;
   }
 }
+
+const STEPS = [
+  { id: 'shape', label: 'Форма' },
+  { id: 'material', label: 'Материал' },
+  { id: 'color', label: 'Цвет' },
+  { id: 'bracelet', label: 'Ремешок' },
+  { id: 'details', label: 'Детали' },
+];
 
 const GEOMETRIES: { value: WatchConfigInputWatchfaceGeometry; label: string }[] = [
   { value: 'circle', label: 'Круг' },
@@ -60,59 +66,61 @@ const BRACELET_TYPES: { value: WatchConfigInputBraceletType; label: string }[] =
   { value: 'rubber', label: 'Силиконовый' },
 ];
 
-const WATCH_COLORS = [
-  '#1e293b', '#0f172a', '#c0c0c0', '#b8860b',
-  '#1e3a5f', '#3b0764', '#1a1a1a', '#f8fafc',
-];
-
-const STRAP_COLORS = [
-  '#0f172a', '#1e293b', '#78350f', '#1c1917',
-  '#064e3b', '#1e1b4b', '#c0c0c0', '#7f1d1d',
-];
+const FACE_COLORS = ['#1e293b', '#0f172a', '#c0c0c0', '#b8860b', '#1e3a5f', '#3b0764', '#1a1a1a', '#f8fafc'];
+const STRAP_COLORS = ['#0f172a', '#1e293b', '#78350f', '#1c1917', '#064e3b', '#1e1b4b', '#c0c0c0', '#7f1d1d'];
+const HAND_COLORS = ['#cbd5e1', '#f8fafc', '#fbbf24', '#34d399', '#60a5fa', '#f472b6', '#a78bfa', '#1e293b'];
 
 function ColorSwatch({ color, selected, onClick }: { color: string; selected: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        'w-8 h-8 rounded-full transition-all duration-150 border-2',
-        selected ? 'border-primary scale-110 shadow-lg' : 'border-transparent hover:scale-105'
+        'w-8 h-8 rounded-full transition-all duration-150 border-2 shrink-0',
+        selected ? 'border-primary scale-110 shadow-md' : 'border-transparent hover:scale-105 border border-black/10'
       )}
       style={{ backgroundColor: color }}
     />
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2">{children}</p>;
+function OptionPills<T extends string>({
+  options, value, onChange,
+}: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map(o => (
+        <button
+          key={o.value}
+          onClick={() => onChange(o.value)}
+          className={cn('option-btn', value === o.value && 'active')}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function Watch3DView() {
   return (
     <Canvas shadows camera={{ position: [0, 5, 8], fov: 40 }} gl={{ failIfMajorPerformanceCaveat: false }}>
-      <ambientLight intensity={0.3} />
+      <ambientLight intensity={0.5} />
       <spotLight position={[5, 10, 5]} angle={0.25} penumbra={1} intensity={2} castShadow />
-      <pointLight position={[-5, 5, -5]} intensity={1} color="#4f46e5" />
-      <pointLight position={[5, -5, 5]} intensity={1} color="#06b6d4" />
+      <pointLight position={[-5, 5, -5]} intensity={0.8} color="#4f46e5" />
       <Suspense fallback={null}>
         <WatchModel />
         <Environment preset="city" />
-        <ContactShadows position={[0, -2, 0]} opacity={0.5} scale={12} blur={2} far={5} />
+        <ContactShadows position={[0, -2, 0]} opacity={0.3} scale={12} blur={2} far={5} />
       </Suspense>
-      <OrbitControls
-        enablePan={false}
-        minPolarAngle={Math.PI / 4}
-        maxPolarAngle={Math.PI / 2}
-        minDistance={4}
-        maxDistance={12}
-      />
+      <OrbitControls enablePan={false} minPolarAngle={Math.PI / 4} maxPolarAngle={Math.PI / 2} minDistance={4} maxDistance={12} />
     </Canvas>
   );
 }
 
 export default function Configure() {
-  const { config, updateConfig, activePart, setActivePart, sessionId } = useWatchConfig();
+  const { config, updateConfig, sessionId } = useWatchConfig();
   const [, setLocation] = useLocation();
+  const [step, setStep] = useState(0);
   const [serialNumber, setSerialNumber] = useState(config.serialNumber ?? '');
   const [submitting, setSubmitting] = useState(false);
 
@@ -130,19 +138,13 @@ export default function Configure() {
         serialNumber: serialNumber || undefined,
         sessionId,
       });
-
-      const priceResult = await calcPrice.mutateAsync({
-        configId: cfg.id,
-        sessionId,
-      });
-
+      const priceResult = await calcPrice.mutateAsync({ configId: cfg.id, sessionId });
       const order = await createOrder.mutateAsync({
         configId: cfg.id,
         sessionId,
         totalStars: priceResult.totalStars,
         customerNote: undefined,
       });
-
       setLocation(`/payment/${order.id}`);
     } catch (e) {
       console.error(e);
@@ -151,19 +153,19 @@ export default function Configure() {
     }
   };
 
-  return (
-    <div className="min-h-[100dvh] w-full bg-background flex flex-col md:flex-row overflow-hidden relative text-white">
+  const goBack = () => setStep(s => Math.max(0, s - 1));
+  const goNext = () => {
+    if (step < STEPS.length - 1) setStep(s => s + 1);
+    else handleOrder();
+  };
 
-      {/* Left — 3D/2D Watch View */}
-      <div className="w-full md:w-[55%] h-[45vh] md:h-screen relative bg-black/20">
+  return (
+    <div className="min-h-[100dvh] w-full bg-background flex flex-col md:flex-row overflow-hidden">
+
+      {/* Left — Watch Preview */}
+      <div className="w-full md:w-[52%] h-[40vh] md:h-screen relative bg-gradient-to-br from-slate-50 to-blue-50/30">
         {webglAvailable ? (
-          <WebGLErrorBoundary
-            fallback={
-              <div className="w-full h-full flex items-center justify-center p-8">
-                <WatchSVG />
-              </div>
-            }
-          >
+          <WebGLErrorBoundary fallback={<div className="w-full h-full flex items-center justify-center p-8"><WatchSVG /></div>}>
             <Watch3DView />
           </WebGLErrorBoundary>
         ) : (
@@ -171,218 +173,176 @@ export default function Configure() {
             <WatchSVG />
           </div>
         )}
-
-        {activePart && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 glass-panel px-4 py-1 rounded-full text-xs tracking-widest text-primary">
-            {activePart === 'watchFace' ? 'КОРПУС' : activePart === 'strap' ? 'РЕМЕШОК' : 'ЗАСТЁЖКА'}
-          </div>
-        )}
       </div>
 
-      {/* Right — Config Panel */}
-      <div className="w-full md:w-[45%] md:h-screen flex flex-col">
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5">
+      {/* Right — Step Panel */}
+      <div className="w-full md:w-[48%] md:h-screen flex flex-col bg-background/80 backdrop-blur-xl border-l border-border/60">
 
-          {/* Part Selector */}
-          <GlassPanel className="p-4">
-            <SectionLabel>Выбрать часть</SectionLabel>
-            <div className="flex gap-2">
-              {(['watchFace', 'strap', 'clasp'] as const).map(part => (
+        {/* Progress Bar */}
+        <div className="px-6 pt-6 pb-4">
+          <div className="flex items-center gap-1">
+            {STEPS.map((s, i) => (
+              <React.Fragment key={s.id}>
                 <button
-                  key={part}
-                  onClick={() => setActivePart(activePart === part ? null : part)}
+                  onClick={() => setStep(i)}
                   className={cn(
-                    'flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all',
-                    activePart === part
-                      ? 'bg-primary text-white'
-                      : 'bg-white/5 hover:bg-white/10 text-muted-foreground'
+                    'flex flex-col items-center gap-1 transition-all',
+                    i <= step ? 'opacity-100' : 'opacity-35'
                   )}
                 >
-                  {part === 'watchFace' ? 'Корпус' : part === 'strap' ? 'Ремешок' : 'Застёжка'}
+                  <div className={cn(
+                    'w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all',
+                    i < step ? 'bg-primary border-primary text-white' :
+                    i === step ? 'border-primary text-primary bg-primary/10' :
+                    'border-border text-muted-foreground'
+                  )}>
+                    {i < step ? '✓' : i + 1}
+                  </div>
+                  <span className={cn(
+                    'text-[10px] uppercase tracking-wider font-medium hidden sm:block',
+                    i === step ? 'text-primary' : 'text-muted-foreground'
+                  )}>
+                    {s.label}
+                  </span>
                 </button>
-              ))}
-            </div>
-          </GlassPanel>
-
-          {/* Watchface */}
-          <GlassPanel className="p-4 space-y-4">
-            <h3 className="font-bold tracking-widest text-sm">КОРПУС</h3>
-
-            <div>
-              <SectionLabel>Форма</SectionLabel>
-              <div className="grid grid-cols-4 gap-2">
-                {GEOMETRIES.map(g => (
-                  <button
-                    key={g.value}
-                    onClick={() => updateConfig({ watchfaceGeometry: g.value })}
-                    className={cn(
-                      'py-2 rounded-lg text-xs font-medium transition-all',
-                      config.watchfaceGeometry === g.value
-                        ? 'bg-primary text-white'
-                        : 'bg-white/5 hover:bg-white/10 text-muted-foreground'
-                    )}
-                  >
-                    {g.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <SectionLabel>Материал</SectionLabel>
-              <div className="grid grid-cols-4 gap-2">
-                {FACE_MATERIALS.map(m => (
-                  <button
-                    key={m.value}
-                    onClick={() => updateConfig({ watchfaceMaterial: m.value })}
-                    className={cn(
-                      'py-2 rounded-lg text-xs font-medium transition-all',
-                      config.watchfaceMaterial === m.value
-                        ? 'bg-primary text-white'
-                        : 'bg-white/5 hover:bg-white/10 text-muted-foreground'
-                    )}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <SectionLabel>Цвет корпуса</SectionLabel>
-              <div className="flex flex-wrap gap-2">
-                {WATCH_COLORS.map(c => (
-                  <ColorSwatch key={c} color={c} selected={config.watchfaceColor === c} onClick={() => updateConfig({ watchfaceColor: c })} />
-                ))}
-                <input
-                  type="color"
-                  value={config.watchfaceColor}
-                  onChange={e => updateConfig({ watchfaceColor: e.target.value })}
-                  className="w-8 h-8 rounded-full cursor-pointer border-0 bg-transparent"
-                  title="Custom color"
-                />
-              </div>
-            </div>
-          </GlassPanel>
-
-          {/* Bracelet */}
-          <GlassPanel className="p-4 space-y-4">
-            <h3 className="font-bold tracking-widest text-sm">РЕМЕШОК</h3>
-
-            <div>
-              <SectionLabel>Материал</SectionLabel>
-              <div className="grid grid-cols-3 gap-2">
-                {BRACELET_MATERIALS.map(m => (
-                  <button
-                    key={m.value}
-                    onClick={() => updateConfig({ braceletMaterial: m.value })}
-                    className={cn(
-                      'py-2 rounded-lg text-xs font-medium transition-all',
-                      config.braceletMaterial === m.value
-                        ? 'bg-primary text-white'
-                        : 'bg-white/5 hover:bg-white/10 text-muted-foreground'
-                    )}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <SectionLabel>Тип</SectionLabel>
-              <div className="grid grid-cols-2 gap-2">
-                {BRACELET_TYPES.map(t => (
-                  <button
-                    key={t.value}
-                    onClick={() => updateConfig({ braceletType: t.value })}
-                    className={cn(
-                      'py-2 rounded-lg text-xs font-medium transition-all',
-                      config.braceletType === t.value
-                        ? 'bg-primary text-white'
-                        : 'bg-white/5 hover:bg-white/10 text-muted-foreground'
-                    )}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <SectionLabel>Цвет ремешка</SectionLabel>
-              <div className="flex flex-wrap gap-2">
-                {STRAP_COLORS.map(c => (
-                  <ColorSwatch key={c} color={c} selected={config.braceletColor === c} onClick={() => updateConfig({ braceletColor: c })} />
-                ))}
-                <input
-                  type="color"
-                  value={config.braceletColor}
-                  onChange={e => updateConfig({ braceletColor: e.target.value })}
-                  className="w-8 h-8 rounded-full cursor-pointer border-0 bg-transparent"
-                  title="Custom color"
-                />
-              </div>
-            </div>
-          </GlassPanel>
-
-          {/* Hands */}
-          <GlassPanel className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold tracking-widest text-sm">СТРЕЛКИ</h3>
-              <button
-                onClick={() => updateConfig({ handsEnabled: !config.handsEnabled })}
-                className={cn(
-                  'w-12 h-6 rounded-full transition-all relative',
-                  config.handsEnabled ? 'bg-primary' : 'bg-white/10'
+                {i < STEPS.length - 1 && (
+                  <div className={cn('flex-1 h-0.5 rounded-full transition-all', i < step ? 'bg-primary' : 'bg-border')} />
                 )}
-              >
-                <span className={cn(
-                  'absolute top-1 w-4 h-4 rounded-full bg-white transition-all',
-                  config.handsEnabled ? 'left-7' : 'left-1'
-                )} />
-              </button>
-            </div>
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
 
-            {config.handsEnabled && (
+        {/* Step Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-2 space-y-5">
+
+          {/* Step 0 — Shape */}
+          {step === 0 && (
+            <div className="space-y-4 animate-fade-in">
+              <h2 className="text-xl font-bold tracking-tight">Форма корпуса</h2>
+              <OptionPills options={GEOMETRIES} value={config.watchfaceGeometry} onChange={v => updateConfig({ watchfaceGeometry: v })} />
+            </div>
+          )}
+
+          {/* Step 1 — Material */}
+          {step === 1 && (
+            <div className="space-y-4 animate-fade-in">
+              <h2 className="text-xl font-bold tracking-tight">Материал</h2>
+              <OptionPills options={FACE_MATERIALS} value={config.watchfaceMaterial} onChange={v => updateConfig({ watchfaceMaterial: v })} />
+            </div>
+          )}
+
+          {/* Step 2 — Colors */}
+          {step === 2 && (
+            <div className="space-y-6 animate-fade-in">
               <div>
-                <SectionLabel>Цвет стрелок</SectionLabel>
-                <div className="flex flex-wrap gap-2">
-                  {['#cbd5e1', '#f8fafc', '#fbbf24', '#34d399', '#60a5fa', '#f472b6', '#a78bfa', '#1e293b'].map(c => (
-                    <ColorSwatch key={c} color={c} selected={config.handsColor === c} onClick={() => updateConfig({ handsColor: c })} />
-                  ))}
+                <h2 className="text-xl font-bold tracking-tight mb-3">Цвет корпуса</h2>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {FACE_COLORS.map(c => <ColorSwatch key={c} color={c} selected={config.watchfaceColor === c} onClick={() => updateConfig({ watchfaceColor: c })} />)}
+                  <input type="color" value={config.watchfaceColor} onChange={e => updateConfig({ watchfaceColor: e.target.value })}
+                    className="w-8 h-8 rounded-full cursor-pointer border border-black/10 bg-transparent" />
                 </div>
               </div>
-            )}
-          </GlassPanel>
+              <div>
+                <h2 className="text-xl font-bold tracking-tight mb-3">Цвет ремешка</h2>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {STRAP_COLORS.map(c => <ColorSwatch key={c} color={c} selected={config.braceletColor === c} onClick={() => updateConfig({ braceletColor: c })} />)}
+                  <input type="color" value={config.braceletColor} onChange={e => updateConfig({ braceletColor: e.target.value })}
+                    className="w-8 h-8 rounded-full cursor-pointer border border-black/10 bg-transparent" />
+                </div>
+              </div>
+            </div>
+          )}
 
-          {/* Serial Number */}
-          <GlassPanel className="p-4">
-            <SectionLabel>Серийный номер (опционально)</SectionLabel>
-            <input
-              type="text"
-              maxLength={20}
-              placeholder="NA4-XXXXXXXX"
-              value={serialNumber}
-              onChange={e => setSerialNumber(e.target.value.toUpperCase())}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono tracking-widest text-white placeholder:text-white/20 focus:outline-none focus:border-primary/50"
-            />
-          </GlassPanel>
+          {/* Step 3 — Bracelet */}
+          {step === 3 && (
+            <div className="space-y-5 animate-fade-in">
+              <div>
+                <h2 className="text-xl font-bold tracking-tight mb-3">Материал ремешка</h2>
+                <OptionPills options={BRACELET_MATERIALS} value={config.braceletMaterial} onChange={v => updateConfig({ braceletMaterial: v })} />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-2">Тип</h3>
+                <OptionPills options={BRACELET_TYPES} value={config.braceletType} onChange={v => updateConfig({ braceletType: v })} />
+              </div>
+            </div>
+          )}
 
+          {/* Step 4 — Details */}
+          {step === 4 && (
+            <div className="space-y-6 animate-fade-in">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xl font-bold tracking-tight">Стрелки</h2>
+                  <button
+                    onClick={() => updateConfig({ handsEnabled: !config.handsEnabled })}
+                    className={cn(
+                      'w-12 h-6 rounded-full transition-all relative border',
+                      config.handsEnabled ? 'bg-primary border-primary' : 'bg-border border-border'
+                    )}
+                  >
+                    <span className={cn(
+                      'absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all',
+                      config.handsEnabled ? 'left-6' : 'left-0.5'
+                    )} />
+                  </button>
+                </div>
+                {config.handsEnabled && (
+                  <div className="flex flex-wrap gap-2">
+                    {HAND_COLORS.map(c => <ColorSwatch key={c} color={c} selected={config.handsColor === c} onClick={() => updateConfig({ handsColor: c })} />)}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-2">Серийный номер</h3>
+                <input
+                  type="text"
+                  maxLength={20}
+                  placeholder="NA4-XXXXXXXX"
+                  value={serialNumber}
+                  onChange={e => setSerialNumber(e.target.value.toUpperCase())}
+                  className="w-full bg-white/70 border border-border rounded-full px-4 py-2.5 text-sm font-mono tracking-widest text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              </div>
+
+              {/* Summary */}
+              <div className="liquid-glass rounded-2xl p-4 space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Форма</span><span className="font-medium capitalize">{config.watchfaceGeometry}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Материал</span><span className="font-medium capitalize">{config.watchfaceMaterial}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Ремешок</span><span className="font-medium capitalize">{config.braceletMaterial}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Стрелки</span><span className="font-medium">{config.handsEnabled ? 'Да' : 'Нет'}</span></div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* CTA */}
-        <div className="p-4 md:p-6 border-t border-white/5">
-          <LiquidButton
-            onClick={handleOrder}
+        {/* Navigation */}
+        <div className="px-6 pb-6 pt-3 border-t border-border/40 flex gap-3">
+          {step > 0 && (
+            <button
+              onClick={goBack}
+              className="liquid-button flex-none px-6 py-3 text-sm font-semibold"
+            >
+              ← Назад
+            </button>
+          )}
+          <button
+            onClick={goNext}
             disabled={submitting}
-            className="w-full h-12 text-sm font-bold tracking-widest"
+            className={cn(
+              'flex-1 py-3 rounded-full text-sm font-bold tracking-widest uppercase transition-all',
+              step === STEPS.length - 1
+                ? 'bg-primary text-white shadow-lg hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60'
+                : 'liquid-button'
+            )}
           >
-            {submitting ? 'ОФОРМЛЕНИЕ...' : 'ОФОРМИТЬ ЗАКАЗ →'}
-          </LiquidButton>
+            {step === STEPS.length - 1
+              ? (submitting ? 'Оформление...' : 'Оформить заказ →')
+              : `Далее: ${STEPS[step + 1].label} →`}
+          </button>
         </div>
       </div>
-
     </div>
   );
 }

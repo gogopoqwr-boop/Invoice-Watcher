@@ -1,6 +1,4 @@
 import React, { useState } from "react";
-import { GlassPanel } from "@/components/ui/glass-panel";
-import { LiquidButton } from "@/components/ui/liquid-button";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 
@@ -32,10 +30,12 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background text-white flex items-center justify-center p-4">
-      <GlassPanel className="p-8 w-full max-w-sm">
-        <h1 className="text-2xl font-bold tracking-widest mb-2 text-center">НА_УТРАХ_4</h1>
-        <p className="text-muted-foreground text-sm text-center mb-8 tracking-widest">ADMIN ACCESS</p>
+    <div className="min-h-[100dvh] bg-background flex items-center justify-center p-4">
+      <div className="liquid-glass rounded-3xl p-8 w-full max-w-sm">
+        <div className="text-center mb-8">
+          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">НА_УТРАХ_4</p>
+          <h1 className="text-2xl font-bold tracking-tight">Вход</h1>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -45,7 +45,7 @@ export default function Login() {
               autoComplete="username"
               value={username}
               onChange={e => setUsername(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-primary/50 transition-colors"
+              className="w-full bg-white/60 border border-border rounded-full px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all"
               placeholder="admin"
               required
             />
@@ -58,21 +58,23 @@ export default function Login() {
               autoComplete="current-password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-primary/50 transition-colors"
+              className="w-full bg-white/60 border border-border rounded-full px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all"
               placeholder="••••••••"
               required
             />
           </div>
 
-          {error && (
-            <p className="text-red-400 text-sm text-center">{error}</p>
-          )}
+          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-          <LiquidButton type="submit" disabled={loading} className="w-full h-12 font-bold tracking-widest text-sm mt-2">
-            {loading ? "ВХОД..." : "ВОЙТИ"}
-          </LiquidButton>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-primary text-white rounded-full py-3.5 font-bold text-sm tracking-widest uppercase shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-60 mt-2"
+          >
+            {loading ? "Вход..." : "Войти"}
+          </button>
         </form>
-      </GlassPanel>
+      </div>
     </div>
   );
 }

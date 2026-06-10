@@ -10,7 +10,7 @@ export const GlassPanel = React.forwardRef<HTMLDivElement, GlassPanelProps>(
     return (
       <div
         ref={ref}
-        className={cn("liquid-glass rounded-xl", className)}
+        className={cn("liquid-glass rounded-2xl", className)}
         {...props}
       >
         {children}

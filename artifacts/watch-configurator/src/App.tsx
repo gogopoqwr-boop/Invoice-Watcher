@@ -18,10 +18,6 @@ import { AuthProvider } from "@/hooks/use-auth";
 
 const queryClient = new QueryClient();
 
-if (typeof window !== "undefined") {
-  document.documentElement.classList.add("dark");
-}
-
 function Router() {
   return (
     <Switch>

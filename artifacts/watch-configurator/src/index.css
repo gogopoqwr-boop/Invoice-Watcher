@@ -67,65 +67,65 @@
 }
 
 :root {
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
+  --button-outline: rgba(0,0,0, .06);
+  --badge-outline: rgba(0,0,0, .04);
 
-  --opaque-button-border-intensity: -8;
+  --opaque-button-border-intensity: 8;
 
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
+  --elevate-1: rgba(255,255,255, .7);
+  --elevate-2: rgba(255,255,255, .9);
 
-  /* Deep Space Darkness */
-  --background: 228 20% 4%;
-  --foreground: 210 20% 90%;
-  
-  --border: 215 15% 15%;
-  --input: 215 15% 15%;
-  --ring: 210 100% 60%;
-  
-  --card: 228 20% 6%;
-  --card-foreground: 210 20% 90%;
-  --card-border: 215 15% 15%;
-  
-  --sidebar: 228 20% 5%;
-  --sidebar-foreground: 210 20% 90%;
-  --sidebar-border: 215 15% 15%;
-  --sidebar-primary: 210 100% 60%;
-  --sidebar-primary-foreground: 210 20% 90%;
-  --sidebar-accent: 215 15% 15%;
-  --sidebar-accent-foreground: 210 20% 90%;
-  --sidebar-ring: 210 100% 60%;
-  
-  --popover: 228 20% 6%;
-  --popover-foreground: 210 20% 90%;
-  --popover-border: 215 15% 15%;
-  
-  --primary: 210 100% 60%;
-  --primary-foreground: 228 20% 4%;
-  
-  --secondary: 215 15% 15%;
-  --secondary-foreground: 210 20% 90%;
-  
-  --muted: 215 15% 15%;
-  --muted-foreground: 215 15% 60%;
-  
-  --accent: 215 15% 15%;
-  --accent-foreground: 210 20% 90%;
-  
-  --destructive: 0 80% 60%;
-  --destructive-foreground: 210 20% 90%;
+  /* Light, clean */
+  --background: 0 0% 97%;
+  --foreground: 222 25% 12%;
 
-  --chart-1: 210 100% 60%;
-  --chart-2: 190 90% 50%;
-  --chart-3: 160 80% 40%;
-  --chart-4: 280 70% 50%;
-  --chart-5: 320 60% 60%;
+  --border: 220 13% 88%;
+  --input: 220 13% 88%;
+  --ring: 220 90% 55%;
 
-  --app-font-sans: 'Geist', 'Inter', sans-serif;
+  --card: 0 0% 100%;
+  --card-foreground: 222 25% 12%;
+  --card-border: 220 13% 88%;
+
+  --sidebar: 0 0% 99%;
+  --sidebar-foreground: 222 25% 12%;
+  --sidebar-border: 220 13% 88%;
+  --sidebar-primary: 220 90% 55%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 220 13% 94%;
+  --sidebar-accent-foreground: 222 25% 12%;
+  --sidebar-ring: 220 90% 55%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 25% 12%;
+  --popover-border: 220 13% 88%;
+
+  --primary: 220 90% 55%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 220 13% 94%;
+  --secondary-foreground: 222 25% 12%;
+
+  --muted: 220 14% 95%;
+  --muted-foreground: 220 10% 50%;
+
+  --accent: 220 13% 94%;
+  --accent-foreground: 222 25% 12%;
+
+  --destructive: 0 80% 58%;
+  --destructive-foreground: 0 0% 100%;
+
+  --chart-1: 220 90% 55%;
+  --chart-2: 190 85% 45%;
+  --chart-3: 160 70% 38%;
+  --chart-4: 280 65% 52%;
+  --chart-5: 320 60% 55%;
+
+  --app-font-sans: 'Inter', 'Geist', system-ui, sans-serif;
   --app-font-serif: Georgia, serif;
   --app-font-mono: Menlo, monospace;
-  
-  --radius: 0rem;
+
+  --radius: 1rem;
 }
 
 @layer base {
@@ -138,43 +138,69 @@
   }
 }
 
+/* Light glass panel */
 .liquid-glass {
-  backdrop-filter: blur(20px);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(16px) saturate(180%);
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
+/* Round semi-transparent button */
 .liquid-button {
   backdrop-filter: blur(12px);
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 9999px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   position: relative;
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  color: hsl(222 25% 12%);
 }
 
 .liquid-button:hover {
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
 }
 
-.liquid-button::before {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255, 255, 255, 0.2) 0%, transparent 60%);
-  opacity: 0;
-  transition: opacity 0.3s;
-  pointer-events: none;
-}
-
-.liquid-button:hover::before {
-  opacity: 1;
+.liquid-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .liquid-pill {
   backdrop-filter: blur(12px);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 9999px;
+}
+
+/* Option button — pill selection */
+.option-btn {
+  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 9999px;
+  padding: 0.4rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: hsl(220 10% 45%);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.option-btn:hover {
+  background: rgba(255, 255, 255, 0.75);
+  color: hsl(222 25% 12%);
+}
+
+.option-btn.active {
+  background: hsl(220 90% 55%);
+  border-color: hsl(220 90% 55%);
+  color: white;
+  box-shadow: 0 2px 12px hsla(220, 90%, 55%, 0.35);
 }
