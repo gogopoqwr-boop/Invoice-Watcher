@@ -1,7 +1,8 @@
 import React, { Suspense, useState, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
+import * as THREE from 'three';
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
-import WatchModel from '@/components/WatchModel';
+import WatchModel, { CameraRig } from '@/components/WatchModel';
 import WatchSVG from '@/components/WatchSVG';
 import { WebGLErrorBoundary } from '@/components/WebGLErrorBoundary';
 import { useWatchConfig } from '@/hooks/use-watch-config';
@@ -96,18 +97,31 @@ function OptionCard({ selected, onClick, children, className }: { selected: bool
   );
 }
 
-function Watch3DView() {
+function Watch3DView({ step }: { step: number }) {
   return (
-    <Canvas shadows camera={{ position: [0, 5, 8], fov: 40 }} gl={{ failIfMajorPerformanceCaveat: false }}>
-      <ambientLight intensity={0.5} />
-      <spotLight position={[5, 10, 5]} angle={0.25} penumbra={1} intensity={2} castShadow />
-      <pointLight position={[-5, 5, -5]} intensity={0.8} color="#4f46e5" />
+    <Canvas
+      shadows={{ type: THREE.PCFShadowMap }}
+      camera={{ position: [0, 0.5, 9], fov: 42 }}
+      gl={{ failIfMajorPerformanceCaveat: false, antialias: true }}
+    >
+      <ambientLight intensity={0.55} />
+      <spotLight position={[4, 6, 8]} angle={0.3} penumbra={0.8} intensity={2.5} castShadow shadow-mapSize={[1024, 1024]} />
+      <pointLight position={[-5, 3, -4]} intensity={1.0} color="#6366f1" />
+      <pointLight position={[5, -2, 3]} intensity={0.4} color="#f0f4ff" />
       <Suspense fallback={null}>
-        <WatchModel />
+        <WatchModel step={step} />
+        <CameraRig step={step} />
         <Environment preset="city" />
-        <ContactShadows position={[0, -2, 0]} opacity={0.3} scale={12} blur={2} far={5} />
+        <ContactShadows position={[0, -5, 0]} opacity={0.25} scale={18} blur={2.5} far={8} />
       </Suspense>
-      <OrbitControls enablePan={false} minPolarAngle={Math.PI / 4} maxPolarAngle={Math.PI / 2} minDistance={4} maxDistance={12} />
+      <OrbitControls
+        enablePan={false}
+        autoRotate={false}
+        minPolarAngle={0}
+        maxPolarAngle={Math.PI}
+        minDistance={4}
+        maxDistance={14}
+      />
     </Canvas>
   );
 }
@@ -165,7 +179,7 @@ export default function Configure() {
 
         {webglAvailable ? (
           <WebGLErrorBoundary fallback={<div className="w-full h-full flex items-center justify-center p-10"><WatchSVG /></div>}>
-            <Watch3DView />
+            <Watch3DView step={step} />
           </WebGLErrorBoundary>
         ) : (
           <div className="w-full h-full flex items-center justify-center p-10">
