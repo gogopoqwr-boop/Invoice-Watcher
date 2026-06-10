@@ -58,7 +58,7 @@ A full-stack 3D watch configurator. Users design a custom watch (geometry, mater
 ## Seeded data
 
 - Presets: Midnight Steel, Arctic Frost, Crimson Core, Carbon Ghost, Gold Rush, Ocean Drive
-- Admin users: `admin` / `admin123` (role: admin), `courier1` / `courier123` (role: courier)
+- Admin users: `admin` / `FutureAfterWatch3s` (role: admin), `courier1` / `courier123` (role: courier)
 - 150 analytics events pre-seeded
 
 ## User preferences
