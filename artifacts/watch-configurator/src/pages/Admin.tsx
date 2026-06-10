@@ -33,12 +33,34 @@ const NEXT_STATUSES: Record<string, string> = {
 const PAGE_SIZE = 20;
 type Tab = "orders" | "analytics";
 
+async function callRefund(orderId: number): Promise<{ ok: boolean; msg: string }> {
+  try {
+    const res = await fetch(`/api/orders/${orderId}/refund`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const json = await res.json();
+    const tgResult = json.telegramRefundResult;
+    if (tgResult?.ok === false) {
+      const desc: string = tgResult.description ?? "Telegram error";
+      if (desc.includes("CHARGE_ALREADY_REFUNDED")) return { ok: true, msg: "Уже возвращено ранее" };
+      return { ok: false, msg: desc };
+    }
+    return { ok: true, msg: "Звёзды возвращены ✓" };
+  } catch {
+    return { ok: false, msg: "Ошибка сети" };
+  }
+}
+
 export default function Admin() {
   const [, setLocation] = useLocation();
   const { user, logout } = useAuth();
   const [tab, setTab] = useState<Tab>("orders");
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [refundingId, setRefundingId] = useState<number | null>(null);
+  const [refundMsg, setRefundMsg] = useState<Record<number, { ok: boolean; msg: string }>>({});
 
   const { data: ordersData, isLoading: ordersLoading, refetch } = useListOrders(
     { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE, status: (statusFilter as any) || undefined }
@@ -52,6 +74,14 @@ export default function Admin() {
 
   const handleStatusUpdate = async (orderId: number, newStatus: string) => {
     await updateStatus.mutateAsync({ id: orderId, data: { status: newStatus as any } });
+    refetch();
+  };
+
+  const handleRefund = async (orderId: number) => {
+    setRefundingId(orderId);
+    const result = await callRefund(orderId);
+    setRefundMsg(prev => ({ ...prev, [orderId]: result }));
+    setRefundingId(null);
     refetch();
   };
 
@@ -163,6 +193,23 @@ export default function Admin() {
                             >
                               Отмена
                             </button>
+                          )}
+
+                          {order.status === "cancelled" && order.telegramPaymentChargeId && (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleRefund(order.id)}
+                                disabled={refundingId === order.id}
+                                className="px-3 py-1.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-xs font-bold hover:bg-amber-100 transition-colors disabled:opacity-50"
+                              >
+                                {refundingId === order.id ? "…" : "Рефанд ⭐"}
+                              </button>
+                              {refundMsg[order.id] && (
+                                <span className={cn("text-xs font-medium", refundMsg[order.id].ok ? "text-emerald-600" : "text-red-500")}>
+                                  {refundMsg[order.id].msg}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
