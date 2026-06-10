@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState } from "react";
 import { getOrCreateSessionId } from "@/lib/session";
 import {
   WatchConfigInput,
@@ -43,31 +43,23 @@ type WatchConfigContextType = {
 const WatchConfigContext = createContext<WatchConfigContextType | undefined>(undefined);
 
 export function WatchConfigProvider({ children }: { children: React.ReactNode }) {
-  const [sessionId, setSessionId] = useState<string>("");
-  const [config, setConfig] = useState<ExtendedConfigState>(defaultState);
+  const [sessionId] = useState<string>(() => getOrCreateSessionId());
+  const [config, setConfig] = useState<ExtendedConfigState>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("watch_config_draft") : null;
+      if (saved) return { ...defaultState, ...JSON.parse(saved) };
+    } catch {}
+    return defaultState;
+  });
   const [activePart, setActivePart] = useState<"watchFace" | "strap" | "clasp" | null>(null);
-
-  useEffect(() => {
-    setSessionId(getOrCreateSessionId());
-    const saved = localStorage.getItem("watch_config_draft");
-    if (saved) {
-      try {
-        setConfig({ ...defaultState, ...JSON.parse(saved) });
-      } catch {
-        // ignore
-      }
-    }
-  }, []);
 
   const updateConfig = (updates: Partial<ExtendedConfigState>) => {
     setConfig(prev => {
       const next = { ...prev, ...updates };
-      localStorage.setItem("watch_config_draft", JSON.stringify(next));
+      try { localStorage.setItem("watch_config_draft", JSON.stringify(next)); } catch {}
       return next;
     });
   };
-
-  if (!sessionId) return null;
 
   return (
     <WatchConfigContext.Provider value={{ sessionId, config, updateConfig, activePart, setActivePart }}>
