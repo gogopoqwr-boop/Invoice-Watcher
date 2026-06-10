@@ -110,6 +110,23 @@ router.patch("/orders/:id/status", async (req, res) => {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     const { status, courierId } = req.body;
+
+    // Auto-refund Stars when cancelling a paid order
+    if (status === "cancelled") {
+      const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
+      if (order?.telegramPaymentChargeId && order?.telegramId) {
+        try {
+          const refundResult = await callTelegram("refundStarPayment", {
+            user_id: Number(order.telegramId),
+            telegram_payment_charge_id: order.telegramPaymentChargeId,
+          });
+          req.log.info({ orderId: id, refundResult }, "Telegram Stars refund issued on cancel");
+        } catch (telegramErr) {
+          req.log.error({ telegramErr, orderId: id }, "Failed to refund Stars on cancel — continuing");
+        }
+      }
+    }
+
     const updateData: Record<string, unknown> = { status, updatedAt: new Date() };
     if (courierId !== undefined) updateData.courierId = courierId;
     const [updated] = await db.update(ordersTable).set(updateData).where(eq(ordersTable.id, id)).returning();
