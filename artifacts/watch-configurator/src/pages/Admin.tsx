@@ -9,30 +9,28 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: "Ожидает",
-  paid: "Оплачен",
-  in_production: "Производство",
-  shipped: "Отправлен",
-  delivered: "Доставлен",
+  payment_pending: "Ожидает оплаты",
+  processing: "В производстве",
+  shipping: "Отправлен",
+  arrived: "Доставлен",
   cancelled: "Отменён",
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "text-amber-600 bg-amber-50 border-amber-200",
-  paid: "text-green-600 bg-green-50 border-green-200",
-  in_production: "text-blue-600 bg-blue-50 border-blue-200",
-  shipped: "text-violet-600 bg-violet-50 border-violet-200",
-  delivered: "text-emerald-600 bg-emerald-50 border-emerald-200",
+  payment_pending: "text-amber-600 bg-amber-50 border-amber-200",
+  processing: "text-blue-600 bg-blue-50 border-blue-200",
+  shipping: "text-violet-600 bg-violet-50 border-violet-200",
+  arrived: "text-emerald-600 bg-emerald-50 border-emerald-200",
   cancelled: "text-red-600 bg-red-50 border-red-200",
 };
 
 const NEXT_STATUSES: Record<string, string> = {
-  pending: "paid",
-  paid: "in_production",
-  in_production: "shipped",
-  shipped: "delivered",
+  payment_pending: "processing",
+  processing: "shipping",
+  shipping: "arrived",
 };
 
+const PAGE_SIZE = 20;
 type Tab = "orders" | "analytics";
 
 export default function Admin() {
@@ -41,21 +39,19 @@ export default function Admin() {
   const [tab, setTab] = useState<Tab>("orders");
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("");
-  const [trackingInput, setTrackingInput] = useState<Record<number, string>>({});
 
   const { data: ordersData, isLoading: ordersLoading, refetch } = useListOrders(
-    { page, limit: 20, status: (statusFilter as any) || undefined },
-    { query: { keepPreviousData: true } as any }
+    { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE, status: (statusFilter as any) || undefined }
   );
 
-  const { data: analytics, isLoading: analyticsLoading } = useGetAnalyticsSummary({
-    query: { enabled: tab === "analytics" },
-  });
+  const { data: analytics, isLoading: analyticsLoading } = useGetAnalyticsSummary(
+    { query: { enabled: tab === "analytics" } } as any
+  );
 
   const updateStatus = useUpdateOrderStatus();
 
-  const handleStatusUpdate = async (orderId: number, newStatus: string, trackingCode?: string) => {
-    await updateStatus.mutateAsync({ id: orderId, data: { status: newStatus as any, trackingCode } });
+  const handleStatusUpdate = async (orderId: number, newStatus: string) => {
+    await updateStatus.mutateAsync({ id: orderId, data: { status: newStatus as any } });
     refetch();
   };
 
@@ -65,7 +61,8 @@ export default function Admin() {
   }
 
   const orders: any[] = (ordersData as any)?.orders ?? [];
-  const totalPages: number = (ordersData as any)?.totalPages ?? 1;
+  const total: number = (ordersData as any)?.total ?? 0;
+  const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
 
   return (
     <div className="min-h-[100dvh] bg-background">
@@ -113,14 +110,11 @@ export default function Admin() {
         {tab === "orders" && (
           <div className="space-y-4">
             <div className="flex gap-2 flex-wrap">
-              {["", "pending", "paid", "in_production", "shipped", "delivered"].map((s) => (
+              {["", "payment_pending", "processing", "shipping", "arrived", "cancelled"].map((s) => (
                 <button
                   key={s}
                   onClick={() => { setStatusFilter(s); setPage(1); }}
-                  className={cn(
-                    "option-btn",
-                    statusFilter === s && "active"
-                  )}
+                  className={cn("option-btn", statusFilter === s && "active")}
                 >
                   {s ? STATUS_LABELS[s] : "Все"}
                 </button>
@@ -141,8 +135,8 @@ export default function Admin() {
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                         <div className="flex items-center gap-3 flex-wrap">
                           <span className="font-bold text-sm font-mono">#{order.id}</span>
-                          <span className={cn("text-xs px-2.5 py-0.5 rounded-full font-semibold border", STATUS_COLORS[order.status])}>
-                            {STATUS_LABELS[order.status]}
+                          <span className={cn("text-xs px-2.5 py-0.5 rounded-full font-semibold border", STATUS_COLORS[order.status] ?? "text-muted-foreground bg-muted border-border")}>
+                            {STATUS_LABELS[order.status] ?? order.status}
                           </span>
                           <span className="text-primary font-bold text-sm">{order.totalStars} ⭐</span>
                           <span className="text-xs text-muted-foreground font-mono">
@@ -151,27 +145,9 @@ export default function Admin() {
                         </div>
 
                         <div className="flex items-center gap-2 flex-wrap">
-                          {order.status === "paid" && (
-                            <input
-                              type="text"
-                              placeholder="Трек-номер"
-                              value={trackingInput[order.id] ?? ""}
-                              onChange={(e) =>
-                                setTrackingInput((prev) => ({ ...prev, [order.id]: e.target.value }))
-                              }
-                              className="w-32 bg-white/60 border border-border rounded-full px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/20"
-                            />
-                          )}
-
                           {NEXT_STATUSES[order.status] && (
                             <button
-                              onClick={() =>
-                                handleStatusUpdate(
-                                  order.id,
-                                  NEXT_STATUSES[order.status],
-                                  order.status === "paid" ? trackingInput[order.id] : undefined
-                                )
-                              }
+                              onClick={() => handleStatusUpdate(order.id, NEXT_STATUSES[order.status])}
                               disabled={updateStatus.isPending}
                               className="px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-bold hover:bg-primary/20 transition-colors whitespace-nowrap disabled:opacity-50"
                             >
@@ -179,7 +155,7 @@ export default function Admin() {
                             </button>
                           )}
 
-                          {order.status !== "cancelled" && order.status !== "delivered" && (
+                          {order.status !== "cancelled" && order.status !== "arrived" && (
                             <button
                               onClick={() => handleStatusUpdate(order.id, "cancelled")}
                               disabled={updateStatus.isPending}
@@ -190,29 +166,15 @@ export default function Admin() {
                           )}
                         </div>
                       </div>
-
-                      {order.trackingCode && (
-                        <p className="text-xs text-muted-foreground mt-2 font-mono">
-                          Трек: {order.trackingCode}
-                        </p>
-                      )}
                     </div>
                   ))}
                 </div>
 
                 {totalPages > 1 && (
                   <div className="flex items-center justify-center gap-3 mt-6">
-                    <button
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                      className="liquid-button px-4 py-2 text-sm disabled:opacity-30"
-                    >←</button>
+                    <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="liquid-button px-4 py-2 text-sm disabled:opacity-30">←</button>
                     <span className="text-sm text-muted-foreground">{page} / {totalPages}</span>
-                    <button
-                      onClick={() => setPage((p) => p + 1)}
-                      disabled={page === totalPages}
-                      className="liquid-button px-4 py-2 text-sm disabled:opacity-30"
-                    >→</button>
+                    <button onClick={() => setPage((p) => p + 1)} disabled={page === totalPages} className="liquid-button px-4 py-2 text-sm disabled:opacity-30">→</button>
                   </div>
                 )}
               </>
@@ -232,12 +194,12 @@ export default function Admin() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[
                     { label: "Всего заказов", value: (analytics as any).totalOrders ?? 0 },
-                    { label: "Оплачено", value: (analytics as any).paidOrders ?? 0 },
+                    { label: "В обработке", value: (analytics as any).processingOrders ?? 0 },
                     { label: "Звёзд получено", value: (analytics as any).totalStarsEarned ?? 0 },
                     {
                       label: "Конверсия",
                       value: (analytics as any).totalOrders > 0
-                        ? `${Math.round(((analytics as any).paidOrders / (analytics as any).totalOrders) * 100)}%`
+                        ? `${Math.round(((analytics as any).processingOrders / (analytics as any).totalOrders) * 100)}%`
                         : "0%",
                     },
                   ].map((stat) => (
@@ -261,10 +223,7 @@ export default function Admin() {
                               <span className="text-primary font-semibold">{p.count}</span>
                             </div>
                             <div className="h-1.5 bg-black/5 rounded-full">
-                              <div
-                                className="h-full bg-primary rounded-full"
-                                style={{ width: `${(p.count / (analytics as any).topPresets[0].count) * 100}%` }}
-                              />
+                              <div className="h-full bg-primary rounded-full" style={{ width: `${(p.count / (analytics as any).topPresets[0].count) * 100}%` }} />
                             </div>
                           </div>
                         </div>
@@ -279,7 +238,7 @@ export default function Admin() {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {Object.entries((analytics as any).statusBreakdown).map(([status, count]) => (
                         <div key={status} className={cn("rounded-xl p-3 border", STATUS_COLORS[status] ?? "bg-muted/50 border-border")}>
-                          <p className="text-xs font-bold">{STATUS_LABELS[status]}</p>
+                          <p className="text-xs font-bold">{STATUS_LABELS[status] ?? status}</p>
                           <p className="text-xl font-bold mt-1">{count as number}</p>
                         </div>
                       ))}

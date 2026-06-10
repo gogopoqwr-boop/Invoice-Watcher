@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginMutation = useLogin();
 
   const login = useCallback(async (username: string, password: string) => {
-    const result = await loginMutation.mutateAsync({ username, password });
+    const result = await loginMutation.mutateAsync({ data: { username, password } } as any);
     const token = (result as any).token as string;
     localStorage.setItem("jwt", token);
     setUser(parseJwt(token));

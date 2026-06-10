@@ -5,26 +5,24 @@ import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'Ожидает оплаты',
-  paid: 'Оплачен',
-  in_production: 'В производстве',
-  shipped: 'Отправлен',
-  delivered: 'Доставлен',
+  payment_pending: 'Ожидает оплаты',
+  processing: 'В производстве',
+  shipping: 'Отправлен',
+  arrived: 'Доставлен',
   cancelled: 'Отменён',
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'text-amber-600 bg-amber-50 border-amber-200',
-  paid: 'text-green-600 bg-green-50 border-green-200',
-  in_production: 'text-blue-600 bg-blue-50 border-blue-200',
-  shipped: 'text-violet-600 bg-violet-50 border-violet-200',
-  delivered: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+  payment_pending: 'text-amber-600 bg-amber-50 border-amber-200',
+  processing: 'text-blue-600 bg-blue-50 border-blue-200',
+  shipping: 'text-violet-600 bg-violet-50 border-violet-200',
+  arrived: 'text-emerald-600 bg-emerald-50 border-emerald-200',
   cancelled: 'text-red-600 bg-red-50 border-red-200',
 };
 
 export default function Orders() {
   const { sessionId } = useWatchConfig();
-  const { data: orders, isLoading } = useGetMyOrders({ sessionId }, { query: { enabled: !!sessionId } });
+  const { data: orders, isLoading } = useGetMyOrders({ sessionId }, { query: { enabled: !!sessionId } } as any);
 
   return (
     <div className="min-h-[100dvh] bg-background p-6 md:p-8">
@@ -56,7 +54,7 @@ export default function Orders() {
           </div>
         ) : (
           <div className="space-y-3">
-            {orders.map(order => (
+            {orders.map((order: any) => (
               <div key={order.id} className="liquid-glass rounded-2xl p-5 flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -66,12 +64,9 @@ export default function Orders() {
                     </span>
                   </div>
                   <p className="text-xl font-bold text-primary">{order.totalStars} ⭐</p>
-                  {order.trackingCode && (
-                    <p className="text-xs text-muted-foreground mt-1 font-mono">Трек: {order.trackingCode}</p>
-                  )}
                 </div>
 
-                {order.status === 'pending' && (
+                {order.status === 'payment_pending' && (
                   <Link href={`/payment/${order.id}`}>
                     <button className="bg-primary text-white rounded-full px-4 py-2 text-xs font-bold tracking-widest hover:bg-primary/90 transition-all whitespace-nowrap">
                       Оплатить
