@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "postgresql-16"]
+modules = ["nodejs-20", "web", "bash"]
 
 [deployment]
 router = "application"
@@ -49,7 +49,7 @@ args = "PORT=24918 BASE_PATH=/ pnpm --filter @workspace/watch-configurator run d
 waitForPort = 24918
 
 [agent]
-stack = "PNPM_WORKSPACE"
+stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
 
 [postMerge]
@@ -74,7 +74,5 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
-TELEGRAM_BOT_TOKEN = "8576299379:AAGBEJeybVncfNS9aAV7psZAPzmqhpgCfnY"
-JWT_SECRET = "na_utrah4_jwt_secret_2024_ultra_secure_key_xk9m2p"
 TELEGRAM_BOT_USERNAME = "bebebeabot"
 VITE_TELEGRAM_BOT_USERNAME = "bebebeabot"
