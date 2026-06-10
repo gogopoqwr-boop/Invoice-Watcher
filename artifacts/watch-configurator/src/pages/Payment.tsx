@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useGetOrder } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
 
-const PAYMENT_WINDOW_MS = 20 * 60 * 1000; // 20 minutes
+const PAYMENT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 
 function formatCountdown(ms: number): string {
   if (ms <= 0) return '0:00';
@@ -35,7 +35,7 @@ export default function Payment() {
     }
   }, [order?.status, setLocation]);
 
-  // 20-minute countdown from order creation
+  // 10-minute countdown from order creation
   useEffect(() => {
     if (!order?.createdAt) return;
     const deadline = new Date(order.createdAt).getTime() + PAYMENT_WINDOW_MS;
@@ -82,29 +82,37 @@ export default function Payment() {
   const expired = timeLeft === 0;
 
   return (
-    <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-4">
-
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-blue-100/50 blur-[100px] pointer-events-none" />
+    <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Ambient glow */}
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full pointer-events-none"
+        style={{ background: "var(--orb-1)", filter: "blur(110px)", opacity: 0.5 }} />
 
       {/* Back to configure */}
-      <div className="absolute top-4 left-4">
+      <div className="absolute top-4 left-4 z-10">
         <Link href="/configure">
           <button className="liquid-button px-3 py-1.5 text-xs font-semibold">← К настройке</button>
         </Link>
       </div>
 
-      <div className="liquid-glass rounded-3xl p-8 max-w-sm w-full flex flex-col items-center text-center relative z-10 gap-5">
+      {/* My orders shortcut */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+        <Link href="/orders">
+          <button className="liquid-button px-3 py-1.5 text-xs font-semibold">📦 Мои заказы</button>
+        </Link>
+      </div>
+
+      <div className="liquid-glass rounded-3xl p-8 max-w-sm w-full flex flex-col items-center text-center relative z-10 gap-5 animate-shimmer-in">
 
         {isPaid ? (
           <>
-            <div className="text-5xl">✅</div>
-            <h1 className="text-2xl font-bold">Оплачено!</h1>
+            <div className="text-6xl">✅</div>
+            <h1 className="text-2xl font-black">Оплачено!</h1>
             <p className="text-muted-foreground text-sm">Перенаправляем в мои заказы…</p>
           </>
         ) : expired ? (
           <>
-            <div className="text-5xl">⏰</div>
-            <h1 className="text-2xl font-bold">Время истекло</h1>
+            <div className="text-6xl">⏰</div>
+            <h1 className="text-2xl font-black">Время истекло</h1>
             <p className="text-muted-foreground text-sm">Окно оплаты закрылось. Создайте новый заказ.</p>
             <Link href="/configure" className="w-full">
               <button className="w-full bg-primary text-white rounded-full py-3.5 font-bold text-sm tracking-widest uppercase shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all">
@@ -116,16 +124,18 @@ export default function Payment() {
           <>
             <div>
               <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Заказ #{orderId}</p>
-              <h1 className="text-2xl font-bold tracking-tight">Оплата</h1>
+              <h1 className="text-2xl font-black tracking-tight">Оплата</h1>
             </div>
 
-            <div className="text-4xl font-bold text-primary">{order.totalStars} ⭐</div>
+            <div className="text-4xl font-black text-primary">{order.totalStars} ⭐</div>
 
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            {/* QR Code */}
+            <div className="rounded-2xl p-4 shadow-sm" style={{ background: "white" }}>
               <QRCodeSVG value={webLink} size={180} level="M" />
             </div>
             <p className="text-xs text-muted-foreground">Отсканируй QR-код в Telegram</p>
 
+            {/* Pay button */}
             <a href={deepLink} className="w-full" onClick={() => {
               setTimeout(() => window.open(webLink, '_blank'), 500);
             }}>
@@ -138,6 +148,7 @@ export default function Payment() {
               {copied ? '✓ Скопировано!' : 'Скопировать ссылку'}
             </button>
 
+            {/* Status + countdown */}
             <div className="flex items-center justify-between w-full text-xs">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
@@ -146,7 +157,7 @@ export default function Payment() {
               {timeLeft !== null && (
                 <span className={cn(
                   'font-mono font-bold tabular-nums',
-                  timeLeft < 60_000 ? 'text-red-500' : timeLeft < 5 * 60_000 ? 'text-amber-500' : 'text-muted-foreground'
+                  timeLeft < 60_000 ? 'text-red-500' : timeLeft < 3 * 60_000 ? 'text-amber-500' : 'text-muted-foreground'
                 )}>
                   {formatCountdown(timeLeft)}
                 </span>

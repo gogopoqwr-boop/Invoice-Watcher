@@ -10,11 +10,9 @@ const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 function getWebsiteBaseUrl() {
   const envUrl = process.env.WEBSITE_URL?.trim();
   if (envUrl) return envUrl.replace(/\/$/, "");
-
   const domains = process.env.REPLIT_DOMAINS ?? "";
   const primaryDomain = domains.split(",")[0]?.trim();
   if (primaryDomain) return `https://${primaryDomain}`;
-
   return "";
 }
 
@@ -39,7 +37,7 @@ async function sendWatchInvoice(chatId: number | string, orderId: number) {
   if (!order) {
     await callTelegram("sendMessage", {
       chat_id: chatId,
-      text: "Заказ не найден. Пожалуйста, создайте новый заказ на сайте.",
+      text: "⚠️ Заказ не найден. Пожалуйста, создайте новый заказ на сайте.",
     });
     return;
   }
@@ -48,12 +46,10 @@ async function sendWatchInvoice(chatId: number | string, orderId: number) {
     const orderUrl = buildOrderReturnUrl(orderId);
     const msg: Record<string, unknown> = {
       chat_id: chatId,
-      text: `Заказ #${orderId} уже оплачен. Спасибо! ✅`,
+      text: `✅ Заказ #${orderId} уже оплачен. Спасибо! Ваши часы уже в работе ⌚`,
     };
     if (orderUrl) {
-      msg.reply_markup = {
-        inline_keyboard: [[{ text: "Посмотреть заказ на сайте", url: orderUrl }]],
-      };
+      msg.reply_markup = { inline_keyboard: [[{ text: "📦 Посмотреть заказ", url: orderUrl }]] };
     }
     await callTelegram("sendMessage", msg);
     return;
@@ -62,7 +58,7 @@ async function sendWatchInvoice(chatId: number | string, orderId: number) {
   if (order.status === "cancelled") {
     await callTelegram("sendMessage", {
       chat_id: chatId,
-      text: `Заказ #${orderId} был отменён. Создайте новый заказ на сайте.`,
+      text: `❌ Заказ #${orderId} был отменён. Создайте новый заказ на сайте.`,
     });
     return;
   }
@@ -71,25 +67,105 @@ async function sendWatchInvoice(chatId: number | string, orderId: number) {
     ? await db.select().from(watchConfigsTable).where(eq(watchConfigsTable.id, order.configId))
     : [null];
 
-  const configDesc = config
+  const configLines = config
     ? [
-        `Корпус: ${config.watchfaceGeometry ?? "—"} (${config.watchfaceMaterial ?? "—"})`,
-        `Ремешок: ${config.braceletMaterial ?? "—"}`,
-        config.watchfaceText ? `Надпись: ${config.watchfaceText}` : null,
-        config.serialNumber ? `Серийный №: ${config.serialNumber}` : null,
-      ]
-        .filter(Boolean)
-        .join("\n")
+        config.watchfaceGeometry ? `• Форма: ${config.watchfaceGeometry}` : null,
+        config.watchfaceMaterial ? `• Материал: ${config.watchfaceMaterial}` : null,
+        config.braceletMaterial ? `• Ремешок: ${config.braceletMaterial}` : null,
+        config.watchfaceText ? `• Надпись: "${config.watchfaceText}"` : null,
+        config.serialNumber ? `• Серийный №: ${config.serialNumber}` : null,
+      ].filter(Boolean).join("\n")
     : "Кастомные часы";
 
   await callTelegram("sendInvoice", {
     chat_id: chatId,
-    title: `Заказ #${orderId} — Часы На Утрах`,
-    description: configDesc,
+    title: `⌚ Заказ #${orderId} — На Утрах`,
+    description: configLines,
     payload: JSON.stringify({ orderId }),
     currency: "XTR",
     prices: [{ label: "Итого", amount: order.totalStars }],
   });
+}
+
+async function sendPaymentReceipt(chatId: string | number, orderId: number, order: any, config: any) {
+  const orderUrl = buildOrderReturnUrl(orderId);
+
+  const receiptLines = [
+    `✅ *Оплата подтверждена!*`,
+    ``,
+    `📋 *Заказ #${orderId}*`,
+    `💫 Стоимость: ${order.totalStars} звёзд`,
+    ``,
+    `⌚ *Конфигурация:*`,
+    config ? [
+      config.watchfaceGeometry ? `  Форма: ${config.watchfaceGeometry}` : null,
+      config.watchfaceMaterial ? `  Материал: ${config.watchfaceMaterial}` : null,
+      config.braceletMaterial ? `  Ремешок: ${config.braceletMaterial}` : null,
+      config.watchfaceText ? `  Надпись: "${config.watchfaceText}"` : null,
+      config.serialNumber ? `  Серийный №: ${config.serialNumber}` : null,
+    ].filter(Boolean).join("\n") : "  Кастомные часы",
+    ``,
+    `🔨 Ваши часы уже в производстве! Мы уведомим вас об отправке.`,
+  ].join("\n");
+
+  const msg: Record<string, unknown> = {
+    chat_id: chatId,
+    text: receiptLines,
+    parse_mode: "Markdown",
+  };
+
+  if (orderUrl) {
+    msg.reply_markup = {
+      inline_keyboard: [[{ text: "📦 Отслеживать заказ", url: orderUrl }]],
+    };
+  }
+
+  await callTelegram("sendMessage", msg);
+}
+
+// Exported so orders.ts can call it for status notifications
+export async function sendStatusNotification(telegramId: string, orderId: number, status: string, trackingCode?: string) {
+  if (!BOT_TOKEN || !telegramId) return;
+
+  const orderUrl = buildOrderReturnUrl(orderId);
+  let text = "";
+
+  switch (status) {
+    case "processing":
+      text = `⚙️ *Заказ #${orderId} — В производстве*\n\nВаши часы начали изготавливаться! Мы сообщим, когда они будут отправлены.`;
+      break;
+    case "shipping":
+      text = trackingCode
+        ? `🚚 *Заказ #${orderId} отправлен!*\n\nТрек-номер: \`${trackingCode}\`\n\nОтслеживайте посылку по трек-номеру.`
+        : `🚚 *Заказ #${orderId} отправлен!*\n\nВаши часы в пути! Ожидайте доставку.`;
+      break;
+    case "arrived":
+      text = `📦 *Заказ #${orderId} доставлен!*\n\nВаши часы ждут вас. Наслаждайтесь! ⌚✨`;
+      break;
+    case "cancelled":
+      text = `❌ *Заказ #${orderId} отменён.*\n\nЕсли была оплата — возврат звёзд будет выполнен в ближайшее время.`;
+      break;
+    default:
+      return;
+  }
+
+  const msg: Record<string, unknown> = {
+    chat_id: telegramId,
+    text,
+    parse_mode: "Markdown",
+  };
+
+  if (orderUrl && status !== "cancelled") {
+    msg.reply_markup = {
+      inline_keyboard: [[{ text: "📦 Посмотреть заказ", url: orderUrl }]],
+    };
+  }
+
+  try {
+    await callTelegram("sendMessage", msg);
+  } catch {
+    // silent — notifications are best-effort
+  }
 }
 
 router.post("/bot/webhook", async (req, res) => {
@@ -120,11 +196,27 @@ router.post("/bot/webhook", async (req, res) => {
               });
             }
           }
-        } else {
-          await callTelegram("sendMessage", {
+        } else if (param === "orders") {
+          const orderUrl = buildOrderReturnUrl(0)?.replace("/orders?paid=true&orderId=0", "/orders");
+          const msg: Record<string, unknown> = {
             chat_id: chatId,
-            text: "Привет! 👋 Создайте свои уникальные часы на сайте и оплатите звёздами Telegram.",
-          });
+            text: "📦 Откройте список ваших заказов на сайте:",
+          };
+          if (orderUrl) msg.reply_markup = { inline_keyboard: [[{ text: "Мои заказы", url: orderUrl }]] };
+          await callTelegram("sendMessage", msg);
+        } else {
+          const siteUrl = getWebsiteBaseUrl();
+          const startMsg: Record<string, unknown> = {
+            chat_id: chatId,
+            text: "⌚ *Привет! Это бот На Утрах.*\n\nЗдесь вы можете оплатить заказ часов звёздами Telegram.\n\nСоздайте свои уникальные часы на сайте!",
+            parse_mode: "Markdown",
+          };
+          if (siteUrl) {
+            startMsg.reply_markup = {
+              inline_keyboard: [[{ text: "🛍 Открыть конфигуратор", url: siteUrl }]],
+            };
+          }
+          await callTelegram("sendMessage", startMsg);
         }
       }
     }
@@ -182,17 +274,17 @@ router.post("/bot/webhook", async (req, res) => {
 
       req.log.info({ orderId, chargeId, telegramId }, "Order marked as paid");
 
-      const orderUrl = buildOrderReturnUrl(orderId);
-      const successMsg: Record<string, unknown> = {
-        chat_id: update.message.chat.id,
-        text: `✅ Оплата получена! Заказ #${orderId} подтверждён.\n\nСпасибо за покупку — ваши часы уже в производстве! ⌚`,
-      };
-      if (orderUrl) {
-        successMsg.reply_markup = {
-          inline_keyboard: [[{ text: "Посмотреть заказ на сайте", url: orderUrl }]],
-        };
+      // Fetch config for receipt
+      const [updatedOrder] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId));
+      const [config] = updatedOrder?.configId
+        ? await db.select().from(watchConfigsTable).where(eq(watchConfigsTable.id, updatedOrder.configId))
+        : [null];
+
+      try {
+        await sendPaymentReceipt(update.message.chat.id, orderId, updatedOrder ?? existing, config ?? null);
+      } catch (err) {
+        req.log.error({ err, orderId }, "Failed to send payment receipt — continuing");
       }
-      await callTelegram("sendMessage", successMsg);
     }
 
   } catch (err) {
@@ -203,9 +295,7 @@ router.post("/bot/webhook", async (req, res) => {
 router.post("/bot/register-webhook", async (req, res) => {
   try {
     const webhookUrl = req.body.url as string;
-    if (!webhookUrl) {
-      return res.status(400).json({ error: "url is required" });
-    }
+    if (!webhookUrl) return res.status(400).json({ error: "url is required" });
     const result = await callTelegram("setWebhook", {
       url: `${webhookUrl}/api/bot/webhook`,
       allowed_updates: ["message", "pre_checkout_query"],

@@ -1,3 +1,4 @@
 - [React R3F Deduplication](react-r3f-dedup.md) — single React instance required; pnpm overrides + vite dedupe both needed
 - [WebGL in Replit Sandbox](webgl-sandbox.md) — no GPU in Replit preview; detect upfront and skip Canvas entirely
 - [Auth token key](auth-token.md) — custom-fetch reads `localStorage["jwt"]` automatically; store token under that key
+- [Seed data](seed-data.md) — presets + admin users must be seeded via `pnpm --filter @workspace/scripts run seed`; DB starts empty

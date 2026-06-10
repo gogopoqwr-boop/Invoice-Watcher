@@ -45,7 +45,7 @@ export default function Login() {
               autoComplete="username"
               value={username}
               onChange={e => setUsername(e.target.value)}
-              className="w-full bg-white/60 border border-border rounded-full px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all"
+              className="w-full bg-background/60 border border-border rounded-full px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all"
               placeholder="admin"
               required
             />
@@ -58,7 +58,7 @@ export default function Login() {
               autoComplete="current-password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full bg-white/60 border border-border rounded-full px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all"
+              className="w-full bg-background/60 border border-border rounded-full px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all"
               placeholder="••••••••"
               required
             />

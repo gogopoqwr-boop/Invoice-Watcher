@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, ordersTable, watchConfigsTable } from "@workspace/db";
 import { eq, desc, and, count, sql } from "drizzle-orm";
+import { sendStatusNotification } from "./bot.js";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -132,6 +133,12 @@ router.patch("/orders/:id/status", async (req, res) => {
     const [updated] = await db.update(ordersTable).set(updateData).where(eq(ordersTable.id, id)).returning();
     if (!updated) return res.status(404).json({ error: "Order not found" });
     res.json(updated);
+
+    // Fire-and-forget Telegram status notification
+    if (updated.telegramId && ["processing", "shipping", "arrived", "cancelled"].includes(status)) {
+      sendStatusNotification(updated.telegramId, id, status)
+        .catch(err => req.log.error({ err, orderId: id, status }, "Failed to send status notification"));
+    }
   } catch (err) {
     req.log.error({ err }, "Failed to update order status");
     res.status(500).json({ error: "Failed to update order status" });

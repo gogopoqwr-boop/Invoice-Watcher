@@ -25,15 +25,22 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: 'text-red-600 bg-red-50 border-red-200',
 };
 
+const STATUS_ICONS: Record<string, string> = {
+  payment_pending: '💳',
+  paid: '✅',
+  cancel_requested: '⏳',
+  processing: '⚙️',
+  shipping: '🚚',
+  arrived: '📦',
+  cancelled: '❌',
+};
+
 async function requestCancel(orderId: number): Promise<{ ok: boolean; msg: string }> {
   try {
     const jwt = localStorage.getItem("jwt") ?? "";
-    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` };
-    // payment_pending: free cancel
-    // paid/processing: request cancellation (admin reviews)
     const res = await fetch(`/api/orders/${orderId}/status`, {
       method: "PATCH",
-      headers,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
       body: JSON.stringify({ status: "cancel_requested" }),
     });
     if (!res.ok) throw new Error();
@@ -58,33 +65,6 @@ async function cancelFree(orderId: number): Promise<{ ok: boolean; msg: string }
   }
 }
 
-async function adminCancelRefund(orderId: number): Promise<{ ok: boolean; msg: string }> {
-  try {
-    const jwt = localStorage.getItem("jwt") ?? "";
-    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` };
-    await fetch(`/api/orders/${orderId}/status`, {
-      method: "PATCH",
-      headers,
-      body: JSON.stringify({ status: "cancelled" }),
-    });
-    const refundRes = await fetch(`/api/orders/${orderId}/refund`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({}),
-    });
-    const json = await refundRes.json();
-    const tgResult = json.telegramRefundResult;
-    if (tgResult?.ok === false) {
-      const desc: string = tgResult.description ?? "Telegram error";
-      if (desc.includes("CHARGE_ALREADY_REFUNDED")) return { ok: true, msg: "Уже возвращено" };
-      return { ok: false, msg: desc };
-    }
-    return { ok: true, msg: "Отменён + возврат ✓" };
-  } catch {
-    return { ok: false, msg: "Ошибка сети" };
-  }
-}
-
 export default function Orders() {
   const { sessionId } = useWatchConfig();
   const { user } = useAuth();
@@ -104,70 +84,83 @@ export default function Orders() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background p-6 md:p-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-[100dvh] bg-background relative overflow-hidden">
+      {/* Ambient orb */}
+      <div className="absolute top-0 right-0 w-[400px] h-[400px] rounded-full pointer-events-none"
+        style={{ background: "var(--orb-1)", filter: "blur(90px)", opacity: 0.4 }} />
+
+      <div className="relative z-10 max-w-2xl mx-auto px-6 py-8 md:py-10">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-1">История</p>
-            <h1 className="text-3xl font-bold tracking-tight">Мои заказы</h1>
+            <Link href="/">
+              <button className="text-xs text-muted-foreground hover:text-foreground transition-colors mb-3 flex items-center gap-1 liquid-button px-3 py-1.5">
+                ← Главная
+              </button>
+            </Link>
+            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-1 animate-fade-up">История</p>
+            <h1 className="text-4xl font-black tracking-tight animate-fade-up delay-100">Мои заказы</h1>
           </div>
-          <Link href="/collections">
-            <button className="liquid-button px-4 py-2 text-sm font-semibold">+ Новый</button>
-          </Link>
+          <div className="flex flex-col gap-2 items-end animate-fade-up delay-200">
+            <Link href="/collections">
+              <button className="liquid-button px-5 py-2.5 text-sm font-bold">+ Новый</button>
+            </Link>
+            {isAdmin && (
+              <Link href="/admin">
+                <button className="liquid-button px-4 py-2 text-xs font-semibold">⚙️ Панель</button>
+              </Link>
+            )}
+          </div>
         </div>
 
         {isLoading ? (
           <div className="space-y-3">
-            {[1, 2, 3].map(i => <div key={i} className="liquid-glass rounded-2xl h-20 animate-pulse" />)}
+            {[1, 2, 3].map(i => <div key={i} className="liquid-glass rounded-2xl h-24 animate-pulse" />)}
           </div>
         ) : !orders?.length ? (
-          <div className="liquid-glass rounded-3xl p-12 flex flex-col items-center text-center">
-            <div className="text-5xl mb-4">⌚</div>
-            <h2 className="text-xl font-bold mb-2">Заказов пока нет</h2>
+          <div className="liquid-glass rounded-3xl p-12 flex flex-col items-center text-center animate-shimmer-in">
+            <div className="text-6xl mb-4">⌚</div>
+            <h2 className="text-2xl font-black mb-2">Заказов пока нет</h2>
             <p className="text-muted-foreground mb-6 text-sm">Создайте свои уникальные часы</p>
             <Link href="/collections">
-              <button className="bg-primary text-white rounded-full px-8 py-3 font-bold text-sm tracking-widest hover:bg-primary/90 transition-all active:scale-[0.98]">
+              <button className="bg-primary text-white rounded-full px-8 py-3.5 font-bold text-sm tracking-widest hover:bg-primary/90 transition-all active:scale-[0.98]">
                 Начать
               </button>
             </Link>
           </div>
         ) : (
           <div className="space-y-3">
-            {(orders as any[]).map((order: any) => (
-              <div key={order.id} className="liquid-glass rounded-2xl p-5">
+            {(orders as any[]).map((order: any, idx: number) => (
+              <div
+                key={order.id}
+                className="liquid-glass rounded-2xl p-5 animate-fade-up"
+                style={{ animationDelay: `${idx * 0.06}s` }}
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                      <span className="font-bold text-sm font-mono text-foreground">#{order.id}</span>
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <span className="text-base">{STATUS_ICONS[order.status] ?? '📋'}</span>
+                      <span className="font-black text-sm font-mono text-foreground">#{order.id}</span>
                       <span className={cn('text-xs px-2.5 py-0.5 rounded-full font-semibold border', STATUS_COLORS[order.status] ?? 'text-muted-foreground bg-muted border-border')}>
                         {STATUS_LABELS[order.status] ?? order.status}
                       </span>
                     </div>
-                    <p className="text-xl font-bold text-primary">{order.totalStars} ⭐</p>
+                    <p className="text-2xl font-black text-primary">{order.totalStars} ⭐</p>
+                    {order.cancelComment && (
+                      <p className="text-xs text-orange-600 mt-1 italic">"{order.cancelComment}"</p>
+                    )}
                   </div>
 
-                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  <div className="flex flex-col items-end gap-2 shrink-0">
                     {/* Pay button for pending */}
                     {order.status === 'payment_pending' && (
                       <Link href={`/payment/${order.id}`}>
-                        <button className="bg-primary text-white rounded-full px-4 py-2 text-xs font-bold tracking-widest hover:bg-primary/90 transition-all whitespace-nowrap">
+                        <button className="bg-primary text-white rounded-full px-4 py-2 text-xs font-black tracking-widest hover:bg-primary/90 transition-all whitespace-nowrap">
                           Оплатить
                         </button>
                       </Link>
                     )}
 
-                    {/* Admin: cancel + refund */}
-                    {isAdmin && order.status !== 'cancelled' && order.status !== 'arrived' && (
-                      <button
-                        onClick={() => handleAction(order.id, () => adminCancelRefund(order.id))}
-                        disabled={actionId === order.id}
-                        className="px-3 py-1.5 bg-red-50 text-red-500 border border-red-100 rounded-full text-xs font-bold hover:bg-red-100 transition-colors disabled:opacity-50 whitespace-nowrap"
-                      >
-                        {actionId === order.id ? '…' : order.telegramPaymentChargeId ? 'Отмена + Возврат ⭐' : 'Отменить'}
-                      </button>
-                    )}
-
-                    {/* User (non-admin): request cancellation */}
+                    {/* Free cancel for payment_pending */}
                     {!isAdmin && order.status === 'payment_pending' && (
                       <button
                         onClick={() => handleAction(order.id, () => cancelFree(order.id))}
@@ -178,6 +171,7 @@ export default function Orders() {
                       </button>
                     )}
 
+                    {/* Request cancellation for paid/processing */}
                     {!isAdmin && (order.status === 'paid' || order.status === 'processing') && (
                       <button
                         onClick={() => handleAction(order.id, () => requestCancel(order.id))}

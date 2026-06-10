@@ -88,7 +88,7 @@ function OptionCard({ selected, onClick, children, className }: { selected: bool
       onClick={onClick}
       className={cn(
         'rounded-2xl border-2 p-3 text-left transition-all duration-150',
-        selected ? 'border-primary bg-primary/8 shadow-sm' : 'border-border/60 bg-white/50 hover:border-border hover:bg-white/70',
+        selected ? 'border-primary bg-primary/10 shadow-sm' : 'border-border/60 bg-card/60 hover:border-border hover:bg-card/80',
         className
       )}
     >
@@ -232,7 +232,7 @@ export default function Configure() {
     <div className="min-h-[100dvh] w-full bg-background flex flex-col md:flex-row overflow-hidden">
 
       {/* Left — Watch Preview */}
-      <div className="w-full md:w-[52%] h-[42vh] md:h-screen relative bg-gradient-to-br from-slate-50 to-blue-50/40">
+      <div className="w-full md:w-[52%] h-[42vh] md:h-screen relative bg-gradient-to-br from-background to-muted/30">
         {/* Back to collections */}
         <Link href="/collections">
           <button className="absolute top-3 left-3 z-10 liquid-button px-3 py-1.5 text-xs font-semibold">← Коллекции</button>
@@ -429,7 +429,7 @@ export default function Configure() {
                   placeholder={"НА УТРАХ\nMUCHO\nДОХУИЩА"}
                   value={config.watchfaceText ?? ''}
                   onChange={e => updateConfig({ watchfaceText: e.target.value })}
-                  className="w-full bg-white/60 border border-border rounded-2xl px-4 py-3 text-sm font-mono tracking-wider text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all resize-none uppercase"
+                  className="w-full bg-background/60 border border-border rounded-2xl px-4 py-3 text-sm font-mono tracking-wider text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all resize-none uppercase"
                 />
                 <p className="text-xs text-muted-foreground text-right mt-1">{(config.watchfaceText ?? '').length}/60</p>
               </div>
@@ -467,7 +467,7 @@ export default function Configure() {
                   placeholder="NA4-XXXXXXXX"
                   value={config.serialNumber ?? ''}
                   onChange={e => updateConfig({ serialNumber: e.target.value.toUpperCase() })}
-                  className="w-full bg-white/60 border border-border rounded-full px-4 py-2.5 text-sm font-mono tracking-widest text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all"
+                  className="w-full bg-background/60 border border-border rounded-full px-4 py-2.5 text-sm font-mono tracking-widest text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>
 
