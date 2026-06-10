@@ -16,7 +16,7 @@ export default function Home() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 z-10 w-full max-w-sm sm:max-w-none sm:w-auto">
-        <Link href="/presets">
+        <Link href="/collections">
           <button className="liquid-button w-full sm:w-auto px-10 py-4 text-sm font-semibold tracking-widest uppercase">
             Часы
           </button>

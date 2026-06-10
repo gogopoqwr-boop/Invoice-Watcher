@@ -32,7 +32,7 @@ export default function Orders() {
             <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-1">История</p>
             <h1 className="text-3xl font-bold tracking-tight">Мои заказы</h1>
           </div>
-          <Link href="/presets">
+          <Link href="/collections">
             <button className="liquid-button px-4 py-2 text-sm font-semibold">+ Новый</button>
           </Link>
         </div>
@@ -46,7 +46,7 @@ export default function Orders() {
             <div className="text-5xl mb-4">⌚</div>
             <h2 className="text-xl font-bold mb-2">Заказов пока нет</h2>
             <p className="text-muted-foreground mb-6 text-sm">Создайте свои уникальные часы</p>
-            <Link href="/presets">
+            <Link href="/collections">
               <button className="bg-primary text-white rounded-full px-8 py-3 font-bold text-sm tracking-widest hover:bg-primary/90 transition-all active:scale-[0.98]">
                 Начать
               </button>

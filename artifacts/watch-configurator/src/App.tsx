@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import Home from "@/pages/Home";
-import Presets from "@/pages/Presets";
+import Collections from "@/pages/Collections";
 import Configure from "@/pages/Configure";
 import Payment from "@/pages/Payment";
 import Orders from "@/pages/Orders";
@@ -22,7 +22,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/presets" component={Presets} />
+      <Route path="/collections" component={Collections} />
       <Route path="/configure" component={Configure} />
       <Route path="/payment/:orderId" component={Payment} />
       <Route path="/orders" component={Orders} />
