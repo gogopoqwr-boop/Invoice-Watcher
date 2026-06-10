@@ -1,4 +1,4 @@
-import React, { Suspense, useState, useMemo, useRef, useEffect } from 'react';
+import React, { Suspense, useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
@@ -143,6 +143,10 @@ export default function Configure() {
   const initialConfigRef = useRef<typeof config | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Live price
+  const [livePrice, setLivePrice] = useState<number | null>(null);
+  const [priceLoading, setPriceLoading] = useState(false);
+
   useEffect(() => {
     if (!initialConfigRef.current) {
       initialConfigRef.current = { ...config };
@@ -154,6 +158,29 @@ export default function Configure() {
     if (!initialConfigRef.current) return;
     setHasChanges(JSON.stringify(config) !== JSON.stringify(initialConfigRef.current));
   }, [config]);
+
+  // Live price — debounced, recalculates whenever price-affecting fields change
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      try {
+        setPriceLoading(true);
+        const result = await calcPrice.mutateAsync({
+          data: {
+            watchfaceMaterial: config.watchfaceMaterial,
+            braceletMaterial: config.braceletMaterial,
+            handsEnabled: config.handsEnabled,
+          },
+        });
+        setLivePrice(result.totalStars);
+      } catch {
+        // silent — keep showing last known price
+      } finally {
+        setPriceLoading(false);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.watchfaceMaterial, config.braceletMaterial, config.handsEnabled]);
 
   // Shared ref for 3D interaction detection
   const lastInteractionRef = useRef<number>(0);
@@ -445,6 +472,13 @@ export default function Configure() {
 
         {/* Navigation */}
         <div className="px-5 pb-5 pt-3 border-t border-border/40 space-y-2">
+          {/* Price row */}
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs text-muted-foreground uppercase tracking-widest">Стоимость</span>
+            <span className={cn('text-sm font-bold transition-opacity', priceLoading ? 'opacity-40' : 'opacity-100')}>
+              {livePrice !== null ? `${livePrice} ⭐` : priceLoading ? '…' : '—'}
+            </span>
+          </div>
           {/* Discard row — only visible when there are unsaved changes */}
           {hasChanges && (
             <div className="flex justify-center">
@@ -470,7 +504,13 @@ export default function Configure() {
                   : 'liquid-button'
               )}
             >
-              {step === STEPS.length - 1 ? (submitting ? 'Оформление...' : 'Оформить заказ →') : `Далее: ${STEPS[step + 1].label} →`}
+              {step === STEPS.length - 1
+                ? submitting
+                  ? 'Оформление...'
+                  : livePrice !== null
+                  ? `Оформить заказ — ${livePrice} ⭐`
+                  : 'Оформить заказ →'
+                : `Далее: ${STEPS[step + 1].label} →`}
             </button>
           </div>
         </div>
