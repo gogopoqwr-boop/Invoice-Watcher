@@ -1,4 +1,4 @@
-import React, { Suspense, useState, useMemo } from 'react';
+import React, { Suspense, useState, useMemo, useRef, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
@@ -97,7 +97,11 @@ function OptionCard({ selected, onClick, children, className }: { selected: bool
   );
 }
 
-function Watch3DView({ step }: { step: number }) {
+function Watch3DView({ step, lastInteractionRef }: { step: number; lastInteractionRef: React.RefObject<number> }) {
+  const markInteraction = () => {
+    (lastInteractionRef as React.MutableRefObject<number>).current = Date.now();
+  };
+
   return (
     <Canvas
       shadows={{ type: THREE.PCFShadowMap }}
@@ -109,7 +113,7 @@ function Watch3DView({ step }: { step: number }) {
       <pointLight position={[-5, 3, -4]} intensity={1.0} color="#6366f1" />
       <pointLight position={[5, -2, 3]} intensity={0.4} color="#f0f4ff" />
       <Suspense fallback={null}>
-        <WatchModel step={step} />
+        <WatchModel step={step} lastInteractionRef={lastInteractionRef} />
         <CameraRig step={step} />
         <Environment preset="city" />
         <ContactShadows position={[0, -5, 0]} opacity={0.25} scale={18} blur={2.5} far={8} />
@@ -121,6 +125,9 @@ function Watch3DView({ step }: { step: number }) {
         maxPolarAngle={Math.PI}
         minDistance={4}
         maxDistance={14}
+        onStart={markInteraction}
+        onChange={markInteraction}
+        onEnd={markInteraction}
       />
     </Canvas>
   );
@@ -132,11 +139,37 @@ export default function Configure() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
+  // Capture config on first mount — used for discard
+  const initialConfigRef = useRef<typeof config | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    if (!initialConfigRef.current) {
+      initialConfigRef.current = { ...config };
+    }
+  }, []);
+
+  // Track changes vs initial config
+  useEffect(() => {
+    if (!initialConfigRef.current) return;
+    setHasChanges(JSON.stringify(config) !== JSON.stringify(initialConfigRef.current));
+  }, [config]);
+
+  // Shared ref for 3D interaction detection
+  const lastInteractionRef = useRef<number>(0);
+
   const webglAvailable = useMemo(() => isWebGLAvailable(), []);
 
   const createConfig = useCreateConfiguration();
   const createOrder = useCreateOrder();
   const calcPrice = useCalculatePrice();
+
+  const handleDiscard = () => {
+    if (initialConfigRef.current) {
+      updateConfig(initialConfigRef.current);
+      setStep(0);
+    }
+  };
 
   const handleOrder = async () => {
     setSubmitting(true);
@@ -172,14 +205,14 @@ export default function Configure() {
 
       {/* Left — Watch Preview */}
       <div className="w-full md:w-[52%] h-[42vh] md:h-screen relative bg-gradient-to-br from-slate-50 to-blue-50/40">
-        {/* Back to presets */}
-        <Link href="/presets">
-          <button className="absolute top-3 left-3 z-10 liquid-button px-3 py-1.5 text-xs font-semibold">← Пресеты</button>
+        {/* Back to collections */}
+        <Link href="/collections">
+          <button className="absolute top-3 left-3 z-10 liquid-button px-3 py-1.5 text-xs font-semibold">← Коллекции</button>
         </Link>
 
         {webglAvailable ? (
           <WebGLErrorBoundary fallback={<div className="w-full h-full flex items-center justify-center p-10"><WatchSVG /></div>}>
-            <Watch3DView step={step} />
+            <Watch3DView step={step} lastInteractionRef={lastInteractionRef} />
           </WebGLErrorBoundary>
         ) : (
           <div className="w-full h-full flex items-center justify-center p-10">
@@ -411,22 +444,35 @@ export default function Configure() {
         </div>
 
         {/* Navigation */}
-        <div className="px-5 pb-5 pt-3 border-t border-border/40 flex gap-3">
-          {step > 0 && (
-            <button onClick={goBack} className="liquid-button flex-none px-5 py-3 text-sm font-semibold">← Назад</button>
+        <div className="px-5 pb-5 pt-3 border-t border-border/40 space-y-2">
+          {/* Discard row — only visible when there are unsaved changes */}
+          {hasChanges && (
+            <div className="flex justify-center">
+              <button
+                onClick={handleDiscard}
+                className="text-xs text-muted-foreground hover:text-destructive transition-colors underline underline-offset-2"
+              >
+                Сбросить изменения
+              </button>
+            </div>
           )}
-          <button
-            onClick={goNext}
-            disabled={submitting}
-            className={cn(
-              'flex-1 py-3 rounded-full text-sm font-bold tracking-widest uppercase transition-all',
-              step === STEPS.length - 1
-                ? 'bg-primary text-white shadow-lg hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60'
-                : 'liquid-button'
+          <div className="flex gap-3">
+            {step > 0 && (
+              <button onClick={goBack} className="liquid-button flex-none px-5 py-3 text-sm font-semibold">← Назад</button>
             )}
-          >
-            {step === STEPS.length - 1 ? (submitting ? 'Оформление...' : 'Оформить заказ →') : `Далее: ${STEPS[step + 1].label} →`}
-          </button>
+            <button
+              onClick={goNext}
+              disabled={submitting}
+              className={cn(
+                'flex-1 py-3 rounded-full text-sm font-bold tracking-widest uppercase transition-all',
+                step === STEPS.length - 1
+                  ? 'bg-primary text-white shadow-lg hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60'
+                  : 'liquid-button'
+              )}
+            >
+              {step === STEPS.length - 1 ? (submitting ? 'Оформление...' : 'Оформить заказ →') : `Далее: ${STEPS[step + 1].label} →`}
+            </button>
+          </div>
         </div>
       </div>
     </div>

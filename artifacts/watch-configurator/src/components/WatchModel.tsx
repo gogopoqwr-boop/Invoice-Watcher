@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import * as THREE from 'three';
@@ -26,7 +26,6 @@ function buildFaceShape(geom: string): THREE.Shape {
     }
     s.closePath();
   } else {
-    // drawn / pillow — super-rounded square
     const r = 0.65, w = 1.1;
     s.moveTo(-w + r, -w); s.lineTo(w - r, -w);
     s.quadraticCurveTo(w, -w, w, -w + r); s.lineTo(w, w - r);
@@ -48,14 +47,12 @@ function buildFaceTexture(faceColor: string, handsColor: string, text: string): 
   ctx.fillStyle = faceColor;
   ctx.fillRect(0, 0, S, S);
 
-  // subtle radial highlight
   const grad = ctx.createRadialGradient(S * 0.35, S * 0.3, 0, S / 2, S / 2, S * 0.55);
   grad.addColorStop(0, 'rgba(255,255,255,0.12)');
   grad.addColorStop(1, 'rgba(0,0,0,0.18)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, S, S);
 
-  // hour markers
   for (let i = 0; i < 12; i++) {
     const a = (i * Math.PI * 2) / 12 - Math.PI / 2;
     const rr = S * 0.41;
@@ -69,7 +66,6 @@ function buildFaceTexture(faceColor: string, handsColor: string, text: string): 
   }
   ctx.globalAlpha = 1;
 
-  // text lines
   const lines = (text ?? '').trim().toUpperCase().split('\n').filter(Boolean).slice(0, 4);
   if (lines.length > 0) {
     const maxLen = Math.max(...lines.map(l => l.length), 1);
@@ -88,7 +84,6 @@ function buildFaceTexture(faceColor: string, handsColor: string, text: string): 
     ctx.shadowBlur = 0;
   }
 
-  // center dot
   ctx.beginPath();
   ctx.arc(S / 2, S / 2, 6, 0, Math.PI * 2);
   ctx.fillStyle = handsColor;
@@ -124,7 +119,6 @@ function SolidStrap({ posY, color, mat }: { posY: number; color: string; mat: st
   const roughness = isLeather ? 0.92 : isFabric ? 0.88 : isResin ? 0.06 : 0.78;
 
   if (isFabric) {
-    // NATO strap — multiple thin layers
     return (
       <group position={[0, posY, 0]}>
         <mesh castShadow>
@@ -160,11 +154,11 @@ function SolidStrap({ posY, color, mat }: { posY: number; color: string; mat: st
 export function CameraRig({ step }: { step: number }) {
   const { camera } = useThree();
   const targets: [number, number, number][] = [
-    [0, 0.5, 9],   // 0 shape
-    [0, 0.5, 9],   // 1 material
-    [0, -3.5, 8],  // 2 bracelet — look down to see strap
-    [0, 0.5, 9],   // 3 color
-    [0, 0.5, 9],   // 4 details
+    [0, 0.5, 9],
+    [0, 0.5, 9],
+    [0, -3.5, 8],
+    [0, 0.5, 9],
+    [0, 0.5, 9],
   ];
   const pos = targets[Math.min(step, targets.length - 1)];
   const vec = useMemo(() => new THREE.Vector3(...pos), [step]);
@@ -178,30 +172,65 @@ export function CameraRig({ step }: { step: number }) {
 
 // ─── Main watch model ─────────────────────────────────────────────────────────
 
-export default function WatchModel({ step = 0 }: { step?: number }) {
+export interface WatchModelProps {
+  step?: number;
+  lastInteractionRef?: React.RefObject<number>;
+}
+
+export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelProps) {
   const { config } = useWatchConfig();
   const groupRef = useRef<THREE.Group>(null);
+  const prevStepRef = useRef(step);
+  // When set, lerp model rotation.y toward this target then stop
+  const faceSnapTargetRef = useRef<number | null>(null);
+  const INTERACTION_PAUSE_MS = 10_000;
 
-  // idle rotation
-  useFrame(() => {
-    if (groupRef.current) {
-      groupRef.current.rotation.y += 0.004;
+  // When entering the color step (3), snap front face toward camera
+  useEffect(() => {
+    if (step === 3 && prevStepRef.current !== 3 && groupRef.current) {
+      const curY = groupRef.current.rotation.y;
+      // nearest multiple of 2π = visually same as rotation 0 (face forward)
+      faceSnapTargetRef.current = Math.round(curY / (Math.PI * 2)) * Math.PI * 2;
+    } else if (step !== 3) {
+      faceSnapTargetRef.current = null;
     }
-  });
+    prevStepRef.current = step;
+  }, [step]);
 
-  // tilt toward viewer on bracelet step
   const { tiltX } = useSpring({
     tiltX: step === 2 ? 0.55 : 0,
     config: { mass: 1, tension: 110, friction: 22 },
   });
 
-  // strap spread on bracelet step
   const { spread } = useSpring({
     spread: step === 2 ? 0.5 : 0,
     config: { mass: 1, tension: 120, friction: 20 },
   });
 
-  // watchface body geometry
+  useFrame(() => {
+    if (!groupRef.current) return;
+
+    const userActive = lastInteractionRef?.current
+      ? Date.now() - lastInteractionRef.current < INTERACTION_PAUSE_MS
+      : false;
+
+    if (userActive) return; // user is in control — do nothing
+
+    if (faceSnapTargetRef.current !== null) {
+      // Smoothly snap to face-forward
+      const target = faceSnapTargetRef.current;
+      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, target, 0.06);
+      // Once close enough, lock it exactly and stop snapping
+      if (Math.abs(groupRef.current.rotation.y - target) < 0.001) {
+        groupRef.current.rotation.y = target;
+        faceSnapTargetRef.current = null; // done — keep still, user can take over
+      }
+    } else {
+      // Normal idle auto-rotation
+      groupRef.current.rotation.y += 0.004;
+    }
+  });
+
   const bodyGeo = useMemo(() => {
     const shape = buildFaceShape(config.watchfaceGeometry);
     return new THREE.ExtrudeGeometry(shape, {
@@ -213,19 +242,16 @@ export default function WatchModel({ step = 0 }: { step?: number }) {
     });
   }, [config.watchfaceGeometry]);
 
-  // watchface disc for face texture
   const discGeo = useMemo(() => {
     const shape = buildFaceShape(config.watchfaceGeometry);
     return new THREE.ShapeGeometry(shape, 72);
   }, [config.watchfaceGeometry]);
 
-  // crystal glass disc (same shape, separate geometry so no clone in render)
   const crystalGeo = useMemo(() => {
     const shape = buildFaceShape(config.watchfaceGeometry);
     return new THREE.ShapeGeometry(shape, 72);
   }, [config.watchfaceGeometry]);
 
-  // face texture
   const faceTexture = useMemo(
     () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceText ?? ''),
     [config.watchfaceColor, config.handsColor, config.watchfaceText]
@@ -243,45 +269,37 @@ export default function WatchModel({ step = 0 }: { step?: number }) {
   return (
     <animated.group ref={groupRef} rotation-x={tiltX}>
 
-      {/* Case body */}
       <mesh castShadow receiveShadow>
         <primitive object={bodyGeo} />
         <meshStandardMaterial {...caseMat} />
       </mesh>
 
-      {/* Face disc — textured */}
       <mesh position={[0, 0, 0.48]}>
         <primitive object={discGeo} />
         <meshStandardMaterial map={faceTexture} roughness={0.25} metalness={0.05} />
       </mesh>
 
-      {/* Crystal glass — subtle reflection */}
       <mesh position={[0, 0, 0.52]}>
         <primitive object={crystalGeo} />
         <meshStandardMaterial transparent opacity={0.16} metalness={0.0} roughness={0.0} color="#e0f0ff" />
       </mesh>
 
-      {/* Watch hands */}
       {config.handsEnabled && (
         <group position={[0, 0, 0.58]}>
-          {/* Hour */}
           <mesh rotation={[0, 0, Math.PI / 5]} castShadow>
             <boxGeometry args={[0.065, 0.8, 0.04]} />
             <meshStandardMaterial color={config.handsColor} metalness={0.92} roughness={0.08} />
           </mesh>
-          {/* Minute */}
           <mesh rotation={[0, 0, -Math.PI / 3.5]} castShadow>
             <boxGeometry args={[0.045, 1.1, 0.04]} />
             <meshStandardMaterial color={config.handsColor} metalness={0.92} roughness={0.08} />
           </mesh>
-          {/* Second (if 3 hands) */}
           {(config.handsCount ?? 3) >= 3 && (
             <mesh rotation={[0, 0, Math.PI * 0.75]} castShadow>
               <boxGeometry args={[0.028, 1.0, 0.04]} />
               <meshStandardMaterial color="#ef4444" metalness={0.7} roughness={0.2} />
             </mesh>
           )}
-          {/* Center cap */}
           <mesh>
             <cylinderGeometry args={[0.07, 0.07, 0.06, 16]} />
             <meshStandardMaterial color={config.handsColor} metalness={1} roughness={0.05} />
@@ -289,13 +307,11 @@ export default function WatchModel({ step = 0 }: { step?: number }) {
         </group>
       )}
 
-      {/* Crown button */}
       <mesh position={[1.68, 0, 0.05]} rotation={[0, 0, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[0.1, 0.1, 0.38, 16]} />
         <meshStandardMaterial {...caseMat} />
       </mesh>
 
-      {/* Lug connectors (bars between case and strap) */}
       {[1.78, -1.78].map((y) => (
         <mesh key={y} position={[0, y, 0.02]} castShadow>
           <boxGeometry args={[1.22, 0.2, 0.18]} />
@@ -303,7 +319,6 @@ export default function WatchModel({ step = 0 }: { step?: number }) {
         </mesh>
       ))}
 
-      {/* Top strap */}
       <animated.group position-z={spread}>
         {isSegmented
           ? <SegmentedStrap posY={3.3} color={config.braceletColor} />
@@ -311,7 +326,6 @@ export default function WatchModel({ step = 0 }: { step?: number }) {
         }
       </animated.group>
 
-      {/* Bottom strap */}
       <animated.group position-z={spread}>
         {isSegmented
           ? <SegmentedStrap posY={-3.3} color={config.braceletColor} />
