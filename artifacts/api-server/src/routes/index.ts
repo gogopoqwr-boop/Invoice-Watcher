@@ -6,6 +6,7 @@ import pricesRouter from "./prices";
 import ordersRouter from "./orders";
 import analyticsRouter from "./analytics";
 import authRouter from "./auth";
+import botRouter from "./bot";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(pricesRouter);
 router.use(ordersRouter);
 router.use(analyticsRouter);
 router.use(authRouter);
+router.use(botRouter);
 
 export default router;

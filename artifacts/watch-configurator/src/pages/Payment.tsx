@@ -13,7 +13,7 @@ export default function Payment() {
   } as any);
   const [copied, setCopied] = useState(false);
 
-  const botUsername = 'na_utrah_4_bot';
+  const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'bebebeabot';
   const deepLink = `tg://resolve?domain=${botUsername}&start=pay_${orderId}`;
   const webLink = `https://t.me/${botUsername}?start=pay_${orderId}`;
 

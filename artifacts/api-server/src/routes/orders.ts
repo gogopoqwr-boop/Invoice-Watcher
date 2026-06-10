@@ -2,6 +2,18 @@ import { Router } from "express";
 import { db, ordersTable, watchConfigsTable } from "@workspace/db";
 import { eq, desc, and, count, sql } from "drizzle-orm";
 
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
+const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
+
+async function callTelegram(method: string, body: object) {
+  const res = await fetch(`${TELEGRAM_API}/${method}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
 const router = Router();
 
 router.get("/orders", async (req, res) => {
@@ -131,12 +143,29 @@ router.post("/orders/:id/refund", async (req, res) => {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     const { refundComment } = req.body;
+
+    const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    let telegramRefundResult: unknown = null;
+    if (order.telegramPaymentChargeId && order.telegramId) {
+      try {
+        telegramRefundResult = await callTelegram("refundStarPayment", {
+          user_id: Number(order.telegramId),
+          telegram_payment_charge_id: order.telegramPaymentChargeId,
+        });
+        req.log.info({ orderId: id, telegramRefundResult }, "Telegram Stars refund issued");
+      } catch (telegramErr) {
+        req.log.error({ telegramErr, orderId: id }, "Failed to call refundStarPayment — continuing with DB update");
+      }
+    }
+
     const [updated] = await db.update(ordersTable)
       .set({ status: "cancelled", refundComment: refundComment ?? null, updatedAt: new Date() })
       .where(eq(ordersTable.id, id))
       .returning();
-    if (!updated) return res.status(404).json({ error: "Order not found" });
-    res.json(updated);
+
+    res.json({ ...updated, telegramRefundResult });
   } catch (err) {
     req.log.error({ err }, "Failed to refund order");
     res.status(500).json({ error: "Failed to refund order" });

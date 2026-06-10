@@ -1,0 +1,95 @@
+1. 3d chosen watchbox type opening animated in the invoice message
+2. Some animation after paying the invoice
+3. Redesign the broken-styled web site with 3d rendering of the watch for the user to see the watch and rotate it, while tweaking in right side
+4. Redesign the initial page layout, what does the user see when first on the web site???? Smth wow??  1. Че хоч? Выбор часы или мерч(coming soon) -> to creating the watches
+5. Redesign the overall go from getting to web site to paying and future visits: 1. Че хоч? Выбор часы или мерч(coming soon) -> presets and collections paginated grid < at left and > at right (can be skipped)-> to creating watches -> coloring the parts -> setting the box appearance -> payment 2. The whole way ui has back buttons and possibility to come back 1 or more steps back yet saving all the progress, a clickable progress line implementation with future steps disabled clickables 3. Payment effect when back from payment provider, saving email, telegram id and nickname, generating QR and alphanumeric receipt code for the admin (courier) to scan or input same printed on the box and on the watch back 
+6. Redesign payment system making it Liquid Glass?)))
+7. Sending payment receipt to email and in telegram bot as a gif of chosen watches in 3d (rotating watch in the box) and as a designed email
+Overall Liquid Glass design
+ so workflow: getting all the 3d completely personalized and then implement stars payment from website to bot via deep linking all designed the same way, with theme switcher and all glass clickables should have Liquid Glass animation by themselves and when hovered depending on mouse position  TOKEN 8576299379:AAGBEJeybVncfNS9aAV7psZAPzmqhpgCfnY for bot and @bebebeabot username
+ Watch creation
+
+1. Watchface (material, geometry, arrows, words/letters, )
+2. Bracelet (material, seg/sol)
+3. Serial number
+4. Hands added/removed
+
+Materials:
+watchface:
+Plastic
+Metal
+
+Bracelet(stripe):
+Plastic solid
+Plastic segmented
+Metal solid
+Metal segmented
+Resin
+Leather
+Cotton fabric
+
+Bracelet closing mechanism:
+
+
+Geometry:
+Square
+Circle
+Star
+Drawn geometry
+
+Coloring watch parts
+
+Coloring should be as integrated in Liquid Glass as possible
+
+I need the 3d model in left part to react when choosing it’s parts like the band, the watchface, the closing mechanism and turn the chosen part prespective and drag and rotate feature for the model
+
+Automatic preview right after I typed the letters and additional add the placing choice:
+Around the watch
+Centered (direction when looking on it from left or right wrist perspective) buttons to switch hands and corresponding animations of switching wrists
+
+The 3d model should change it’s appearance instantly on change in configuration (bracelet texture, background watchface, letters/numbers on watchface, their color etc)
+
+
+Adding custom watchface and background, putting skins on full watch and/or on stripe only (in coloring mode)
+
+Changing watchface and stripe length and width
+For watchface just show available sizes, for stripe as well
+
+All with Liquid Glass etc
+ 
+ 
+Future visits are to see my orders and having order progress of shipping or if presale then presale countdown and watches left, we want to make 1000 watches each costing depending on materials etc but for this time no more then 20 stars in telegram yet the price is dependent on materials etc
+
+ admin and courier panel:  admin creates couriers  admin has every order available and the user can also send cancel request and the admin can refund in admin panel, refund can be even without user cancellation, yet when refund confirmation there should be an input field for comment from admin can be left blank  cancellation should also have an input field for cancel explanation
+Sending order changes to bot, email 
+states controlled by assigned couriers and admin:
+Payment
+Cancelled
+Order processing (paid)
+Order shipping (paid)
+Order arrived (paid)
+
+Also there should be analytics: conversion rate, revenue, unique visitors, checkout starts, total orders, paid orders, cancel requests, graphs on all of this by time, seeing all the info about orders - emails, telegram id/username, watch configuration
+
+For admin and couriers there should be passwords and logging in at /login as for ordinary users
+
+Details:
+WATCH 3D MODEL and what it should be like:
+When choosing the watchface the watch should be facing the user, closed stripes,
+When choosing stripes, they should be shown apart from watches themselves
+When choosing closing mechanism they should turn and animate the closing mechanic for the user to choose
+
+Also all the choice buttons should be cards with 2d perspective image on what watches would look like and with inscriptions in the right Bottom corner explaining the change
+
+Changing the bracelet to segmented/solid/cotton fabric/resin should be visible changes in texture
+
+Serial number should be 1 to 1000 during the payments process and getting how many watches there were to show the number.
+
+Responsive:
+Phones:
+The settings for watches should be at bottom half
+The progress bar should be in the bottom as well  payment screen:
+The draggable watch 3d model and pay button deep link in telegram bot stars 
+
+And before going to make your own watch there would be shown a grid of presets like so: 
+￼
