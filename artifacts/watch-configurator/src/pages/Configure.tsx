@@ -1,4 +1,4 @@
-import React, { Suspense, useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { Suspense, useState, useMemo, useRef, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
@@ -114,7 +114,7 @@ function Watch3DView({ step, lastInteractionRef }: { step: number; lastInteracti
       <pointLight position={[5, -2, 3]} intensity={0.4} color="#f0f4ff" />
       <Suspense fallback={null}>
         <WatchModel step={step} lastInteractionRef={lastInteractionRef} />
-        <CameraRig step={step} />
+        <CameraRig step={step} lastInteractionRef={lastInteractionRef} />
         <Environment preset="city" />
         <ContactShadows position={[0, -5, 0]} opacity={0.25} scale={18} blur={2.5} far={8} />
       </Suspense>
@@ -138,6 +138,7 @@ export default function Configure() {
   const [, setLocation] = useLocation();
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [bagOpen, setBagOpen] = useState(false);
 
   // Capture config on first mount — used for discard
   const initialConfigRef = useRef<typeof config | null>(null);
@@ -246,6 +247,27 @@ export default function Configure() {
             <WatchSVG />
           </div>
         )}
+
+        {/* Bag icon — bottom-left shortcut to orders */}
+        <div className="absolute bottom-3 left-3 z-20 flex flex-col items-start">
+          <div
+            className="overflow-hidden transition-all duration-300 ease-in-out"
+            style={{ maxHeight: bagOpen ? '80px' : '0px', opacity: bagOpen ? 1 : 0 }}
+          >
+            <Link href="/orders">
+              <button className="liquid-button mb-2 px-3 py-2 text-xs font-semibold whitespace-nowrap">
+                📦 Мои заказы
+              </button>
+            </Link>
+          </div>
+          <button
+            onClick={() => setBagOpen(o => !o)}
+            className="liquid-button w-10 h-10 flex items-center justify-center text-base transition-transform hover:scale-110 active:scale-95"
+            title="Мои заказы"
+          >
+            🛍️
+          </button>
+        </div>
       </div>
 
       {/* Right — Step Panel */}

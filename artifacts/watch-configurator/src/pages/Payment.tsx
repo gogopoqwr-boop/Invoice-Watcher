@@ -1,8 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useLocation } from 'wouter';
+import { useParams, useLocation, Link } from 'wouter';
 import { QRCodeSVG } from 'qrcode.react';
 import { useGetOrder } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
+
+const PAYMENT_WINDOW_MS = 20 * 60 * 1000; // 20 minutes
+
+function formatCountdown(ms: number): string {
+  if (ms <= 0) return '0:00';
+  const totalSecs = Math.floor(ms / 1000);
+  const m = Math.floor(totalSecs / 60);
+  const s = totalSecs % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
 
 export default function Payment() {
   const params = useParams();
@@ -12,17 +22,32 @@ export default function Payment() {
     query: { enabled: !!orderId, refetchInterval: 3000 },
   } as any);
   const [copied, setCopied] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'bebebeabot';
   const deepLink = `tg://resolve?domain=${botUsername}&start=pay_${orderId}`;
   const webLink = `https://t.me/${botUsername}?start=pay_${orderId}`;
 
-  // Redirect when payment is confirmed (status moves from payment_pending)
+  // Redirect when payment is confirmed
   useEffect(() => {
     if (order?.status && order.status !== 'payment_pending' && order.status !== 'cancelled') {
       setTimeout(() => setLocation('/orders'), 2000);
     }
   }, [order?.status, setLocation]);
+
+  // 20-minute countdown from order creation
+  useEffect(() => {
+    if (!order?.createdAt) return;
+    const deadline = new Date(order.createdAt).getTime() + PAYMENT_WINDOW_MS;
+
+    const tick = () => {
+      const remaining = deadline - Date.now();
+      setTimeLeft(remaining > 0 ? remaining : 0);
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [order?.createdAt]);
 
   const handleCopy = async () => {
     try {
@@ -44,19 +69,29 @@ export default function Payment() {
     return (
       <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center gap-4 p-4">
         <p className="text-muted-foreground">Заказ не найден</p>
-        <button onClick={() => setLocation('/configure')} className="liquid-button px-6 py-3 text-sm font-semibold">
-          Вернуться к настройке
-        </button>
+        <Link href="/configure">
+          <button className="liquid-button px-6 py-3 text-sm font-semibold">
+            Вернуться к настройке
+          </button>
+        </Link>
       </div>
     );
   }
 
   const isPaid = order.status !== 'payment_pending' && order.status !== 'cancelled';
+  const expired = timeLeft === 0;
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-4">
 
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-blue-100/50 blur-[100px] pointer-events-none" />
+
+      {/* Back to configure */}
+      <div className="absolute top-4 left-4">
+        <Link href="/configure">
+          <button className="liquid-button px-3 py-1.5 text-xs font-semibold">← К настройке</button>
+        </Link>
+      </div>
 
       <div className="liquid-glass rounded-3xl p-8 max-w-sm w-full flex flex-col items-center text-center relative z-10 gap-5">
 
@@ -65,6 +100,17 @@ export default function Payment() {
             <div className="text-5xl">✅</div>
             <h1 className="text-2xl font-bold">Оплачено!</h1>
             <p className="text-muted-foreground text-sm">Перенаправляем в мои заказы…</p>
+          </>
+        ) : expired ? (
+          <>
+            <div className="text-5xl">⏰</div>
+            <h1 className="text-2xl font-bold">Время истекло</h1>
+            <p className="text-muted-foreground text-sm">Окно оплаты закрылось. Создайте новый заказ.</p>
+            <Link href="/configure" className="w-full">
+              <button className="w-full bg-primary text-white rounded-full py-3.5 font-bold text-sm tracking-widest uppercase shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all">
+                Настроить заново
+              </button>
+            </Link>
           </>
         ) : (
           <>
@@ -92,9 +138,19 @@ export default function Payment() {
               {copied ? '✓ Скопировано!' : 'Скопировать ссылку'}
             </button>
 
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              Ожидание оплаты…
+            <div className="flex items-center justify-between w-full text-xs">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                Ожидание оплаты…
+              </div>
+              {timeLeft !== null && (
+                <span className={cn(
+                  'font-mono font-bold tabular-nums',
+                  timeLeft < 60_000 ? 'text-red-500' : timeLeft < 5 * 60_000 ? 'text-amber-500' : 'text-muted-foreground'
+                )}>
+                  {formatCountdown(timeLeft)}
+                </span>
+              )}
             </div>
           </>
         )}

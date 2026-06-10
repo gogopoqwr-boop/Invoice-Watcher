@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 const STATUS_LABELS: Record<string, string> = {
   payment_pending: "Ожидает оплаты",
   paid: "Оплачен",
+  cancel_requested: "Запрос отмены",
   processing: "В производстве",
   shipping: "Отправлен",
   arrived: "Доставлен",
@@ -20,6 +21,7 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   payment_pending: "text-amber-600 bg-amber-50 border-amber-200",
   paid: "text-emerald-600 bg-emerald-50 border-emerald-200",
+  cancel_requested: "text-orange-600 bg-orange-50 border-orange-200",
   processing: "text-blue-600 bg-blue-50 border-blue-200",
   shipping: "text-violet-600 bg-violet-50 border-violet-200",
   arrived: "text-emerald-700 bg-emerald-100 border-emerald-300",
@@ -29,6 +31,7 @@ const STATUS_COLORS: Record<string, string> = {
 const NEXT_STATUSES: Record<string, string> = {
   payment_pending: "processing",
   paid: "processing",
+  cancel_requested: "cancelled",
   processing: "shipping",
   shipping: "arrived",
 };
@@ -81,7 +84,6 @@ export default function Admin() {
   const [refundingId, setRefundingId] = useState<number | null>(null);
   const [refundMsg, setRefundMsg] = useState<Record<number, { ok: boolean; msg: string }>>({});
 
-  // Bot tab state
   const [webhookInfo, setWebhookInfo] = useState<any>(null);
   const [webhookLoading, setWebhookLoading] = useState(false);
   const [customWebhookUrl, setCustomWebhookUrl] = useState("");
@@ -121,23 +123,16 @@ export default function Admin() {
 
   const handleLoadWebhookInfo = async () => {
     setWebhookLoading(true);
-    try {
-      const info = await fetchWebhookInfo();
-      setWebhookInfo(info);
-    } finally {
-      setWebhookLoading(false);
-    }
+    try { setWebhookInfo(await fetchWebhookInfo()); }
+    finally { setWebhookLoading(false); }
   };
 
   const handleRegisterWebhook = async (url: string) => {
     setWebhookLoading(true);
     try {
-      const result = await registerWebhook(url);
-      setWebhookRegResult(result);
+      setWebhookRegResult(await registerWebhook(url));
       await handleLoadWebhookInfo();
-    } finally {
-      setWebhookLoading(false);
-    }
+    } finally { setWebhookLoading(false); }
   };
 
   if (!user) {
@@ -151,12 +146,14 @@ export default function Admin() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "orders", label: "Заказы" },
-    ...(user.role === "admin" ? [{ id: "analytics" as Tab, label: "Аналитика" }, { id: "bot" as Tab, label: "Бот" }] : []),
+    ...(user.role === "admin" ? [
+      { id: "analytics" as Tab, label: "Аналитика" },
+      { id: "bot" as Tab, label: "Бот" },
+    ] : []),
   ];
 
   return (
     <div className="min-h-[100dvh] bg-background">
-      {/* Header */}
       <div className="border-b border-border px-6 py-4 flex items-center justify-between bg-white/60 backdrop-blur-md">
         <div>
           <h1 className="text-lg font-bold tracking-tight">Панель управления</h1>
@@ -178,7 +175,6 @@ export default function Admin() {
       </div>
 
       <div className="max-w-6xl mx-auto p-6">
-        {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-black/5 rounded-full p-1 w-fit">
           {tabs.map((t) => (
             <button
@@ -198,11 +194,11 @@ export default function Admin() {
         {tab === "orders" && (
           <div className="space-y-4">
             <div className="flex gap-2 flex-wrap">
-              {["", "payment_pending", "paid", "processing", "shipping", "arrived", "cancelled"].map((s) => (
+              {["", "payment_pending", "paid", "cancel_requested", "processing", "shipping", "arrived", "cancelled"].map((s) => (
                 <button
                   key={s}
                   onClick={() => { setStatusFilter(s); setPage(1); }}
-                  className={cn("option-btn", statusFilter === s && "active")}
+                  className={cn("option-btn text-xs", statusFilter === s && "active")}
                 >
                   {s ? STATUS_LABELS[s] : "Все"}
                 </button>
@@ -219,9 +215,15 @@ export default function Admin() {
               <>
                 <div className="space-y-3">
                   {orders.map((order) => (
-                    <div key={order.id} className="liquid-glass rounded-2xl p-4">
+                    <div
+                      key={order.id}
+                      className={cn(
+                        "liquid-glass rounded-2xl p-4",
+                        order.status === "cancel_requested" && "ring-2 ring-orange-300"
+                      )}
+                    >
                       <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
-                        {/* Left: order info */}
+                        {/* Left: info */}
                         <div className="flex flex-col gap-1.5">
                           <div className="flex items-center gap-3 flex-wrap">
                             <span className="font-bold text-sm font-mono">#{order.id}</span>
@@ -231,7 +233,6 @@ export default function Admin() {
                             <span className="text-primary font-bold text-sm">{order.totalStars} ⭐</span>
                           </div>
 
-                          {/* Telegram user info */}
                           {(order.telegramUsername || order.telegramId) && (
                             <div className="flex items-center gap-2 flex-wrap">
                               {order.telegramUsername && (
@@ -245,9 +246,7 @@ export default function Admin() {
                                 </a>
                               )}
                               {order.telegramId && (
-                                <span className="text-xs text-muted-foreground font-mono">
-                                  ID: {order.telegramId}
-                                </span>
+                                <span className="text-xs text-muted-foreground font-mono">ID: {order.telegramId}</span>
                               )}
                             </div>
                           )}
@@ -255,22 +254,34 @@ export default function Admin() {
                           <span className="text-xs text-muted-foreground font-mono">
                             session: {String(order.sessionId ?? "").slice(0, 8)}…
                           </span>
+
+                          {order.cancelComment && (
+                            <span className="text-xs text-orange-600 italic">"{order.cancelComment}"</span>
+                          )}
                         </div>
 
                         {/* Right: actions */}
                         <div className="flex items-center gap-2 flex-wrap">
+                          {/* Advance status */}
                           {NEXT_STATUSES[order.status] && (
                             <button
                               onClick={() => handleStatusUpdate(order.id, NEXT_STATUSES[order.status])}
                               disabled={updateStatus.isPending || refundingId === order.id}
-                              className="px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-bold hover:bg-primary/20 transition-colors whitespace-nowrap disabled:opacity-50"
+                              className={cn(
+                                "px-3 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap disabled:opacity-50",
+                                order.status === "cancel_requested"
+                                  ? "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
+                                  : "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20"
+                              )}
                             >
-                              → {STATUS_LABELS[NEXT_STATUSES[order.status]]}
+                              {order.status === "cancel_requested"
+                                ? "✓ Одобрить отмену"
+                                : `→ ${STATUS_LABELS[NEXT_STATUSES[order.status]]}`}
                             </button>
                           )}
 
-                          {/* Cancel: for paid orders also triggers refund */}
-                          {order.status !== "cancelled" && order.status !== "arrived" && (
+                          {/* Cancel button for non-terminal orders */}
+                          {order.status !== "cancelled" && order.status !== "arrived" && order.status !== "cancel_requested" && (
                             <button
                               onClick={() =>
                                 order.telegramPaymentChargeId
@@ -288,21 +299,22 @@ export default function Admin() {
                             </button>
                           )}
 
-                          {/* Manual refund retry (already cancelled, has charge id, no message yet) */}
-                          {order.status === "cancelled" && order.telegramPaymentChargeId && !refundMsg[order.id] && (
-                            <button
-                              onClick={() => handleRefund(order.id)}
-                              disabled={refundingId === order.id}
-                              className="px-3 py-1.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-xs font-bold hover:bg-amber-100 transition-colors disabled:opacity-50"
-                            >
-                              {refundingId === order.id ? "…" : "Рефанд ⭐"}
-                            </button>
-                          )}
-
-                          {refundMsg[order.id] && (
-                            <span className={cn("text-xs font-medium", refundMsg[order.id].ok ? "text-emerald-600" : "text-red-500")}>
-                              {refundMsg[order.id].msg}
-                            </span>
+                          {/* ALWAYS show refund button if charge ID exists and order is not arrived */}
+                          {order.telegramPaymentChargeId && order.status !== "arrived" && (
+                            <div className="flex flex-col items-end gap-1">
+                              <button
+                                onClick={() => handleRefund(order.id)}
+                                disabled={refundingId === order.id}
+                                className="px-3 py-1.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-xs font-bold hover:bg-amber-100 transition-colors disabled:opacity-50"
+                              >
+                                {refundingId === order.id ? "…" : "Рефанд ⭐"}
+                              </button>
+                              {refundMsg[order.id] && (
+                                <span className={cn("text-xs font-medium", refundMsg[order.id].ok ? "text-emerald-600" : "text-red-500")}>
+                                  {refundMsg[order.id].msg}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -397,8 +409,7 @@ export default function Admin() {
           <div className="space-y-4 max-w-xl">
             <div className="liquid-glass rounded-2xl p-5 space-y-4">
               <h2 className="font-bold text-sm tracking-widest">Вебхук Telegram бота</h2>
-
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={handleLoadWebhookInfo}
                   disabled={webhookLoading}

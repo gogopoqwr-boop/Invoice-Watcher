@@ -31,6 +31,12 @@ export default function Home() {
         </button>
       </div>
 
+      <Link href="/orders" className="z-10 mt-5">
+        <button className="liquid-button px-7 py-2.5 text-sm font-semibold tracking-widest">
+          Мои заказы
+        </button>
+      </Link>
+
       <p className="z-10 mt-6 text-xs text-muted-foreground/50 tracking-widest uppercase">
         at dawn · version 4
       </p>

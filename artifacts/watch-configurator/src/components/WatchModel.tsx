@@ -151,7 +151,12 @@ function SolidStrap({ posY, color, mat }: { posY: number; color: string; mat: st
 
 // ─── Camera controller ────────────────────────────────────────────────────────
 
-export function CameraRig({ step }: { step: number }) {
+const INTERACTION_PAUSE_MS = 10_000;
+
+export function CameraRig({ step, lastInteractionRef }: {
+  step: number;
+  lastInteractionRef?: React.RefObject<number>;
+}) {
   const { camera } = useThree();
   const targets: [number, number, number][] = [
     [0, 0.5, 9],
@@ -164,6 +169,12 @@ export function CameraRig({ step }: { step: number }) {
   const vec = useMemo(() => new THREE.Vector3(...pos), [step]);
 
   useFrame(() => {
+    // During user interaction: hands off — let OrbitControls own the camera fully
+    const userActive = lastInteractionRef?.current
+      ? Date.now() - lastInteractionRef.current < INTERACTION_PAUSE_MS
+      : false;
+    if (userActive) return;
+
     camera.position.lerp(vec, 0.05);
     camera.lookAt(0, 0, 0);
   });
@@ -181,15 +192,12 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
   const { config } = useWatchConfig();
   const groupRef = useRef<THREE.Group>(null);
   const prevStepRef = useRef(step);
-  // When set, lerp model rotation.y toward this target then stop
   const faceSnapTargetRef = useRef<number | null>(null);
-  const INTERACTION_PAUSE_MS = 10_000;
 
   // When entering the color step (3), snap front face toward camera
   useEffect(() => {
     if (step === 3 && prevStepRef.current !== 3 && groupRef.current) {
       const curY = groupRef.current.rotation.y;
-      // nearest multiple of 2π = visually same as rotation 0 (face forward)
       faceSnapTargetRef.current = Math.round(curY / (Math.PI * 2)) * Math.PI * 2;
     } else if (step !== 3) {
       faceSnapTargetRef.current = null;
@@ -210,20 +218,19 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
   useFrame(() => {
     if (!groupRef.current) return;
 
+    // During user interaction: do nothing — user owns the model rotation too
     const userActive = lastInteractionRef?.current
       ? Date.now() - lastInteractionRef.current < INTERACTION_PAUSE_MS
       : false;
-
-    if (userActive) return; // user is in control — do nothing
+    if (userActive) return;
 
     if (faceSnapTargetRef.current !== null) {
       // Smoothly snap to face-forward
       const target = faceSnapTargetRef.current;
       groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, target, 0.06);
-      // Once close enough, lock it exactly and stop snapping
       if (Math.abs(groupRef.current.rotation.y - target) < 0.001) {
         groupRef.current.rotation.y = target;
-        faceSnapTargetRef.current = null; // done — keep still, user can take over
+        faceSnapTargetRef.current = null;
       }
     } else {
       // Normal idle auto-rotation

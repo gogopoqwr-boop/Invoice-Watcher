@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 const STATUS_LABELS: Record<string, string> = {
   payment_pending: 'Ожидает оплаты',
   paid: 'Оплачен',
+  cancel_requested: 'Отмена на рассмотрении',
   processing: 'В производстве',
   shipping: 'Отправлен',
   arrived: 'Доставлен',
@@ -17,23 +18,55 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   payment_pending: 'text-amber-600 bg-amber-50 border-amber-200',
   paid: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+  cancel_requested: 'text-orange-600 bg-orange-50 border-orange-200',
   processing: 'text-blue-600 bg-blue-50 border-blue-200',
   shipping: 'text-violet-600 bg-violet-50 border-violet-200',
   arrived: 'text-emerald-700 bg-emerald-100 border-emerald-300',
   cancelled: 'text-red-600 bg-red-50 border-red-200',
 };
 
-async function cancelAndRefund(orderId: number): Promise<{ ok: boolean; msg: string }> {
+async function requestCancel(orderId: number): Promise<{ ok: boolean; msg: string }> {
   try {
     const jwt = localStorage.getItem("jwt") ?? "";
     const headers = { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` };
+    // payment_pending: free cancel
+    // paid/processing: request cancellation (admin reviews)
+    const res = await fetch(`/api/orders/${orderId}/status`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ status: "cancel_requested" }),
+    });
+    if (!res.ok) throw new Error();
+    return { ok: true, msg: "Запрос отправлен" };
+  } catch {
+    return { ok: false, msg: "Ошибка сети" };
+  }
+}
 
+async function cancelFree(orderId: number): Promise<{ ok: boolean; msg: string }> {
+  try {
+    const jwt = localStorage.getItem("jwt") ?? "";
+    const res = await fetch(`/api/orders/${orderId}/cancel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
+      body: JSON.stringify({ cancelComment: "Отменён пользователем" }),
+    });
+    if (!res.ok) throw new Error();
+    return { ok: true, msg: "Отменён" };
+  } catch {
+    return { ok: false, msg: "Ошибка сети" };
+  }
+}
+
+async function adminCancelRefund(orderId: number): Promise<{ ok: boolean; msg: string }> {
+  try {
+    const jwt = localStorage.getItem("jwt") ?? "";
+    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` };
     await fetch(`/api/orders/${orderId}/status`, {
       method: "PATCH",
       headers,
       body: JSON.stringify({ status: "cancelled" }),
     });
-
     const refundRes = await fetch(`/api/orders/${orderId}/refund`, {
       method: "POST",
       headers,
@@ -57,16 +90,16 @@ export default function Orders() {
   const { user } = useAuth();
   const { data: orders, isLoading, refetch } = useGetMyOrders({ sessionId }, { query: { enabled: !!sessionId } } as any);
 
-  const [cancellingId, setCancellingId] = useState<number | null>(null);
-  const [cancelMsg, setCancelMsg] = useState<Record<number, { ok: boolean; msg: string }>>({});
+  const [actionId, setActionId] = useState<number | null>(null);
+  const [msgs, setMsgs] = useState<Record<number, { ok: boolean; msg: string }>>({});
 
   const isAdmin = user?.role === "admin";
 
-  const handleCancelAndRefund = async (orderId: number) => {
-    setCancellingId(orderId);
-    const result = await cancelAndRefund(orderId);
-    setCancelMsg(prev => ({ ...prev, [orderId]: result }));
-    setCancellingId(null);
+  const handleAction = async (orderId: number, action: () => Promise<{ ok: boolean; msg: string }>) => {
+    setActionId(orderId);
+    const result = await action();
+    setMsgs(prev => ({ ...prev, [orderId]: result }));
+    setActionId(null);
     refetch();
   };
 
@@ -113,7 +146,8 @@ export default function Orders() {
                     <p className="text-xl font-bold text-primary">{order.totalStars} ⭐</p>
                   </div>
 
-                  <div className="flex flex-col items-end gap-2">
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    {/* Pay button for pending */}
                     {order.status === 'payment_pending' && (
                       <Link href={`/payment/${order.id}`}>
                         <button className="bg-primary text-white rounded-full px-4 py-2 text-xs font-bold tracking-widest hover:bg-primary/90 transition-all whitespace-nowrap">
@@ -122,26 +156,42 @@ export default function Orders() {
                       </Link>
                     )}
 
-                    {/* Admin-only cancel+refund button */}
+                    {/* Admin: cancel + refund */}
                     {isAdmin && order.status !== 'cancelled' && order.status !== 'arrived' && (
-                      <div className="flex flex-col items-end gap-1">
-                        <button
-                          onClick={() => handleCancelAndRefund(order.id)}
-                          disabled={cancellingId === order.id}
-                          className="px-3 py-1.5 bg-red-50 text-red-500 border border-red-100 rounded-full text-xs font-bold hover:bg-red-100 transition-colors disabled:opacity-50 whitespace-nowrap"
-                        >
-                          {cancellingId === order.id
-                            ? "…"
-                            : order.telegramPaymentChargeId
-                            ? "Отмена + Возврат ⭐"
-                            : "Отменить"}
-                        </button>
-                        {cancelMsg[order.id] && (
-                          <span className={cn("text-xs font-medium", cancelMsg[order.id].ok ? "text-emerald-600" : "text-red-500")}>
-                            {cancelMsg[order.id].msg}
-                          </span>
-                        )}
-                      </div>
+                      <button
+                        onClick={() => handleAction(order.id, () => adminCancelRefund(order.id))}
+                        disabled={actionId === order.id}
+                        className="px-3 py-1.5 bg-red-50 text-red-500 border border-red-100 rounded-full text-xs font-bold hover:bg-red-100 transition-colors disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {actionId === order.id ? '…' : order.telegramPaymentChargeId ? 'Отмена + Возврат ⭐' : 'Отменить'}
+                      </button>
+                    )}
+
+                    {/* User (non-admin): request cancellation */}
+                    {!isAdmin && order.status === 'payment_pending' && (
+                      <button
+                        onClick={() => handleAction(order.id, () => cancelFree(order.id))}
+                        disabled={actionId === order.id}
+                        className="px-3 py-1.5 bg-red-50 text-red-500 border border-red-100 rounded-full text-xs font-bold hover:bg-red-100 transition-colors disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {actionId === order.id ? '…' : 'Отменить'}
+                      </button>
+                    )}
+
+                    {!isAdmin && (order.status === 'paid' || order.status === 'processing') && (
+                      <button
+                        onClick={() => handleAction(order.id, () => requestCancel(order.id))}
+                        disabled={actionId === order.id}
+                        className="px-3 py-1.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-full text-xs font-bold hover:bg-orange-100 transition-colors disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {actionId === order.id ? '…' : 'Запросить отмену'}
+                      </button>
+                    )}
+
+                    {msgs[order.id] && (
+                      <span className={cn('text-xs font-medium', msgs[order.id].ok ? 'text-emerald-600' : 'text-red-500')}>
+                        {msgs[order.id].msg}
+                      </span>
                     )}
                   </div>
                 </div>
