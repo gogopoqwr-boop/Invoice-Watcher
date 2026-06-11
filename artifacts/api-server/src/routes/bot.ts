@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, ordersTable, watchConfigsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -29,6 +29,14 @@ async function callTelegram(method: string, body: object) {
     body: JSON.stringify(body),
   });
   return res.json();
+}
+
+async function deleteMessage(chatId: number | string, messageId: number) {
+  try {
+    await callTelegram("deleteMessage", { chat_id: chatId, message_id: messageId });
+  } catch {
+    // best-effort
+  }
 }
 
 async function sendWatchInvoice(chatId: number | string, orderId: number) {
@@ -77,14 +85,25 @@ async function sendWatchInvoice(chatId: number | string, orderId: number) {
       ].filter(Boolean).join("\n")
     : "Кастомные часы";
 
-  await callTelegram("sendInvoice", {
+  const result = await callTelegram("sendInvoice", {
     chat_id: chatId,
-    title: `⌚ Заказ #${orderId} — На Утрах`,
+    title: `⌚ Заказ #${orderId} — Чеблячас`,
     description: configLines,
     payload: JSON.stringify({ orderId }),
     currency: "XTR",
     prices: [{ label: "Итого", amount: order.totalStars }],
   });
+
+  // Store invoice message_id so we can delete it after payment
+  if (result?.result?.message_id) {
+    try {
+      await db.update(ordersTable)
+        .set({ telegramInvoiceMessageId: result.result.message_id })
+        .where(eq(ordersTable.id, orderId));
+    } catch {
+      // non-fatal
+    }
+  }
 }
 
 async function sendPaymentReceipt(chatId: string | number, orderId: number, order: any, config: any) {
@@ -123,7 +142,6 @@ async function sendPaymentReceipt(chatId: string | number, orderId: number, orde
   await callTelegram("sendMessage", msg);
 }
 
-// Exported so orders.ts can call it for status notifications
 export async function sendStatusNotification(telegramId: string, orderId: number, status: string, trackingCode?: string) {
   if (!BOT_TOKEN || !telegramId) return;
 
@@ -208,7 +226,7 @@ router.post("/bot/webhook", async (req, res) => {
           const siteUrl = getWebsiteBaseUrl();
           const startMsg: Record<string, unknown> = {
             chat_id: chatId,
-            text: "⌚ *Привет! Это бот На Утрах.*\n\nЗдесь вы можете оплатить заказ часов звёздами Telegram.\n\nСоздайте свои уникальные часы на сайте!",
+            text: "⌚ *Привет! Это бот Чеблячас.*\n\nЗдесь вы можете оплатить заказ часов звёздами Telegram.\n\nСоздайте свои уникальные часы на сайте!",
             parse_mode: "Markdown",
           };
           if (siteUrl) {
@@ -245,6 +263,7 @@ router.post("/bot/webhook", async (req, res) => {
       const telegramId = String(update.message.from?.id ?? "");
       const telegramUsername = update.message.from?.username ?? null;
       const chargeId: string = payment.telegram_payment_charge_id ?? "";
+      const chatId = update.message.chat.id;
 
       if (!orderId) {
         req.log.error({ payload }, "successful_payment: orderId missing from payload");
@@ -255,11 +274,27 @@ router.post("/bot/webhook", async (req, res) => {
 
       if (existing?.status === "paid") {
         req.log.warn({ orderId, chargeId }, "Duplicate payment for already-paid order");
+
+        // Record the duplicate charge ID for admin review
+        const existingDuplicates = existing.duplicateChargeIds
+          ? existing.duplicateChargeIds.split(",")
+          : [];
+        const newDuplicates = [...existingDuplicates, chargeId].join(",");
+        await db.update(ordersTable)
+          .set({ duplicateChargeIds: newDuplicates, updatedAt: new Date() })
+          .where(eq(ordersTable.id, orderId));
+
         await callTelegram("sendMessage", {
-          chat_id: update.message.chat.id,
-          text: `Заказ #${orderId} уже подтверждён. Если вы были списаны повторно — обратитесь в поддержку. ID транзакции: ${chargeId}`,
+          chat_id: chatId,
+          text: `⚠️ *Заказ #${orderId}* уже был оплачен ранее.\n\nID транзакции: \`${chargeId}\`\n\nЭта транзакция записана и будет проверена. Если вы были списаны повторно — обратитесь в поддержку с этим ID.`,
+          parse_mode: "Markdown",
         });
         return;
+      }
+
+      // Delete the invoice message now that it's been paid (prevents re-tapping)
+      if (existing?.telegramInvoiceMessageId) {
+        await deleteMessage(chatId, existing.telegramInvoiceMessageId);
       }
 
       await db.update(ordersTable)
@@ -274,14 +309,13 @@ router.post("/bot/webhook", async (req, res) => {
 
       req.log.info({ orderId, chargeId, telegramId }, "Order marked as paid");
 
-      // Fetch config for receipt
       const [updatedOrder] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId));
       const [config] = updatedOrder?.configId
         ? await db.select().from(watchConfigsTable).where(eq(watchConfigsTable.id, updatedOrder.configId))
         : [null];
 
       try {
-        await sendPaymentReceipt(update.message.chat.id, orderId, updatedOrder ?? existing, config ?? null);
+        await sendPaymentReceipt(chatId, orderId, updatedOrder ?? existing, config ?? null);
       } catch (err) {
         req.log.error({ err, orderId }, "Failed to send payment receipt — continuing");
       }

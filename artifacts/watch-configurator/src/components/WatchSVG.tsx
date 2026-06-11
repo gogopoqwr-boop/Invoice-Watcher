@@ -1,7 +1,6 @@
 import React from 'react';
 import { useWatchConfig, ExtendedConfigState } from '@/hooks/use-watch-config';
 
-// Generate star polygon points (5-pointed by default)
 function starPoints(cx: number, cy: number, outerR: number, innerR: number, n = 5): string {
   const pts: string[] = [];
   for (let i = 0; i < n * 2; i++) {
@@ -10,11 +9,6 @@ function starPoints(cx: number, cy: number, outerR: number, innerR: number, n = 
     pts.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`);
   }
   return pts.join(' ');
-}
-
-// Get clip path shape id based on geometry
-function getGeometryClipId(geometry: string) {
-  return `face-clip-${geometry}`;
 }
 
 interface WatchSVGProps {
@@ -35,6 +29,7 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
   const handsEnabled = config.handsEnabled !== false;
   const handsCount = config.handsCount ?? 3;
   const watchfaceText = config.watchfaceText ?? '';
+  const watchfaceTextMode = config.watchfaceTextMode ?? 'center';
   const bgType = config.watchfaceBackgroundType ?? 'solid';
   const gradEnd = config.watchfaceGradientEnd ?? '#0f172a';
   const braceletMat = config.braceletMaterial ?? 'metal_solid';
@@ -42,10 +37,8 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
   const faceActive = !mini && activePart === 'watchFace';
   const strapActive = !mini && activePart === 'strap';
 
-  // Watch face geometry
   const cx = 60, cy = 100, faceR = 44;
 
-  // Face shape path/element
   const FaceShape = ({ fill, stroke, strokeWidth, opacity, ...rest }: any) => {
     if (geo === 'circle') {
       return <circle cx={cx} cy={cy} r={faceR} fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity} {...rest} />;
@@ -55,12 +48,11 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
       return <polygon points={starPoints(cx, cy, faceR, faceR * 0.44)} fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity} {...rest} />;
     } else if (geo === 'drawn') {
       return <rect x={cx - faceR} y={cy - faceR} width={faceR * 2} height={faceR * 2} rx="22" fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity} {...rest} />;
-    } else { // tonneau
+    } else {
       return <rect x={cx - faceR} y={cy - faceR * 0.85} width={faceR * 2} height={faceR * 1.7} rx="30" fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity} {...rest} />;
     }
   };
 
-  // Clip path for face interior
   const clipId = `clip-${geo}-${mini ? 'mini' : 'full'}`;
   const ClipShape = () => {
     if (geo === 'circle') return <circle cx={cx} cy={cy} r={faceR - 2} />;
@@ -70,11 +62,10 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
     return <rect x={cx - faceR + 2} y={cy - faceR * 0.85 + 2} width={(faceR - 2) * 2} height={faceR * 1.7 - 4} rx="28" />;
   };
 
-  // Bracelet pattern defs
   const meshPatternId = `mesh-${mini ? 'm' : 'f'}`;
   const linkPatternId = `link-${mini ? 'm' : 'f'}`;
+  const circTextPathId = `circ-${mini ? 'm' : 'f'}`;
 
-  // Bracelet visual: returns strap fill + extra pattern overlay
   const strapFill = strapColor;
   const showMesh = braceletMat === 'metal_segmented';
   const showLinks = braceletMat === 'metal_solid';
@@ -82,14 +73,64 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
   const showNato = braceletMat === 'cotton_fabric';
   const showRubber = braceletMat === 'plastic_solid' || braceletMat === 'resin' || braceletMat === 'plastic_segmented';
 
-  // Strap dimensions
   const strapW = showNato ? 28 : showRubber ? 26 : 24;
   const strapX = cx - strapW / 2;
 
-  // Text layout: split by newline, max 3 lines
   const textLines = watchfaceText.split('\n').slice(0, 4);
 
   const gradId = `bg-grad-${mini ? 'm' : 'f'}`;
+
+  // Circular text path: full circle at r=33
+  const circR = 33;
+  const circTextPath = `M ${cx},${cy - circR} A ${circR},${circR} 0 1,1 ${cx - 0.001},${cy - circR}`;
+
+  const renderWatchfaceText = () => {
+    if (!watchfaceText || textLines.length === 0) return null;
+
+    if (watchfaceTextMode === 'circular') {
+      // Render first line of text circularly around the face
+      const circText = watchfaceText.replace(/\n/g, ' · ').toUpperCase();
+      const fontSize = mini ? 4 : 5;
+      return (
+        <>
+          <defs>
+            <path id={circTextPathId} d={circTextPath} fill="none" />
+          </defs>
+          <text fontSize={fontSize} fontFamily="system-ui, sans-serif" fontWeight="700" fill={handsColor} opacity="0.85" letterSpacing="0.12em">
+            <textPath href={`#${circTextPathId}`} startOffset="50%" textAnchor="middle">
+              {circText}
+            </textPath>
+          </text>
+        </>
+      );
+    }
+
+    // Center mode
+    const lineH = Math.min(10, 34 / textLines.length);
+    const totalH = lineH * textLines.length;
+    const startY = cy - totalH / 2 + lineH * 0.8;
+    const fontSize = Math.max(4, Math.min(10, (faceR * 1.5) / Math.max(...textLines.map(l => l.length || 1))));
+    return (
+      <>
+        {textLines.map((line, i) => (
+          <text
+            key={i}
+            x={cx}
+            y={startY + i * lineH}
+            textAnchor="middle"
+            fill={handsColor}
+            fontSize={fontSize}
+            fontFamily="system-ui, sans-serif"
+            fontWeight="600"
+            letterSpacing="0.05em"
+            opacity="0.9"
+          >
+            {line.toUpperCase()}
+          </text>
+        ))}
+      </>
+    );
+  };
 
   return (
     <svg
@@ -100,31 +141,24 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
       onClick={onClick}
     >
       <defs>
-        {/* Gradient background */}
         <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor={faceColor} />
           <stop offset="100%" stopColor={bgType === 'gradient' ? gradEnd : faceColor} />
         </linearGradient>
-
-        {/* Mesh pattern */}
         <pattern id={meshPatternId} x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
           <line x1="0" y1="4" x2="4" y2="0" stroke="rgba(255,255,255,0.18)" strokeWidth="0.8" />
           <line x1="-1" y1="1" x2="1" y2="-1" stroke="rgba(255,255,255,0.18)" strokeWidth="0.8" />
           <line x1="3" y1="5" x2="5" y2="3" stroke="rgba(255,255,255,0.18)" strokeWidth="0.8" />
         </pattern>
-
-        {/* Link/segment marks */}
         <pattern id={linkPatternId} x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
           <line x1="0" y1="7" x2="8" y2="7" stroke="rgba(0,0,0,0.25)" strokeWidth="1" />
         </pattern>
-
-        {/* Face clip */}
         <clipPath id={clipId}>
           <ClipShape />
         </clipPath>
       </defs>
 
-      {/* ── Top strap ── */}
+      {/* Top strap */}
       <rect x={strapX} y="0" width={strapW} height="58" rx={showRubber ? 8 : 5} fill={strapFill} opacity={strapActive ? 1 : 0.85} stroke={strapActive ? '#6366f1' : 'transparent'} strokeWidth="1.5" style={{ cursor: mini ? 'default' : 'pointer' }} onClick={() => !mini && setActivePart(activePart === 'strap' ? null : 'strap')} />
       {showMesh && <rect x={strapX} y="0" width={strapW} height="58" fill={`url(#${meshPatternId})`} pointerEvents="none" rx={showRubber ? 8 : 5} />}
       {showLinks && <rect x={strapX} y="0" width={strapW} height="58" fill={`url(#${linkPatternId})`} pointerEvents="none" />}
@@ -136,7 +170,7 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
         </>
       )}
 
-      {/* ── Bottom strap ── */}
+      {/* Bottom strap */}
       <rect x={strapX} y="142" width={strapW} height="58" rx={showRubber ? 8 : 5} fill={strapFill} opacity={strapActive ? 1 : 0.85} stroke={strapActive ? '#6366f1' : 'transparent'} strokeWidth="1.5" style={{ cursor: mini ? 'default' : 'pointer' }} onClick={() => !mini && setActivePart(activePart === 'strap' ? null : 'strap')} />
       {showMesh && <rect x={strapX} y="142" width={strapW} height="58" fill={`url(#${meshPatternId})`} pointerEvents="none" rx={showRubber ? 8 : 5} />}
       {showLinks && <rect x={strapX} y="142" width={strapW} height="58" fill={`url(#${linkPatternId})`} pointerEvents="none" />}
@@ -148,9 +182,9 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
         </>
       )}
 
-      {/* ── Case ── */}
+      {/* Case */}
       <FaceShape
-        fill={faceActive ? faceColor : faceColor}
+        fill={faceColor}
         stroke={faceActive ? '#6366f1' : 'rgba(0,0,0,0.3)'}
         strokeWidth={faceActive ? 3 : 1.5}
         opacity={1}
@@ -158,18 +192,15 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
         onClick={() => !mini && setActivePart(activePart === 'watchFace' ? null : 'watchFace')}
       />
 
-      {/* ── Face glass (gradient or solid background) ── */}
+      {/* Face interior */}
       <g clipPath={`url(#${clipId})`} pointerEvents="none">
-        {/* Background */}
         <rect x={cx - faceR} y={cy - faceR} width={faceR * 2} height={faceR * 2} fill={`url(#${gradId})`} opacity="0.95" />
-
-        {/* Subtle glass glare */}
         <ellipse cx={cx - 10} cy={cy - 18} rx="18" ry="10" fill="rgba(255,255,255,0.06)" transform={`rotate(-20, ${cx - 10}, ${cy - 18})`} />
 
-        {/* Hour markers — only if no text */}
-        {!watchfaceText && [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle, i) => {
+        {/* Hour markers — only if no text or circular mode (circular text leaves center free) */}
+        {(!watchfaceText || watchfaceTextMode === 'circular') && [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle, i) => {
           const rad = (angle - 90) * Math.PI / 180;
-          const r = faceR - 9;
+          const r = watchfaceTextMode === 'circular' && watchfaceText ? faceR - 5 : faceR - 9;
           const x = cx + r * Math.cos(rad);
           const y2 = cy + r * Math.sin(rad);
           const isQuarter = i % 3 === 0;
@@ -178,29 +209,8 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
             : <circle key={i} cx={x} cy={y2} r="1.2" fill={handsColor} opacity="0.5" />;
         })}
 
-        {/* Custom watchface text */}
-        {watchfaceText && textLines.length > 0 && (() => {
-          const lineH = Math.min(10, 34 / textLines.length);
-          const totalH = lineH * textLines.length;
-          const startY = cy - totalH / 2 + lineH * 0.8;
-          const fontSize = Math.max(4, Math.min(10, (faceR * 1.5) / Math.max(...textLines.map(l => l.length || 1))));
-          return textLines.map((line, i) => (
-            <text
-              key={i}
-              x={cx}
-              y={startY + i * lineH}
-              textAnchor="middle"
-              fill={handsColor}
-              fontSize={fontSize}
-              fontFamily="system-ui, sans-serif"
-              fontWeight="600"
-              letterSpacing="0.05em"
-              opacity="0.9"
-            >
-              {line.toUpperCase()}
-            </text>
-          ));
-        })()}
+        {/* Watchface text */}
+        {renderWatchfaceText()}
 
         {/* Center dot */}
         {handsEnabled && <circle cx={cx} cy={cy} r="2.5" fill={handsColor} opacity="0.9" />}

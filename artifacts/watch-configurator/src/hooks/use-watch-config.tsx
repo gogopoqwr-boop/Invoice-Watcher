@@ -12,6 +12,7 @@ type ApiConfigState = Omit<WatchConfigInput, "sessionId">;
 
 export type ExtendedConfigState = ApiConfigState & {
   watchfaceText?: string;
+  watchfaceTextMode?: "center" | "circular";
   handsCount?: number; // 0 | 2 | 3
   watchfaceBackgroundType?: "solid" | "gradient";
   watchfaceGradientEnd?: string;
@@ -30,6 +31,7 @@ const defaultState: ExtendedConfigState = {
   handsCount: 3,
   handsColor: "#cbd5e1",
   watchfaceText: "",
+  watchfaceTextMode: "center",
 };
 
 type WatchConfigContextType = {

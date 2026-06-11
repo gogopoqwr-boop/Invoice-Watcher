@@ -422,11 +422,55 @@ export default function Configure() {
             <div className="space-y-5">
               <div>
                 <h2 className="text-xl font-bold tracking-tight mb-1">Надпись на циферблате</h2>
-                <p className="text-xs text-muted-foreground mb-2">До 4 строк. Каждая строка — отдельная строчка текста.</p>
+
+                {/* Predefined text presets */}
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {['ДОХУИЩА', 'МНОГО', 'БЕЗ ПЯТИ\nШЕСТЬ УТРОВ', 'АЛЕ', 'TOO MUCH', 'A LOT'].map(preset => (
+                    <button
+                      key={preset}
+                      onClick={() => updateConfig({ watchfaceText: preset })}
+                      className={cn(
+                        'px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide border transition-all',
+                        config.watchfaceText === preset
+                          ? 'border-primary bg-primary/15 text-primary'
+                          : 'border-border/60 text-muted-foreground hover:border-border hover:text-foreground'
+                      )}
+                    >
+                      {preset.replace('\n', ' ')}
+                    </button>
+                  ))}
+                  {config.watchfaceText && (
+                    <button
+                      onClick={() => updateConfig({ watchfaceText: '' })}
+                      className="px-2.5 py-1 rounded-full text-[11px] font-bold border border-destructive/40 text-destructive/70 hover:bg-destructive/10 transition-all"
+                    >
+                      ✕ очистить
+                    </button>
+                  )}
+                </div>
+
+                {/* Mode toggle */}
+                {config.watchfaceText && (
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      onClick={() => updateConfig({ watchfaceTextMode: 'center' })}
+                      className={cn('option-btn flex-1 text-xs', (config.watchfaceTextMode ?? 'center') === 'center' ? 'active' : '')}
+                    >
+                      ☰ Центр
+                    </button>
+                    <button
+                      onClick={() => updateConfig({ watchfaceTextMode: 'circular' })}
+                      className={cn('option-btn flex-1 text-xs', config.watchfaceTextMode === 'circular' ? 'active' : '')}
+                    >
+                      ◯ Кольцом
+                    </button>
+                  </div>
+                )}
+
                 <textarea
-                  rows={4}
+                  rows={3}
                   maxLength={60}
-                  placeholder={"НА УТРАХ\nMUCHO\nДОХУИЩА"}
+                  placeholder={"ЧЕБЛЯЧАС\nДОХУИЩА"}
                   value={config.watchfaceText ?? ''}
                   onChange={e => updateConfig({ watchfaceText: e.target.value })}
                   className="w-full bg-background/60 border border-border rounded-2xl px-4 py-3 text-sm font-mono tracking-wider text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all resize-none uppercase"
