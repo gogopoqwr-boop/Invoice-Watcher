@@ -254,7 +254,7 @@ export default function Configure() {
             className="overflow-hidden transition-all duration-300 ease-in-out"
             style={{ maxHeight: bagOpen ? '80px' : '0px', opacity: bagOpen ? 1 : 0 }}
           >
-            <Link href="/orders">
+            <Link href="/orders?from=configure">
               <button className="liquid-button mb-2 px-3 py-2 text-xs font-semibold whitespace-nowrap">
                 📦 Мои заказы
               </button>
@@ -273,8 +273,8 @@ export default function Configure() {
       {/* Right — Step Panel */}
       <div className="w-full md:w-[48%] md:h-screen flex flex-col bg-background/80 backdrop-blur-xl border-l border-border/60">
 
-        {/* Progress Bar */}
-        <div className="px-5 pt-5 pb-3">
+        {/* Progress Bar — pr-14 to avoid overlap with fixed ThemeToggle */}
+        <div className="px-5 pr-14 pt-5 pb-3">
           <div className="flex items-center gap-1">
             {STEPS.map((s, i) => (
               <React.Fragment key={s.id}>

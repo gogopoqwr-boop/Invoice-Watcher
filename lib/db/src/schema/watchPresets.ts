@@ -23,7 +23,11 @@ export const watchPresetsTable = pgTable("watch_presets", {
   serialNumber: text("serial_number"),
   boxType: text("box_type").default("standard"),
   boxColor: text("box_color").default("#1A1A1A"),
+  collectionName: text("collection_name"),
+  watchfaceText: text("watchface_text"),
+  watchfaceTextMode: text("watchface_text_mode").default("center"),
   priceStars: integer("price_stars").notNull().default(10),
+  maxQuantity: integer("max_quantity").default(1000),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

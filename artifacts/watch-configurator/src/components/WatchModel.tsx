@@ -38,54 +38,122 @@ function buildFaceShape(geom: string): THREE.Shape {
 
 // ─── Face texture (canvas) ────────────────────────────────────────────────────
 
-function buildFaceTexture(faceColor: string, handsColor: string, text: string): THREE.CanvasTexture {
+function buildFaceTexture(faceColor: string, handsColor: string, text: string, textMode = 'center'): THREE.CanvasTexture {
   const S = 512;
   const cv = document.createElement('canvas');
   cv.width = S; cv.height = S;
   const ctx = cv.getContext('2d')!;
 
+  // Background
   ctx.fillStyle = faceColor;
   ctx.fillRect(0, 0, S, S);
 
+  // Subtle gradient gloss
   const grad = ctx.createRadialGradient(S * 0.35, S * 0.3, 0, S / 2, S / 2, S * 0.55);
-  grad.addColorStop(0, 'rgba(255,255,255,0.12)');
-  grad.addColorStop(1, 'rgba(0,0,0,0.18)');
+  grad.addColorStop(0, 'rgba(255,255,255,0.10)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.15)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, S, S);
 
-  for (let i = 0; i < 12; i++) {
-    const a = (i * Math.PI * 2) / 12 - Math.PI / 2;
-    const rr = S * 0.41;
-    const x = S / 2 + rr * Math.cos(a);
-    const y = S / 2 + rr * Math.sin(a);
-    ctx.beginPath();
-    ctx.arc(x, y, i % 3 === 0 ? 7 : 3.5, 0, Math.PI * 2);
-    ctx.fillStyle = handsColor;
-    ctx.globalAlpha = 0.75;
-    ctx.fill();
+  const trimmedText = (text ?? '').trim().toUpperCase();
+  const isCircular = textMode === 'circular' && trimmedText.length > 0;
+
+  // Hour markers — drawn inside the safe area so they stay within UV bounds
+  // rr=0.33*S keeps markers well within the 512px canvas and the circular UV face
+  const markerR = S * 0.33;
+  if (!isCircular) {
+    // Standard hour dots
+    for (let i = 0; i < 12; i++) {
+      const a = (i * Math.PI * 2) / 12 - Math.PI / 2;
+      const x = S / 2 + markerR * Math.cos(a);
+      const y = S / 2 + markerR * Math.sin(a);
+      ctx.beginPath();
+      const r = i % 3 === 0 ? 8 : 4;
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = handsColor;
+      ctx.globalAlpha = 0.8;
+      ctx.fill();
+    }
+  } else {
+    // Smaller tick marks when text goes around the dial
+    for (let i = 0; i < 12; i++) {
+      const a = (i * Math.PI * 2) / 12 - Math.PI / 2;
+      const x = S / 2 + markerR * Math.cos(a);
+      const y = S / 2 + markerR * Math.sin(a);
+      ctx.beginPath();
+      ctx.arc(x, y, i % 3 === 0 ? 5 : 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = handsColor;
+      ctx.globalAlpha = 0.5;
+      ctx.fill();
+    }
   }
   ctx.globalAlpha = 1;
 
-  const lines = (text ?? '').trim().toUpperCase().split('\n').filter(Boolean).slice(0, 4);
-  if (lines.length > 0) {
-    const maxLen = Math.max(...lines.map(l => l.length), 1);
-    const fz = Math.min(52, Math.max(18, Math.floor(S * 0.38 / maxLen)));
+  if (isCircular) {
+    // Circular text around the dial
+    const circR = S * 0.39;
+    const chars = Array.from(trimmedText);
+    const arcSpan = Math.min(Math.PI * 1.7, (chars.length * 0.32));
+    const startAngle = -Math.PI / 2 - arcSpan / 2;
+    const fz = Math.max(16, Math.min(32, Math.floor(S * 0.22 / Math.max(chars.length, 4))));
     ctx.font = `bold ${fz}px monospace`;
+    ctx.fillStyle = handsColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    chars.forEach((ch, i) => {
+      const angle = startAngle + (i + 0.5) * (arcSpan / chars.length);
+      ctx.save();
+      ctx.translate(S / 2 + circR * Math.cos(angle), S / 2 + circR * Math.sin(angle));
+      ctx.rotate(angle + Math.PI / 2);
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 4;
+      ctx.fillText(ch, 0, 0);
+      ctx.restore();
+    });
+    ctx.shadowBlur = 0;
+
+    // Brand label in center small
+    ctx.font = `bold 20px monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = handsColor;
-    const lineH = fz * 1.35;
-    const startY = S / 2 - ((lines.length - 1) * lineH) / 2;
-    lines.forEach((line, i) => {
-      ctx.shadowColor = 'rgba(0,0,0,0.5)';
-      ctx.shadowBlur = 4;
-      ctx.fillText(line, S / 2, startY + i * lineH);
-    });
-    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 0.3;
+    ctx.fillText('ЧЕБЛЯЧАС', S / 2, S / 2 + 28);
+    ctx.globalAlpha = 1;
+  } else {
+    // Centered text lines
+    const lines = trimmedText.split('\n').filter(Boolean).slice(0, 4);
+    if (lines.length > 0) {
+      const maxLen = Math.max(...lines.map(l => l.length), 1);
+      const fz = Math.min(52, Math.max(16, Math.floor(S * 0.34 / maxLen)));
+      ctx.font = `bold ${fz}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = handsColor;
+      const lineH = fz * 1.35;
+      const startY = S / 2 - ((lines.length - 1) * lineH) / 2;
+      lines.forEach((line, i) => {
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 4;
+        ctx.fillText(line, S / 2, startY + i * lineH);
+      });
+      ctx.shadowBlur = 0;
+    }
+
+    // Brand label
+    ctx.font = 'bold 18px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = handsColor;
+    ctx.globalAlpha = 0.25;
+    ctx.fillText('ЧЕБЛЯЧАС', S / 2, S / 2 + (lines.length > 0 ? 36 : 8));
+    ctx.globalAlpha = 1;
   }
 
+  // Center pip
   ctx.beginPath();
-  ctx.arc(S / 2, S / 2, 6, 0, Math.PI * 2);
+  ctx.arc(S / 2, S / 2, 7, 0, Math.PI * 2);
   ctx.fillStyle = handsColor;
   ctx.fill();
 
@@ -260,8 +328,8 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
   }, [config.watchfaceGeometry]);
 
   const faceTexture = useMemo(
-    () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceText ?? ''),
-    [config.watchfaceColor, config.handsColor, config.watchfaceText]
+    () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceText ?? '', config.watchfaceTextMode ?? 'center'),
+    [config.watchfaceColor, config.handsColor, config.watchfaceText, config.watchfaceTextMode]
   );
 
   const isMetal = config.watchfaceMaterial === 'metal';

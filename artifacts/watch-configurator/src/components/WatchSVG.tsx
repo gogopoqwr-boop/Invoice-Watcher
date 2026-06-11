@@ -80,9 +80,17 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
 
   const gradId = `bg-grad-${mini ? 'm' : 'f'}`;
 
-  // Circular text path: full circle at r=33
-  const circR = 33;
-  const circTextPath = `M ${cx},${cy - circR} A ${circR},${circR} 0 1,1 ${cx - 0.001},${cy - circR}`;
+  // Circular text path: arc starting at 8 o'clock (lower-left) going clockwise
+  // so text is centered at 12 o'clock (top of dial)
+  const circR = faceR - 10;
+  // Start arc at -150° (i.e., 210° CCW from 3 o'clock = 8 o'clock position)
+  // Text centered at top (12 o'clock = 0% of this arc)
+  const circStartX = cx + circR * Math.cos((-150 * Math.PI) / 180);
+  const circStartY = cy + circR * Math.sin((-150 * Math.PI) / 180);
+  const circEndX = cx + circR * Math.cos((-30 * Math.PI) / 180);
+  const circEndY = cy + circR * Math.sin((-30 * Math.PI) / 180);
+  // 300° arc (5/6 of circle) so startOffset="50%" centers text at 12 o'clock
+  const circTextPath = `M ${circStartX.toFixed(2)},${circStartY.toFixed(2)} A ${circR},${circR} 0 1,1 ${circEndX.toFixed(2)},${circEndY.toFixed(2)}`;
 
   const renderWatchfaceText = () => {
     if (!watchfaceText || textLines.length === 0) return null;

@@ -79,6 +79,14 @@ export interface WatchPreset {
   boxType?: string | null;
   /** @nullable */
   boxColor?: string | null;
+  /** @nullable */
+  collectionName?: string | null;
+  /** @nullable */
+  watchfaceText?: string | null;
+  /** @nullable */
+  watchfaceTextMode?: string | null;
+  /** @nullable */
+  maxQuantity?: number | null;
   priceStars: number;
   createdAt: string;
 }

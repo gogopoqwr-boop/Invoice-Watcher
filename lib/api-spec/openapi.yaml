@@ -486,6 +486,14 @@ components:
           type: ["string", "null"]
         boxColor:
           type: ["string", "null"]
+        collectionName:
+          type: ["string", "null"]
+        watchfaceText:
+          type: ["string", "null"]
+        watchfaceTextMode:
+          type: ["string", "null"]
+        maxQuantity:
+          type: ["integer", "null"]
         priceStars:
           type: integer
         createdAt:

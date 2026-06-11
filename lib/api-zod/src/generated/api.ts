@@ -40,6 +40,10 @@ export const ListPresetsResponseItem = zod.object({
   "serialNumber": zod.string().nullish(),
   "boxType": zod.string().nullish(),
   "boxColor": zod.string().nullish(),
+  "collectionName": zod.string().nullish(),
+  "watchfaceText": zod.string().nullish(),
+  "watchfaceTextMode": zod.string().nullish(),
+  "maxQuantity": zod.number().nullish(),
   "priceStars": zod.number(),
   "createdAt": zod.string()
 })
@@ -74,6 +78,10 @@ export const GetPresetResponse = zod.object({
   "serialNumber": zod.string().nullish(),
   "boxType": zod.string().nullish(),
   "boxColor": zod.string().nullish(),
+  "collectionName": zod.string().nullish(),
+  "watchfaceText": zod.string().nullish(),
+  "watchfaceTextMode": zod.string().nullish(),
+  "maxQuantity": zod.number().nullish(),
   "priceStars": zod.number(),
   "createdAt": zod.string()
 })

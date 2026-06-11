@@ -1,0 +1,173 @@
+make the TODO with only programmatic features only everything about programming
+
+add these if not there:
+make a prototype app
+
+I have like 10 cards on 1 page and 10 on page 2
+
+there is a sorting mechanism for 5 phones, 5 laptops, 5 headsets and 5 accessories and ability to color them in the box itself and also when switched on the product page, but on product page there would be the ability to write comments etc with pictures etc
+also there would be a possibility to put things to cart
+and finally checkout via stars as we have the same db in the bot as in the web site we would just generate a token in the web site and user would open it in telegram via ?start=CART_TOKEN
+use this token for bot: 
+8576299379:AAGUoZiLUWDhyYqZplVjMn21pNEQ5AoLzlE
+in the bot just make a check out image and instant payment in stars, on the web site there should also be stars as payment currency3d chosen watchbox type opening animated in the invoice message
+Some animation after paying the invoice
+Redesign the broken-styled web site with 3d rendering of the watch for the user to see the watch and rotate it, while tweaking in right side
+Redesign the initial page layout, what does the user see when first on the web site???? Smth wow?? 
+
+1. Че хоч? Выбор часы или мерч(coming soon) -> to creating the watches
+Redesign the overall go from getting to web site to paying and future visits:
+
+1. Че хоч? Выбор часы или мерч(coming soon) -> presets and collections paginated grid < at left and > at right (can be skipped)-> to creating watches -> coloring the parts -> setting the box appearance -> payment
+
+2. The whole way ui has back buttons and possibility to come back 1 or more steps back yet saving all the progress, a clickable progress line implementation with future steps disabled clickables
+
+3. Payment effect when back from payment provider, saving email, telegram id and nickname, generating QR and alphanumeric receipt code for the admin (courier) to scan or input same printed on the box and on the watch back 
+Redesign payment system making it Liquid Glass?)))
+Sending payment receipt to email and in telegram bot as a gif of chosen watches in 3d (rotating watch in the box) and as a designed email
+Overall Liquid Glass design
+
+
+so workflow:
+
+getting all the 3d completely personalized and then implement stars payment from website to bot via deep linking all designed the same way, with theme switcher and all glass clickables should have Liquid Glass animation by themselves and when hovered depending on mouse position
+
+
+TOKEN 8576299379:AAGBEJeybVncfNS9aAV7psZAPzmqhpgCfnY for bot and @bebebeabot username
+
+
+Watch creation
+
+
+Watchface (material, geometry, arrows, words/letters, )
+Bracelet (material, seg/sol)
+Serial number
+Hands added/removed
+
+Materials:
+watchface:
+Plastic
+Metal
+
+Bracelet(stripe):
+Plastic solid
+Plastic segmented
+Metal solid
+Metal segmented
+Resin
+Leather
+Cotton fabric
+
+Bracelet closing mechanism:
+
+
+Geometry:
+Square
+Circle
+Star
+Drawn geometry
+
+Coloring watch parts
+
+Coloring should be as integrated in Liquid Glass as possible
+
+I need the 3d model in left part to react when choosing it’s parts like the band, the watchface, the closing mechanism and turn the chosen part prespective and drag and rotate feature for the model
+
+Automatic preview right after I typed the letters and additional add the placing choice:
+Around the watch
+Centered (direction when looking on it from left or right wrist perspective) buttons to switch hands and corresponding animations of switching wrists
+
+The 3d model should change it’s appearance instantly on change in configuration (bracelet texture, background watchface, letters/numbers on watchface, their color etc)
+
+
+Adding custom watchface and background, putting skins on full watch and/or on stripe only (in coloring mode)
+
+Changing watchface and stripe length and width
+For watchface just show available sizes, for stripe as well
+
+All with Liquid Glass etc
+ 
+ 
+Future visits are to see my orders and having order progress of shipping or if presale then presale countdown and watches left, we want to make 1000 watches each costing depending on materials etc but for this time no more then 20 stars in telegram yet the price is dependent on materials etc
+
+ admin and courier panel:
+ admin creates couriers 
+
+admin has every order available and the user can also send cancel request and the admin can refund in admin panel, refund can be even without user cancellation, yet when refund confirmation there should be an input field for comment from admin can be left blank
+
+
+cancellation should also have an input field for cancel explanation
+Sending order changes to bot, email 
+states controlled by assigned couriers and admin:
+Payment
+Cancelled
+Order processing (paid)
+Order shipping (paid)
+Order arrived (paid)
+
+Also there should be analytics: conversion rate, revenue, unique visitors, checkout starts, total orders, paid orders, cancel requests, graphs on all of this by time, seeing all the info about orders - emails, telegram id/username, watch configuration
+
+For admin and couriers there should be passwords and logging in at /login as for ordinary users
+
+Details:
+WATCH 3D MODEL and what it should be like:
+When choosing the watchface the watch should be facing the user, closed stripes,
+When choosing stripes, they should be shown apart from watches themselves
+When choosing closing mechanism they should turn and animate the closing mechanic for the user to choose
+
+Also all the choice buttons should be cards with 2d perspective image on what watches would look like and with inscriptions in the right Bottom corner explaining the change
+
+Changing the bracelet to segmented/solid/cotton fabric/resin should be visible changes in texture
+
+Serial number should be 1 to 1000 during the payments process and getting how many watches there were to show the number.
+
+Responsive:
+Phones:
+The settings for watches should be at bottom half
+The progress bar should be in the bottom as well
+
+
+payment screen:
+The draggable watch 3d model and pay button deep link in telegram bot stars 
+
+And before going to make your own watch there would be shown a grid of presets like so:
+NEW FEATURES, FIXES
+
+Make cancel orders button for user and make it admin approved to refund and ALWAYS show refund button in admin panel even after delivery
+
+also add my orders button everywhere(on main screen at /, in configuration change it to simple button at bottom left corner), add "to configuration" button on pay screen, make payment countdown 10 minutes
+
+At payment screen and in orders there should be links to what the orders looks like with the receipt, also we need the box at last configuration steps and sending a rotating 3d model of configured watch to telegram after payment as gif added to the message to go to web site to see order and it should make the link route exactly to the receipt for the ordered watches, they should be animated in the receipt and in the box with pricing and state of delivery/manufacturing..
+Also don’t make the links like order’s id but as a hash to send to telegram a message in telegram on /start ?start=SOME_HASH meaning the payment hash[11.06.2026 22:12] huh?: double refund, ux, tg link
+[11.06.2026 22:12] huh?: star quantity near the configuration features
+[11.06.2026 22:12] huh?: words direction
+[11.06.2026 22:12] huh?: get the collections first place them beautifully naming the collections
+[11.06.2026 22:12] huh?: grey out the configurations for now and add 3d models to collections cards and on tap  amplifying animation for watches with the screen showing them, their price, materials very minimalistically
+[11.06.2026 22:37] huh?: delete payment message after the payment because it can be paid again and double refund is to check if the same order was paid twice or more accedantially
+[11.06.2026 22:39] huh?: add the circular ДОХУИЩА, МНОГО,  БЕЗ ПЯТИ ШЕСТЬ УТРОВ, АЛЕ, TOO MUCH, A LOT, instead of numbers on watchface
+[11.06.2026 22:41] huh?: at the main page add at the bottom on scroll:
+<<<<<<< HEAD
+Чеблячас все у права мои у меня пон?
+=======
+Чеблячас © 2026. Сборка приостановлена из-за полного дзена.
+>>>>>>> main
+
+instead of все права защищены
+[11.06.2026 22:45] huh?: make the КУПИТЬ button on the collections tab for every card and EVERY CARD SHOULD BE A 3D MODEL
+
+count to 1000 for serial numbers of this collections and when 1000 is there - grey out BUY button
+
+make 3 collections, each collection - 1000 watches, each with different name and they are independent
+
+first is ROFL what i described earlier (РОФЛ)
+
+second is HYPERSERIOUSNESS (ГИПЕРСЕРЬЕЗНОСТЬ) придумай?)
+
+third ALIVE (ЖИВНОСТЬ) 5 живых часов
+
+MAKE 3D CARDS
+
+OFF THE CONFIGURATOR 
+OFF THE COLOURING
+THEY ARE COLLECTIONS, THEY SHOULD BE THE ONLY ONES,
+MAKE THE ONLY THING THE USER CAN CHANGE - THE STRIPES FOR WATCHES

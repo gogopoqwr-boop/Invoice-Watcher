@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { useWatchConfig } from "@/hooks/use-watch-config";
 import { useGetMyOrders } from "@workspace/api-client-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/use-auth";
 
 const STATUS_LABELS: Record<string, string> = {
   payment_pending: 'Ожидает оплаты',
@@ -67,13 +66,17 @@ async function cancelFree(orderId: number): Promise<{ ok: boolean; msg: string }
 
 export default function Orders() {
   const { sessionId } = useWatchConfig();
-  const { user } = useAuth();
+  const [location] = useLocation();
   const { data: orders, isLoading, refetch } = useGetMyOrders({ sessionId }, { query: { enabled: !!sessionId } } as any);
 
   const [actionId, setActionId] = useState<number | null>(null);
   const [msgs, setMsgs] = useState<Record<number, { ok: boolean; msg: string }>>({});
 
-  const isAdmin = user?.role === "admin";
+  // Detect where we came from via query param
+  const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const fromConfigure = params.get('from') === 'configure';
+  const backHref = fromConfigure ? '/configure' : '/collections';
+  const backLabel = fromConfigure ? '← Конфигуратор' : '← Коллекции';
 
   const handleAction = async (orderId: number, action: () => Promise<{ ok: boolean; msg: string }>) => {
     setActionId(orderId);
@@ -92,9 +95,9 @@ export default function Orders() {
       <div className="relative z-10 max-w-2xl mx-auto px-6 py-8 md:py-10">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <Link href="/">
+            <Link href={backHref}>
               <button className="text-xs text-muted-foreground hover:text-foreground transition-colors mb-3 flex items-center gap-1 liquid-button px-3 py-1.5">
-                ← Главная
+                {backLabel}
               </button>
             </Link>
             <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-1 animate-fade-up">История</p>
@@ -104,11 +107,6 @@ export default function Orders() {
             <Link href="/collections">
               <button className="liquid-button px-5 py-2.5 text-sm font-bold">+ Новый</button>
             </Link>
-            {isAdmin && (
-              <Link href="/admin">
-                <button className="liquid-button px-4 py-2 text-xs font-semibold">⚙️ Панель</button>
-              </Link>
-            )}
           </div>
         </div>
 
@@ -161,7 +159,7 @@ export default function Orders() {
                     )}
 
                     {/* Free cancel for payment_pending */}
-                    {!isAdmin && order.status === 'payment_pending' && (
+                    {order.status === 'payment_pending' && (
                       <button
                         onClick={() => handleAction(order.id, () => cancelFree(order.id))}
                         disabled={actionId === order.id}
@@ -172,7 +170,7 @@ export default function Orders() {
                     )}
 
                     {/* Request cancellation for paid/processing */}
-                    {!isAdmin && (order.status === 'paid' || order.status === 'processing') && (
+                    {(order.status === 'paid' || order.status === 'processing') && (
                       <button
                         onClick={() => handleAction(order.id, () => requestCancel(order.id))}
                         disabled={actionId === order.id}
