@@ -102,11 +102,13 @@ function Watch3DView({ lastInteractionRef, showWrist }: { lastInteractionRef: Re
       camera={{ position: [0, 0.5, 9], fov: 42 }}
       gl={{ failIfMajorPerformanceCaveat: false, antialias: true }}
     >
-      <ambientLight intensity={0.55} />
-      <spotLight position={[4, 6, 8]} angle={0.3} penumbra={0.8} intensity={2.5} castShadow shadow-mapSize={[1024, 1024]} />
-      <pointLight position={[-5, 3, -4]} intensity={1.0} color="#6366f1" />
-      <pointLight position={[5, -2, 3]} intensity={0.4} color="#f0f4ff" />
-      <pointLight position={[0, -5, 4]} intensity={0.3} color="#c4b5fd" />
+      <ambientLight intensity={0.45} />
+      <spotLight position={[4, 6, 8]} angle={0.28} penumbra={0.75} intensity={2.8} castShadow shadow-mapSize={[2048, 2048]} />
+      <directionalLight position={[-4, 4, 3]} intensity={0.6} color="#c4d4f0" />
+      <pointLight position={[-5, 3, -4]} intensity={1.1} color="#6366f1" />
+      <pointLight position={[5, -2, 3]} intensity={0.45} color="#f0f4ff" />
+      <pointLight position={[0, -5, 4]} intensity={0.35} color="#c4b5fd" />
+      <pointLight position={[0, 6, -2]} intensity={0.3} color="#e0eaff" />
       <Suspense fallback={null}>
         <WatchModel step={BRACELET_STEP} lastInteractionRef={lastInteractionRef} showWrist={showWrist} />
         <CameraRig step={BRACELET_STEP} lastInteractionRef={lastInteractionRef} />
@@ -227,7 +229,10 @@ export default function Configure() {
     <div className="min-h-[100dvh] w-full bg-background flex flex-col md:flex-row overflow-hidden">
 
       {/* Left — Watch Preview */}
-      <div className="w-full md:w-[52%] h-[44vh] md:h-screen relative bg-gradient-to-br from-background to-muted/30">
+      <div
+        className="w-full md:w-[52%] h-[44vh] md:h-screen relative"
+        style={{ background: 'radial-gradient(ellipse at 48% 42%, #1e2a4a 0%, #0d1117 55%, #060810 100%)' }}
+      >
         <Link href="/collections">
           <button className="absolute top-3 left-3 z-10 liquid-button px-3 py-1.5 text-xs font-semibold">← Коллекции</button>
         </Link>

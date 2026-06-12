@@ -11,7 +11,7 @@ function shapeHalfWidth(geom: string): number {
   if (geom === 'circle') return 1.5;
   if (geom === 'square') return 1.28;
   if (geom === 'star') return 1.52;
-  return 1.1; // rounded default
+  return 1.1;
 }
 
 function buildFaceShape(geom: string): THREE.Shape {
@@ -26,11 +26,35 @@ function buildFaceShape(geom: string): THREE.Shape {
     s.quadraticCurveTo(-w, w, -w, w - r); s.lineTo(-w, -w + r);
     s.quadraticCurveTo(-w, -w, -w + r, -w);
   } else if (geom === 'star') {
-    const pts = 5, oR = 1.52, iR = 0.68;
-    for (let i = 0; i < pts * 2; i++) {
+    // Machined star: straight outer edges, concave bezier valleys
+    const pts = 5;
+    const oR = 1.52;  // outer tip radius
+    const iR = 0.74;  // inner valley radius (raised slightly for machined look)
+
+    // Pre-compute all 10 vertices (alternating outer/inner)
+    const verts = Array.from({ length: pts * 2 }, (_, i) => {
       const r = i % 2 === 0 ? oR : iR;
       const a = (i * Math.PI) / pts - Math.PI / 2;
-      i === 0 ? s.moveTo(r * Math.cos(a), r * Math.sin(a)) : s.lineTo(r * Math.cos(a), r * Math.sin(a));
+      return { x: r * Math.cos(a), y: r * Math.sin(a), a };
+    });
+
+    s.moveTo(verts[0].x, verts[0].y);
+    for (let i = 1; i <= pts * 2; i++) {
+      const v = verts[i % (pts * 2)];
+      const isOuter = (i % 2 === 0);
+      if (isOuter) {
+        // Outer point: straight line (sharp tip)
+        s.lineTo(v.x, v.y);
+      } else {
+        // Inner valley: concave quadratic bezier — control point pulled toward center
+        // This creates the characteristic machined/milled concave groove
+        const prevV = verts[(i - 1) % (pts * 2)];
+        const nextV = verts[(i + 1) % (pts * 2)];
+        // Midpoint direction toward center, pulled inward
+        const cpX = v.x * 0.78;
+        const cpY = v.y * 0.78;
+        s.quadraticCurveTo(cpX, cpY, v.x, v.y);
+      }
     }
     s.closePath();
   } else {
@@ -44,7 +68,7 @@ function buildFaceShape(geom: string): THREE.Shape {
   return s;
 }
 
-// ─── Face texture (canvas) — background + markers only, NO text ───────────
+// ─── Face texture (canvas) ─────────────────────────────────────────────────
 
 function buildFaceTexture(
   faceColor: string,
@@ -66,7 +90,6 @@ function buildFaceTexture(
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, S, S);
 
-  // Hour markers
   const markerR = S * 0.33;
   for (let i = 0; i < 12; i++) {
     const a = (i * Math.PI * 2) / 12 - Math.PI / 2;
@@ -81,100 +104,59 @@ function buildFaceTexture(
   }
   ctx.globalAlpha = 1;
 
-  // Center pip
   ctx.beginPath();
   ctx.arc(S / 2, S / 2, 7, 0, Math.PI * 2);
   ctx.fillStyle = handsColor;
   ctx.fill();
 
   const tex = new THREE.CanvasTexture(cv);
-
-  // Fix UV mapping: ShapeGeometry uses raw vertex coords as UVs (not normalized).
-  // We must map the shape's [-half, +half] range to texture [0, 1].
-  // formula: sample = offset + rawUV * repeat
-  // offset=0.5, repeat=0.5/halfWidth maps rawUV=0→0.5 (center) and rawUV=±half→0 or 1 (edges)
   const half = shapeHalfWidth(geom);
   const rep = 0.5 / half;
   tex.offset.set(0.5, 0.5);
   tex.repeat.set(rep, rep);
   tex.needsUpdate = true;
-
   return tex;
 }
 
-// ─── 3D text on the watchface ─────────────────────────────────────────────
+// ─── 3D text on the watchface ──────────────────────────────────────────────
 
 const FONT_URL = '/dejavu_bold.typeface.json';
 const TEXT_DEPTH = 0.06;
 
-function WatchFaceText3D({
-  text,
-  mode,
-  handsColor,
-}: {
-  text: string;
-  mode: 'center' | 'circular';
-  handsColor: string;
+function WatchFaceText3D({ text, mode, handsColor }: {
+  text: string; mode: 'center' | 'circular'; handsColor: string;
 }) {
   const trimmed = text.trim().toUpperCase();
   if (!trimmed) return null;
-
-  const mat = (
-    <meshStandardMaterial
-      color={handsColor}
-      metalness={0.55}
-      roughness={0.2}
-    />
-  );
+  const mat = <meshStandardMaterial color={handsColor} metalness={0.55} roughness={0.2} />;
 
   if (mode === 'circular') {
     const chars = Array.from(trimmed);
-    // Cap arc to ~252° so letters stay in the upper portion, leaving the bottom clear
     const arcSpan = Math.min(Math.PI * 1.4, chars.length * 0.32);
-    // Centre the arc at the top (π/2 = 12 o'clock in Three.js where y is up)
     const startAngle = Math.PI / 2 - arcSpan / 2;
-    // Larger radius pushes text out to sit cleanly along the dot-marker ring
     const circR = 1.30;
     const fontSize = Math.max(0.10, Math.min(0.18, 0.82 / Math.max(chars.length, 4)));
-
     return (
       <group position={[0, 0, 0.61]}>
         {chars.map((ch, i) => {
           const angle = startAngle + (i + 0.5) * (arcSpan / chars.length);
           const x = circR * Math.cos(angle);
           const y = circR * Math.sin(angle);
-          // lookAt: bottom of letter faces center — top faces outward along angle
           const rot = angle - Math.PI / 2;
           return (
             <group key={i} position={[x, y, 0]} rotation={[0, 0, rot]}>
               <Center>
-                <Text3D
-                  font={FONT_URL}
-                  size={fontSize}
-                  height={TEXT_DEPTH}
-                  bevelEnabled
-                  bevelSize={0.008}
-                  bevelThickness={0.008}
-                  bevelSegments={3}
-                  curveSegments={6}
-                >
-                  {ch}
-                  {mat}
+                <Text3D font={FONT_URL} size={fontSize} height={TEXT_DEPTH}
+                  bevelEnabled bevelSize={0.008} bevelThickness={0.008} bevelSegments={3} curveSegments={6}>
+                  {ch}{mat}
                 </Text3D>
               </Center>
             </group>
           );
         })}
-        {/* Brand label */}
         <group position={[0, -0.14, 0]}>
           <Center>
-            <Text3D
-              font={FONT_URL}
-              size={0.055}
-              height={0.02}
-              bevelEnabled={false}
-              curveSegments={4}
-            >
+            <Text3D font={FONT_URL} size={0.055} height={0.02} bevelEnabled={false} curveSegments={4}>
               {'ЧЕБЛЯЧАС'}
               <meshStandardMaterial color={handsColor} metalness={0.4} roughness={0.4} opacity={0.4} transparent />
             </Text3D>
@@ -184,47 +166,26 @@ function WatchFaceText3D({
     );
   }
 
-  // Center mode: multi-line text
   const lines = trimmed.split('\n').filter(Boolean).slice(0, 4);
   const maxLen = Math.max(...lines.map(l => l.length), 1);
   const fontSize = Math.min(0.28, Math.max(0.08, 0.7 / maxLen));
   const lineH = fontSize * 1.4;
   const totalH = (lines.length - 1) * lineH;
-
   return (
     <group position={[0, 0, 0.61]}>
-      {lines.map((line, i) => {
-        const yOff = totalH / 2 - i * lineH;
-        return (
-          <group key={i} position={[0, yOff, 0]}>
-            <Center>
-              <Text3D
-                font={FONT_URL}
-                size={fontSize}
-                height={TEXT_DEPTH}
-                bevelEnabled
-                bevelSize={0.012}
-                bevelThickness={0.012}
-                bevelSegments={3}
-                curveSegments={8}
-              >
-                {line}
-                {mat}
-              </Text3D>
-            </Center>
-          </group>
-        );
-      })}
-      {/* Brand label */}
+      {lines.map((line, i) => (
+        <group key={i} position={[0, totalH / 2 - i * lineH, 0]}>
+          <Center>
+            <Text3D font={FONT_URL} size={fontSize} height={TEXT_DEPTH}
+              bevelEnabled bevelSize={0.012} bevelThickness={0.012} bevelSegments={3} curveSegments={8}>
+              {line}{mat}
+            </Text3D>
+          </Center>
+        </group>
+      ))}
       <group position={[0, -totalH / 2 - fontSize * 0.85, 0]}>
         <Center>
-          <Text3D
-            font={FONT_URL}
-            size={0.06}
-            height={0.02}
-            bevelEnabled={false}
-            curveSegments={4}
-          >
+          <Text3D font={FONT_URL} size={0.06} height={0.02} bevelEnabled={false} curveSegments={4}>
             {'ЧЕБЛЯЧАС'}
             <meshStandardMaterial color={handsColor} metalness={0.4} roughness={0.4} opacity={0.3} transparent />
           </Text3D>
@@ -234,8 +195,9 @@ function WatchFaceText3D({
   );
 }
 
-// ─── Strap renderers ──────────────────────────────────────────────────────
+// ─── Strap renderers ───────────────────────────────────────────────────────
 
+// posY is the center of the strap, relative to its animated parent group
 function SegmentedStrap({ posY, color }: { posY: number; color: string }) {
   const count = 9;
   const segH = 0.28;
@@ -257,7 +219,7 @@ function SolidStrap({ posY, color, mat }: { posY: number; color: string; mat: st
   const isResin = mat === 'resin';
   const isFabric = mat === 'cotton_fabric';
   const isLeather = mat === 'leather';
-  const metalness = mat.includes('metal') ? 0.85 : isResin ? 0.0 : 0.0;
+  const metalness = mat.includes('metal') ? 0.85 : 0.0;
   const roughness = isLeather ? 0.92 : isFabric ? 0.88 : isResin ? 0.06 : 0.78;
 
   if (isFabric) {
@@ -291,11 +253,9 @@ function SolidStrap({ posY, color, mat }: { posY: number; color: string; mat: st
   );
 }
 
-// ─── Camera controller ────────────────────────────────────────────────────
+// ─── Camera controller ─────────────────────────────────────────────────────
 
-// How long after the last drag event before auto-rotation resumes (10 s)
 const INTERACTION_PAUSE_MS = 10_000;
-// How long (ms) to ease rotation speed from 0 → full after the pause expires
 const RESUME_RAMP_MS = 2_500;
 
 export function CameraRig({ step, lastInteractionRef }: {
@@ -319,42 +279,32 @@ export function CameraRig({ step, lastInteractionRef }: {
       ? Date.now() - lastInteractionRef.current < INTERACTION_PAUSE_MS
       : false;
     if (userActive) { resumeStartRef.current = null; return; }
-
     if (resumeStartRef.current === null) resumeStartRef.current = Date.now();
     const t = Math.min(1, (Date.now() - resumeStartRef.current) / RESUME_RAMP_MS);
-    const lerpSpeed = 0.02 + 0.03 * t; // ease from slow to normal
-
-    camera.position.lerp(vec, lerpSpeed);
+    camera.position.lerp(vec, 0.02 + 0.03 * t);
     camera.lookAt(0, 0, 0);
   });
   return null;
 }
 
-// ─── Back panel — canvas texture, letters evenly around the face ──────────
+// ─── Back panel ───────────────────────────────────────────────────────────
 
-function buildBackTexture(
-  geom: string,
-  caseColor: string,
-  serial?: string,
-): THREE.CanvasTexture {
+function buildBackTexture(geom: string, caseColor: string, serial?: string): THREE.CanvasTexture {
   const S = 512;
   const cv = document.createElement('canvas');
   cv.width = S; cv.height = S;
   const ctx = cv.getContext('2d')!;
 
-  // Background — darker metallic variant of the case color
   const bgCol = new THREE.Color(caseColor).multiplyScalar(0.72);
   ctx.fillStyle = bgCol.getStyle();
   ctx.fillRect(0, 0, S, S);
 
-  // Radial sheen
   const grad = ctx.createRadialGradient(S * 0.38, S * 0.35, 0, S * 0.5, S * 0.5, S * 0.55);
   grad.addColorStop(0, 'rgba(255,255,255,0.09)');
   grad.addColorStop(1, 'rgba(0,0,0,0.14)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, S, S);
 
-  // Engraving color — brighter variant
   const engCol = new THREE.Color(caseColor).multiplyScalar(1.5);
   engCol.r = Math.min(1, engCol.r);
   engCol.g = Math.min(1, engCol.g);
@@ -362,10 +312,8 @@ function buildBackTexture(
   const engStyle = engCol.getStyle();
 
   const cx = S / 2, cy = S / 2;
-  // Same orbital radius as the front-face hour markers
   const letterR = S * 0.33;
 
-  // Thin decorative orbit ring
   ctx.beginPath();
   ctx.arc(cx, cy, letterR * 1.32, 0, Math.PI * 2);
   ctx.strokeStyle = engStyle;
@@ -374,34 +322,23 @@ function buildBackTexture(
   ctx.stroke();
   ctx.globalAlpha = 1;
 
-  // ── Brand letters placed like clock numbers ────────────────────────────
-  // UV note: tex.repeat.x is set to -rep (negative) to flip U horizontally.
-  // This cancels the UV mirror that occurs when the watch body rotates ~180°
-  // and the back face is viewed from behind, so canvas is drawn un-flipped here.
   const letters = 'ЧЕБЛЯЧАС'.split('');
   const n = letters.length;
-
   ctx.font = `bold ${Math.round(S * 0.064)}px Arial, sans-serif`;
   ctx.fillStyle = engStyle;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-
   letters.forEach((letter, i) => {
-    // Start at 12 o'clock (π/2) going clockwise (decreasing a)
     const a = Math.PI / 2 - (i / n) * Math.PI * 2;
-    // Canvas y-axis is inverted vs Three.js y
     const x = cx + letterR * Math.cos(a);
     const y = cy - letterR * Math.sin(a);
-
     ctx.save();
     ctx.translate(x, y);
-    // Rotate so each letter's top points outward from the center
     ctx.rotate(Math.PI / 2 - a);
     ctx.fillText(letter, 0, 0);
     ctx.restore();
   });
 
-  // Serial number centred below the middle
   if (serial) {
     ctx.font = `bold ${Math.round(S * 0.043)}px monospace`;
     ctx.fillStyle = engStyle;
@@ -412,7 +349,6 @@ function buildBackTexture(
     ctx.globalAlpha = 1;
   }
 
-  // Centre pip
   ctx.beginPath();
   ctx.arc(cx, cy, S * 0.013, 0, Math.PI * 2);
   ctx.fillStyle = engStyle;
@@ -423,7 +359,6 @@ function buildBackTexture(
   const tex = new THREE.CanvasTexture(cv);
   const half = shapeHalfWidth(geom);
   const rep = 0.5 / half;
-  // Negative x-repeat flips U so the back disc shows correctly from behind
   tex.offset.set(0.5, 0.5);
   tex.repeat.set(-rep, rep);
   tex.needsUpdate = true;
@@ -431,48 +366,31 @@ function buildBackTexture(
 }
 
 function WatchBackPanel({ geom, caseColor, serial }: {
-  geom: string;
-  caseColor: string;
-  serial?: string;
+  geom: string; caseColor: string; serial?: string;
 }) {
-  const backDiscGeo = useMemo(() => {
-    const shape = buildFaceShape(geom);
-    return new THREE.ShapeGeometry(shape, 72);
-  }, [geom]);
-
-  const backTexture = useMemo(
-    () => buildBackTexture(geom, caseColor, serial),
-    [geom, caseColor, serial],
-  );
-
+  const backDiscGeo = useMemo(() => new THREE.ShapeGeometry(buildFaceShape(geom), 72), [geom]);
+  const backTexture = useMemo(() => buildBackTexture(geom, caseColor, serial), [geom, caseColor, serial]);
   return (
-    // No rotation needed — BackSide material renders only when face points away
-    // from the camera, i.e. when the watch has rotated ~180° to show its back.
     <mesh position={[0, 0, -0.12]}>
       <primitive object={backDiscGeo} />
-      <meshStandardMaterial
-        map={backTexture}
-        metalness={0.88}
-        roughness={0.2}
-        side={THREE.BackSide}
-      />
+      <meshStandardMaterial map={backTexture} metalness={0.88} roughness={0.2} side={THREE.BackSide} />
     </mesh>
   );
 }
 
-// ─── Machined bezel ring around crystal ───────────────────────────────────
+// ─── Machined bezel ring ───────────────────────────────────────────────────
 
-function BezelRing({ geom, caseMat }: { geom: string; caseMat: { color: string; metalness: number; roughness: number } }) {
+function BezelRing({ geom, caseMat }: {
+  geom: string;
+  caseMat: { color: string; metalness: number; roughness: number };
+}) {
   const geo = useMemo(() => {
-    const outer = buildFaceShape(geom);
-    // Scale up slightly for outer edge, scale down for inner cutout
-    const scaleFn = (s: THREE.Shape, f: number) => {
-      const pts = s.getPoints(48);
-      const ns = new THREE.Shape(pts.map(p => new THREE.Vector2(p.x * f, p.y * f)));
-      return ns;
+    const scaleFn = (f: number) => {
+      const pts = buildFaceShape(geom).getPoints(48);
+      return new THREE.Shape(pts.map(p => new THREE.Vector2(p.x * f, p.y * f)));
     };
-    const outerS = scaleFn(buildFaceShape(geom), 1.055);
-    const innerS = scaleFn(buildFaceShape(geom), 1.005);
+    const outerS = scaleFn(1.055);
+    const innerS = scaleFn(1.005);
     outerS.holes = [innerS];
     return new THREE.ExtrudeGeometry(outerS, {
       depth: 0.14,
@@ -482,7 +400,6 @@ function BezelRing({ geom, caseMat }: { geom: string; caseMat: { color: string; 
       bevelSegments: 5,
     });
   }, [geom]);
-
   useEffect(() => () => geo.dispose(), [geo]);
 
   return (
@@ -492,42 +409,103 @@ function BezelRing({ geom, caseMat }: { geom: string; caseMat: { color: string; 
         color={caseMat.color}
         metalness={Math.min(1, caseMat.metalness + 0.06)}
         roughness={Math.max(0.04, caseMat.roughness - 0.06)}
-        envMapIntensity={1.4}
+        envMapIntensity={1.6}
       />
     </mesh>
   );
 }
 
-// ─── Low-poly wrist mannequin ─────────────────────────────────────────────
+// ─── Realistic star bezel ring with chamfered arms ─────────────────────────
+// Extra ring only for star geometry — adds a visible machined star bezel face
+function StarCaseAccent({ caseMat }: { caseMat: { color: string; metalness: number; roughness: number } }) {
+  const geo = useMemo(() => {
+    // Build a slightly-inset star shape for the accent ring (outer edge of the star case face)
+    const outerShape = buildFaceShape('star');
+    const innerPts = buildFaceShape('star').getPoints(64);
+    const innerShape = new THREE.Shape(innerPts.map(p => new THREE.Vector2(p.x * 0.82, p.y * 0.82)));
+    outerShape.holes = [innerShape];
+    return new THREE.ExtrudeGeometry(outerShape, {
+      depth: 0.12,
+      bevelEnabled: true,
+      bevelSize: 0.035,
+      bevelThickness: 0.035,
+      bevelSegments: 6,
+    });
+  }, []);
+  useEffect(() => () => geo.dispose(), [geo]);
+
+  return (
+    <mesh position={[0, 0, 0.28]} castShadow receiveShadow>
+      <primitive object={geo} />
+      <meshStandardMaterial
+        color={caseMat.color}
+        metalness={Math.min(1, caseMat.metalness + 0.10)}
+        roughness={Math.max(0.03, caseMat.roughness - 0.08)}
+        envMapIntensity={2.0}
+      />
+    </mesh>
+  );
+}
+
+// ─── Wrist mannequin (improved) ────────────────────────────────────────────
 
 export function WristMannequin() {
+  // Lathe profile for a tapered, anatomically shaped wrist
+  // Points define the profile from one end of the wrist to the other
+  const wristGeo = useMemo(() => {
+    const points = [
+      new THREE.Vector2(1.32, -3.8),  // forearm end (narrower — going up arm)
+      new THREE.Vector2(1.38, -2.0),
+      new THREE.Vector2(1.42, -0.5),  // wrist crease (slightly narrower)
+      new THREE.Vector2(1.48, 0.5),
+      new THREE.Vector2(1.52, 2.0),
+      new THREE.Vector2(1.55, 3.8),   // hand side (slightly wider)
+    ];
+    return new THREE.LatheGeometry(points, 28);
+  }, []);
+  useEffect(() => () => wristGeo.dispose(), [wristGeo]);
+
+  // Slight elliptical flattening: x scale < z scale  
+  // The wrist group is rotated so the cylinder runs along Z (horizontal wrist under the watch)
   return (
-    <group position={[0, 0, -1.4]} rotation={[Math.PI / 2, 0, 0]}>
-      {/* Main wrist cylinder — elliptical cross-section */}
+    <group position={[0, 0, -1.55]} rotation={[Math.PI / 2, 0, 0]} scale={[0.96, 1, 1]}>
+      {/* Main wrist body */}
       <mesh receiveShadow>
-        <cylinderGeometry args={[1.45, 1.55, 7.5, 24, 1]} />
-        <meshStandardMaterial color="#d4a98a" roughness={0.82} metalness={0.0} />
+        <primitive object={wristGeo} />
+        <meshStandardMaterial color="#c9a07a" roughness={0.78} metalness={0.0} />
       </mesh>
-      {/* Subtle wrist bone highlight */}
-      <mesh position={[0.72, 0, 0]}>
-        <sphereGeometry args={[0.28, 10, 8]} />
-        <meshStandardMaterial color="#c49070" roughness={0.9} metalness={0} />
+
+      {/* Styloid process (wrist bone) bumps */}
+      <mesh position={[0.74, 0, 0.3]} castShadow>
+        <sphereGeometry args={[0.26, 12, 10]} />
+        <meshStandardMaterial color="#bf9068" roughness={0.85} metalness={0} />
       </mesh>
-      <mesh position={[-0.72, 0, 0]}>
-        <sphereGeometry args={[0.22, 10, 8]} />
-        <meshStandardMaterial color="#c49070" roughness={0.9} metalness={0} />
+      <mesh position={[-0.66, 0, -0.2]} castShadow>
+        <sphereGeometry args={[0.20, 12, 10]} />
+        <meshStandardMaterial color="#bf9068" roughness={0.85} metalness={0} />
+      </mesh>
+
+      {/* Subtle tendon ridge along top of wrist */}
+      <mesh position={[0, 0, 0.6]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.055, 0.055, 7.2, 8]} />
+        <meshStandardMaterial color="#b88a62" roughness={0.92} metalness={0} />
       </mesh>
     </group>
   );
 }
 
-// ─── Main watch model ─────────────────────────────────────────────────────
+// ─── Main watch model ──────────────────────────────────────────────────────
 
 export interface WatchModelProps {
   step?: number;
   lastInteractionRef?: React.RefObject<number>;
   showWrist?: boolean;
 }
+
+// Lug geometry measurements (shared constants so lugs and straps always agree)
+const LUG_TIP_Y = 1.85;   // |y| of the lug tip (where strap attaches)
+const LUG_CY = 1.60;      // |y| of lug center-box
+const STRAP_HALF = 1.2;   // half-length of each strap (center-to-end)
 
 export default function WatchModel({ step = 0, lastInteractionRef, showWrist = false }: WatchModelProps) {
   const { config } = useWatchConfig();
@@ -546,9 +524,10 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
     prevStepRef.current = step;
   }, [step]);
 
-  // Default -0.32 gives "looking down at wrist" angle; bracelet step tilts further
-  const { tiltX } = useSpring({
+  // Tilt + wrist-snap Z position (watch moves forward/into wrist when wrist shown)
+  const { tiltX, watchZ } = useSpring({
     tiltX: step === 2 ? 0.52 : -0.32,
+    watchZ: showWrist ? 0.2 : 0,
     config: { mass: 1, tension: 110, friction: 22 },
   });
 
@@ -557,10 +536,10 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
     config: { mass: 1, tension: 120, friction: 20 },
   });
 
-  // Strap wrapping animation — bend straps around wrist when in bracelet step
+  // Strap wrap — pivots at lug tips so straps stay anchored while curling around wrist
   const { wrapUpper, wrapLower } = useSpring({
-    wrapUpper: step === 2 ? -0.48 : 0,
-    wrapLower: step === 2 ? 0.48 : 0,
+    wrapUpper: step === 2 ? -0.52 : 0,
+    wrapLower: step === 2 ? 0.52 : 0,
     config: { mass: 1.2, tension: 95, friction: 26 },
   });
 
@@ -569,13 +548,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
     const userActive = lastInteractionRef?.current
       ? Date.now() - lastInteractionRef.current < INTERACTION_PAUSE_MS
       : false;
-
-    if (userActive) {
-      rotResumeStartRef.current = null;
-      return;
-    }
-
-    // Smooth speed ramp-up after interaction ends — avoids jarring snap
+    if (userActive) { rotResumeStartRef.current = null; return; }
     if (rotResumeStartRef.current === null) rotResumeStartRef.current = Date.now();
     const speedFactor = Math.min(1, (Date.now() - rotResumeStartRef.current) / RESUME_RAMP_MS);
 
@@ -593,34 +566,23 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
 
   const bodyGeo = useMemo(() => {
     const shape = buildFaceShape(config.watchfaceGeometry);
+    // Star gets extra depth + larger bevel for machined look
+    const isStar = config.watchfaceGeometry === 'star';
     return new THREE.ExtrudeGeometry(shape, {
-      depth: 0.38,
+      depth: isStar ? 0.52 : 0.38,
       bevelEnabled: true,
-      bevelSize: 0.09,
-      bevelThickness: 0.09,
-      bevelSegments: 8,
+      bevelSize: isStar ? 0.12 : 0.09,
+      bevelThickness: isStar ? 0.12 : 0.09,
+      bevelSegments: isStar ? 12 : 8,
     });
   }, [config.watchfaceGeometry]);
 
-  const discGeo = useMemo(() => {
-    const shape = buildFaceShape(config.watchfaceGeometry);
-    return new THREE.ShapeGeometry(shape, 72);
-  }, [config.watchfaceGeometry]);
-
-  const crystalGeo = useMemo(() => {
-    const shape = buildFaceShape(config.watchfaceGeometry);
-    return new THREE.ShapeGeometry(shape, 72);
-  }, [config.watchfaceGeometry]);
+  const discGeo = useMemo(() => new THREE.ShapeGeometry(buildFaceShape(config.watchfaceGeometry), 72), [config.watchfaceGeometry]);
+  const crystalGeo = useMemo(() => new THREE.ShapeGeometry(buildFaceShape(config.watchfaceGeometry), 72), [config.watchfaceGeometry]);
 
   const isCircular = (config.watchfaceTextMode ?? 'center') === 'circular';
-
   const faceTexture = useMemo(
-    () => buildFaceTexture(
-      config.watchfaceColor,
-      config.handsColor,
-      config.watchfaceGeometry,
-      isCircular,
-    ),
+    () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular),
     [config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular]
   );
 
@@ -632,31 +594,38 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   }), [config.watchfaceColor, config.watchfaceMaterial]);
 
   const isSegmented = config.braceletMaterial === 'metal_segmented';
+  const isStar = config.watchfaceGeometry === 'star';
   const hasText = (config.watchfaceText ?? '').trim().length > 0;
+
+  // Vertical Z offset when star (thicker case) to keep face disc at right z
+  const starFaceZ = isStar ? 0.62 : 0.48;
+  const starCrystalZ = isStar ? 0.70 : 0.56;
+  const starHandsZ = isStar ? 0.71 : 0.57;
 
   return (
     <>
-    <animated.group ref={groupRef} rotation-x={tiltX}>
+    <animated.group ref={groupRef} rotation-x={tiltX} position-z={watchZ}>
 
+      {/* ── Case body ── */}
       <mesh castShadow receiveShadow>
         <primitive object={bodyGeo} />
-        <meshStandardMaterial {...caseMat} />
+        <meshStandardMaterial {...caseMat} envMapIntensity={1.4} />
       </mesh>
 
-      {/* Back panel — engraved brand name + serial number */}
+      {/* Back panel — brand + serial */}
       <WatchBackPanel
         geom={config.watchfaceGeometry}
         caseColor={config.watchfaceColor}
         serial={config.serialNumber || undefined}
       />
 
-      {/* Face disc with corrected UV texture */}
-      <mesh position={[0, 0, 0.48]}>
+      {/* Face disc */}
+      <mesh position={[0, 0, starFaceZ]}>
         <primitive object={discGeo} />
         <meshStandardMaterial map={faceTexture} roughness={0.25} metalness={0.05} />
       </mesh>
 
-      {/* 3D extruded text — Suspense so font load doesn't block render */}
+      {/* 3D text on face */}
       {hasText && (
         <Suspense fallback={null}>
           <WatchFaceText3D
@@ -667,85 +636,71 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         </Suspense>
       )}
 
-      {/* Crystal glass layer — physical domed glass, transmission=1.0 */}
-      <mesh position={[0, 0, 0.56]}>
+      {/* Crystal — physical glass with transmission */}
+      <mesh position={[0, 0, starCrystalZ]}>
         <primitive object={crystalGeo} />
         <meshPhysicalMaterial
           color="#d8eeff"
           metalness={0}
           roughness={0.01}
           transmission={1.0}
-          ior={1.5}
-          thickness={0.18}
-          envMapIntensity={1.8}
+          ior={1.52}
+          thickness={0.20}
+          envMapIntensity={2.0}
         />
       </mesh>
 
+      {/* Watch hands */}
       {config.handsEnabled && (
-        <group position={[0, 0, 0.57]}>
-          {/* Hour hand — flat, tapered box, short & wide like a real watch */}
+        <group position={[0, 0, starHandsZ]}>
           <group rotation={[0, 0, Math.PI / 5]}>
-            {/* Main body: tapers from base to tip via two stacked boxes */}
             <mesh position={[0, 0.26, 0]} castShadow>
               <boxGeometry args={[0.058, 0.52, 0.018]} />
               <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
             </mesh>
-            {/* Taper cap at tip */}
             <mesh position={[0, 0.52, 0]} castShadow>
               <boxGeometry args={[0.034, 0.06, 0.018]} />
               <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
             </mesh>
-            {/* Counterweight stub */}
             <mesh position={[0, -0.072, 0]} castShadow>
               <boxGeometry args={[0.072, 0.10, 0.022]} />
               <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
             </mesh>
           </group>
-
-          {/* Minute hand — flat, long & slim */}
           <group rotation={[0, 0, -Math.PI / 3.5]}>
             <mesh position={[0, 0.38, 0]} castShadow>
               <boxGeometry args={[0.040, 0.76, 0.016]} />
               <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
             </mesh>
-            {/* Taper cap */}
             <mesh position={[0, 0.76, 0]} castShadow>
               <boxGeometry args={[0.022, 0.04, 0.016]} />
               <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
             </mesh>
-            {/* Counterweight */}
             <mesh position={[0, -0.08, 0]} castShadow>
               <boxGeometry args={[0.055, 0.12, 0.020]} />
               <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
             </mesh>
           </group>
-
-          {/* Second hand — ultra-thin flat needle */}
           {(config.handsCount ?? 3) >= 3 && (
             <group rotation={[0, 0, Math.PI * 0.75]}>
               <mesh position={[0, 0.34, 0.002]} castShadow>
                 <boxGeometry args={[0.010, 0.68, 0.008]} />
                 <meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} />
               </mesh>
-              {/* Round lollipop at tip */}
               <mesh position={[0, 0.62, 0.002]}>
                 <cylinderGeometry args={[0.022, 0.022, 0.008, 12]} />
                 <meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} />
               </mesh>
-              {/* Counterweight */}
               <mesh position={[0, -0.10, 0.002]} castShadow>
                 <boxGeometry args={[0.024, 0.16, 0.010]} />
                 <meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} />
               </mesh>
             </group>
           )}
-
-          {/* Center pivot — polished flat disc */}
           <mesh rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[0.058, 0.058, 0.006, 28]} />
             <meshStandardMaterial color={config.handsColor} metalness={1} roughness={0.02} />
           </mesh>
-          {/* Red accent pip */}
           <mesh position={[0, 0, 0.007]} rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[0.024, 0.024, 0.004, 16]} />
             <meshStandardMaterial color="#ef4444" metalness={0.85} roughness={0.08} />
@@ -753,54 +708,86 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         </group>
       )}
 
-      {/* Crown — right side, proper case-edge position */}
+      {/* Crown */}
       <mesh position={[1.62, 0.18, 0.10]} rotation={[0, 0, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[0.09, 0.085, 0.28, 18]} />
         <meshStandardMaterial {...caseMat} />
       </mesh>
-      {/* Crown knurl ring */}
       <mesh position={[1.66, 0.18, 0.10]} rotation={[0, 0, Math.PI / 2]}>
         <torusGeometry args={[0.09, 0.018, 8, 18]} />
         <meshStandardMaterial color={caseMat.color} metalness={caseMat.metalness} roughness={Math.min(1, caseMat.roughness + 0.15)} />
       </mesh>
 
-      {/* Lugs — height 0.50 so lug top = 1.85, exactly where strap bottom starts */}
-      {[1.60, -1.60].map((y) => (
+      {/* ── Lugs: physically shaped arms extending from case ── */}
+      {([LUG_CY, -LUG_CY] as const).map((y) => (
         <group key={y}>
-          <mesh position={[0, y, 0.01]} castShadow>
-            <boxGeometry args={[1.14, 0.50, 0.24]} />
-            <meshStandardMaterial {...caseMat} />
+          {/* Lug arm body — tapered from case to tip */}
+          <mesh position={[0, y, 0.02]} castShadow receiveShadow>
+            <boxGeometry args={[1.14, 0.52, 0.26]} />
+            <meshStandardMaterial {...caseMat} envMapIntensity={1.5} />
           </mesh>
-          {/* Spring bar pin through lug */}
-          <mesh position={[0, y, 0.12]} rotation={[0, 0, Math.PI / 2]} castShadow>
-            <cylinderGeometry args={[0.034, 0.034, 1.20, 12]} />
-            <meshStandardMaterial color={caseMat.color} metalness={0.96} roughness={0.03} />
+          {/* Lug chamfer strips — polished edges on the outer face */}
+          <mesh position={[0, y, 0.16]} castShadow>
+            <boxGeometry args={[1.10, 0.52, 0.04]} />
+            <meshStandardMaterial
+              color={caseMat.color}
+              metalness={Math.min(1, caseMat.metalness + 0.08)}
+              roughness={Math.max(0.03, caseMat.roughness - 0.08)}
+              envMapIntensity={2.0}
+            />
           </mesh>
+          {/* Spring bar pin — passes through lug holes, holds the strap */}
+          <mesh position={[0, y, 0.13]} rotation={[0, 0, Math.PI / 2]} castShadow>
+            <cylinderGeometry args={[0.036, 0.036, 1.22, 14]} />
+            <meshStandardMaterial
+              color={caseMat.color}
+              metalness={0.97}
+              roughness={0.02}
+              envMapIntensity={2.2}
+            />
+          </mesh>
+          {/* Spring bar keeper rings (left + right ends of bar) */}
+          {[-0.56, 0.56].map((x) => (
+            <mesh key={x} position={[x, y, 0.13]} rotation={[0, 0, Math.PI / 2]}>
+              <torusGeometry args={[0.036, 0.016, 8, 12]} />
+              <meshStandardMaterial color={caseMat.color} metalness={0.98} roughness={0.02} />
+            </mesh>
+          ))}
         </group>
       ))}
 
-      {/* Upper strap — wraps forward when in bracelet preview step */}
-      <animated.group position-z={spread} rotation-x={wrapUpper}>
-        {isSegmented
-          ? <SegmentedStrap posY={3.05} color={config.braceletColor} />
-          : <SolidStrap posY={3.05} color={config.braceletColor} mat={config.braceletMaterial} />
-        }
-      </animated.group>
+      {/* ── Upper strap — pivot anchored at lug tip ── */}
+      {/* The animated group's origin sits exactly at the lug tip (y=LUG_TIP_Y).
+          Any rotation-x bends the strap forward/back while the attachment point
+          (y=0 in this group = LUG_TIP_Y in world) stays glued to the spring bar. */}
+      <group position={[0, LUG_TIP_Y, 0]}>
+        <animated.group position-z={spread} rotation-x={wrapUpper}>
+          {isSegmented
+            ? <SegmentedStrap posY={STRAP_HALF} color={config.braceletColor} />
+            : <SolidStrap posY={STRAP_HALF} color={config.braceletColor} mat={config.braceletMaterial} />
+          }
+        </animated.group>
+      </group>
 
-      {/* Lower strap — wraps in opposite direction */}
-      <animated.group position-z={spread} rotation-x={wrapLower}>
-        {isSegmented
-          ? <SegmentedStrap posY={-3.05} color={config.braceletColor} />
-          : <SolidStrap posY={-3.05} color={config.braceletColor} mat={config.braceletMaterial} />
-        }
-      </animated.group>
+      {/* ── Lower strap — pivot anchored at lower lug tip ── */}
+      <group position={[0, -LUG_TIP_Y, 0]}>
+        <animated.group position-z={spread} rotation-x={wrapLower}>
+          {isSegmented
+            ? <SegmentedStrap posY={-STRAP_HALF} color={config.braceletColor} />
+            : <SolidStrap posY={-STRAP_HALF} color={config.braceletColor} mat={config.braceletMaterial} />
+          }
+        </animated.group>
+      </group>
 
-      {/* Bezel ring — machined metal overlay around the crystal */}
+      {/* Bezel ring — machined metal overlay around crystal */}
       <BezelRing geom={config.watchfaceGeometry} caseMat={caseMat} />
+
+      {/* Star-only: extra stepped accent ring for the machined case arm look */}
+      {isStar && <StarCaseAccent caseMat={caseMat} />}
 
     </animated.group>
 
-    {/* Wrist mannequin — low-poly preview beneath the watch */}
+    {/* Wrist mannequin — rendered outside watch group so it doesn't rotate with it */}
     {showWrist && <WristMannequin />}
     </>
   );
