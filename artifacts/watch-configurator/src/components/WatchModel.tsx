@@ -216,63 +216,119 @@ function WatchFaceText3D({ text, mode, handsColor, faceZ }: {
   );
 }
 
-// ─── Strap renderers ───────────────────────────────────────────────────────
+// ─── Clasp & bone-chain strap system ───────────────────────────────────────
 
-// Segmented metal-link strap — starts at y=0 (the pivot/spring-bar plane) and
-// grows outward in the sign(posY) direction.  Never centered around posY so
-// segments cannot clip back into the lug body above the attachment point.
-function SegmentedStrap({ posY, color }: { posY: number; color: string }) {
-  const sign  = Math.sign(posY) || 1;
-  const count = 9;
-  const segH  = 0.28;
-  const gap   = 0.06;
+// Joints per strap arm and world-unit length of each segment.
+// 6 joints × 0.44 = 2.64 units total arm length.
+const WRAP_SEGS = 6;
+const SEG_LEN   = 0.44;
+
+// StrapClasp — rendered at the chain terminus.
+// isDeployant → fold-over butterfly clasp (metal bracelets)
+// !isDeployant → traditional pin-buckle (leather / resin / fabric)
+function StrapClasp({ sign, claspColor, isDeployant }: {
+  sign: number; claspColor: string; isDeployant: boolean;
+}) {
+  const m = { color: claspColor, metalness: 0.97, roughness: 0.03, envMapIntensity: 2.0 };
   return (
-    <group>
-      {Array.from({ length: count }).map((_, i) => (
-        <mesh key={i} position={[0, sign * (i * (segH + gap) + segH / 2), 0]} castShadow>
-          <boxGeometry args={[1.05, segH, 0.15]} />
-          <meshStandardMaterial color={color} metalness={0.92} roughness={0.07} />
-        </mesh>
-      ))}
+    <group position={[0, sign * 0.10, 0]}>
+      {/* Clasp frame bar */}
+      <mesh castShadow>
+        <boxGeometry args={[0.82, 0.20, 0.14]} />
+        <meshStandardMaterial {...m} />
+      </mesh>
+      {isDeployant ? (
+        // Deployant: upper leaf + hinge pin
+        <>
+          <mesh position={[0, sign * 0.20, 0.02]} castShadow>
+            <boxGeometry args={[0.76, 0.14, 0.05]} />
+            <meshStandardMaterial {...m} />
+          </mesh>
+          <mesh position={[0, sign * 0.20, 0.05]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.015, 0.015, 0.78, 8]} />
+            <meshStandardMaterial color={claspColor} metalness={0.99} roughness={0.01} />
+          </mesh>
+        </>
+      ) : (
+        // Pin buckle: axial pin + two keeper loops
+        <>
+          <mesh position={[0, 0, 0.10]} rotation={[0, 0, Math.PI / 2]} castShadow>
+            <cylinderGeometry args={[0.015, 0.015, 0.60, 8]} />
+            <meshStandardMaterial color={claspColor} metalness={0.99} roughness={0.01} />
+          </mesh>
+          {([-0.24, 0.24] as const).map(x => (
+            <mesh key={x} position={[x, 0, 0.08]}>
+              <boxGeometry args={[0.06, 0.22, 0.10]} />
+              <meshStandardMaterial {...m} roughness={0.06} />
+            </mesh>
+          ))}
+        </>
+      )}
     </group>
   );
 }
 
-function SolidStrap({ posY, color, mat }: { posY: number; color: string; mat: string }) {
+// StrapJoint — one bone in the procedural strap chain.
+//
+// Each joint is an <animated.group> whose rotation-x is driven by the SAME
+// fractional spring value (total_wrap / WRAP_SEGS).  Because the groups are
+// NESTED (joint k+1 is a child of joint k's far tip), the cumulative angle at
+// the last segment equals WRAP_SEGS × θ = total_wrap, producing a smooth
+// constant-curvature arc identical to a properly-rigged bone chain.
+//
+// sign   +1 = upper arm (strap grows +Y), −1 = lower arm (−Y).
+// θ      a @react-spring SpringValue<number> — React Spring writes the GPU
+//        matrix every animation frame without triggering React re-renders.
+function StrapJoint({ k, sign, θ, color, mat, isSegmented, claspColor }: {
+  k: number; sign: number; θ: any;
+  color: string; mat: string; isSegmented: boolean; claspColor: string;
+}) {
+  const segH    = SEG_LEN * 0.86;
   const isResin = mat === 'resin';
-  const isFabric = mat === 'cotton_fabric';
-  const isLeather = mat === 'leather';
-  const metalness = mat.includes('metal') ? 0.85 : 0.0;
-  const roughness = isLeather ? 0.92 : isFabric ? 0.88 : isResin ? 0.06 : 0.78;
+  const isFab   = mat === 'cotton_fabric';
+  const isLeath = mat === 'leather';
+  const metal   = isSegmented ? 0.92 : mat.includes('metal') ? 0.85 : 0;
+  const rough   = isSegmented ? 0.07 : isLeath ? 0.92 : isFab ? 0.88 : isResin ? 0.06 : 0.78;
 
-  if (isFabric) {
-    return (
-      <group position={[0, posY, 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[1.05, 2.4, 0.10]} />
-          <meshStandardMaterial color={color} roughness={0.9} metalness={0} />
-        </mesh>
-        {[-0.36, -0.12, 0.12, 0.36].map((x, i) => (
-          <mesh key={i} position={[x, 0, 0.06]} castShadow>
-            <boxGeometry args={[0.05, 2.4, 0.04]} />
-            <meshStandardMaterial color={new THREE.Color(color).offsetHSL(0, 0, 0.12).getStyle()} roughness={0.85} metalness={0} />
-          </mesh>
-        ))}
-      </group>
-    );
+  // Terminus: render clasp instead of another joint
+  if (k >= WRAP_SEGS) {
+    return <StrapClasp sign={sign} claspColor={claspColor} isDeployant={isSegmented} />;
   }
 
   return (
-    <mesh position={[0, posY, 0]} castShadow>
-      <boxGeometry args={[1.05, 2.4, 0.15]} />
-      <meshStandardMaterial
-        color={color}
-        metalness={metalness}
-        roughness={roughness}
-        transparent={isResin}
-        opacity={isResin ? 0.72 : 1}
-      />
-    </mesh>
+    <animated.group rotation-x={θ}>
+      {/* Segment body */}
+      {isFab ? (
+        <>
+          <mesh position={[0, sign * segH / 2, 0]} castShadow>
+            <boxGeometry args={[1.05, segH, 0.10]} />
+            <meshStandardMaterial color={color} roughness={0.90} metalness={0} />
+          </mesh>
+          {([-0.36, -0.12, 0.12, 0.36] as const).map(x => (
+            <mesh key={x} position={[x, sign * segH / 2, 0.06]} castShadow>
+              <boxGeometry args={[0.05, segH, 0.03]} />
+              <meshStandardMaterial
+                color={new THREE.Color(color).offsetHSL(0, 0, 0.12).getStyle()}
+                roughness={0.85} metalness={0}
+              />
+            </mesh>
+          ))}
+        </>
+      ) : (
+        <mesh position={[0, sign * segH / 2, 0]} castShadow>
+          <boxGeometry args={[1.05, segH, 0.15]} />
+          <meshStandardMaterial
+            color={color} metalness={metal} roughness={rough}
+            transparent={isResin} opacity={isResin ? 0.72 : 1}
+          />
+        </mesh>
+      )}
+      {/* Next joint pivot at the far tip of this segment */}
+      <group position={[0, sign * SEG_LEN, 0]}>
+        <StrapJoint k={k + 1} sign={sign} θ={θ} color={color} mat={mat}
+          isSegmented={isSegmented} claspColor={claspColor} />
+      </group>
+    </animated.group>
   );
 }
 
@@ -529,7 +585,7 @@ export interface WatchModelProps {
 // the lug arm, spring bar, and strap attachment always share the same Y and Z origin.
 const LUG_TIP_Y  = 1.85;  // |y| of spring bar / strap attachment (top of lug arm)
 const LUG_ARM_Z  = 0.10;  // Z center for lug body, spring bar, and strap — single source of truth
-const STRAP_HALF = 1.2;   // half-length of each strap (center relative to pivot)
+// STRAP_HALF removed — strap length now expressed as WRAP_SEGS × SEG_LEN in the StrapJoint chain
 
 export default function WatchModel({ step = 0, lastInteractionRef, showWrist = false }: WatchModelProps) {
   const { config } = useWatchConfig();
@@ -560,12 +616,18 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
     config: { mass: 1, tension: 120, friction: 20 },
   });
 
-  // Strap wrap — pivots at lug tips so straps stay anchored while curling around wrist
+  // Strap wrap — each spring drives the TOTAL bend angle for one arm.
+  // The StrapJoint chain distributes this across WRAP_SEGS pivot joints
+  // (θ = total / WRAP_SEGS per joint) to produce a smooth circular arc.
+  // 1.4 rad ≈ 80° total gives a convincing wrist-cradling curve.
   const { wrapUpper, wrapLower } = useSpring({
-    wrapUpper: step === 2 ? -0.52 : 0,
-    wrapLower: step === 2 ? 0.52 : 0,
-    config: { mass: 1.2, tension: 95, friction: 26 },
+    wrapUpper: step === 2 ? -1.4 : 0,
+    wrapLower: step === 2 ?  1.4 : 0,
+    config: { mass: 1.4, tension: 80, friction: 30 },
   });
+  // Per-joint fractional angles — passed to every animated.group in the chain
+  const θUpper = wrapUpper.to(v => v / WRAP_SEGS);
+  const θLower = wrapLower.to(v => v / WRAP_SEGS);
 
   useFrame(() => {
     if (!groupRef.current) return;
@@ -814,25 +876,23 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         );
       })}
 
-      {/* ── Upper strap — pivot at spring-bar tip ── */}
-      {/* Base Z = LUG_ARM_Z so the strap sits in the same plane as the spring bar.
-          rotation-x wraps the strap around the wrist; position-z adds spread offset. */}
+      {/* ── Upper strap — 6-joint bone chain from lug tip ── */}
+      {/* θUpper is the PER-JOINT rotation (total / WRAP_SEGS); nesting
+          joints inside each other accumulates the total bend at the tip. */}
       <group position={[0, LUG_TIP_Y, LUG_ARM_Z]}>
-        <animated.group position-z={spread} rotation-x={wrapUpper}>
-          {isSegmented
-            ? <SegmentedStrap posY={STRAP_HALF} color={config.braceletColor} />
-            : <SolidStrap posY={STRAP_HALF} color={config.braceletColor} mat={config.braceletMaterial} />
-          }
+        <animated.group position-z={spread}>
+          <StrapJoint k={0} sign={1} θ={θUpper}
+            color={config.braceletColor} mat={config.braceletMaterial}
+            isSegmented={isSegmented} claspColor={caseMat.color} />
         </animated.group>
       </group>
 
-      {/* ── Lower strap — pivot at spring-bar tip ── */}
+      {/* ── Lower strap — mirror bone chain ── */}
       <group position={[0, -LUG_TIP_Y, LUG_ARM_Z]}>
-        <animated.group position-z={spread} rotation-x={wrapLower}>
-          {isSegmented
-            ? <SegmentedStrap posY={-STRAP_HALF} color={config.braceletColor} />
-            : <SolidStrap posY={-STRAP_HALF} color={config.braceletColor} mat={config.braceletMaterial} />
-          }
+        <animated.group position-z={spread}>
+          <StrapJoint k={0} sign={-1} θ={θLower}
+            color={config.braceletColor} mat={config.braceletMaterial}
+            isSegmented={isSegmented} claspColor={caseMat.color} />
         </animated.group>
       </group>
 

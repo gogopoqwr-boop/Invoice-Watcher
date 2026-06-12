@@ -6,6 +6,7 @@ import { useCart } from '@/hooks/use-cart';
 import LivingEyeSVG, { parseEyeType } from '@/components/LivingEyeSVG';
 import WatchMiniCanvas from '@/components/WatchMiniCanvas';
 import WatchFullscreenViewer, { BRACELET_COMBOS } from '@/components/WatchFullscreenViewer';
+import WatchSVG from '@/components/WatchSVG';
 import { cn } from '@/lib/utils';
 
 function isAlive(preset: any): boolean {
