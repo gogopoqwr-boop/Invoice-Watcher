@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web", "bash", "postgresql-16"]
+modules = ["nodejs-20", "web", "bash"]
 
 [deployment]
 router = "application"
@@ -80,5 +80,3 @@ channel = "stable-25_05"
 [userenv.shared]
 TELEGRAM_BOT_USERNAME = "cheblyachas_bot"
 VITE_TELEGRAM_BOT_USERNAME = "cheblyachas_bot"
-JWT_SECRET = "12b9aea016ce12e2c268296d98c6871bf7d4da482582552efbcb5bc6229dfc33a21e18063b4a198d27abbe56a135d81e"
-TELEGRAM_TOKEN = "8714235616:AAGTgqTxLddwEUHtZiFkzu3-RgbmiO8189s"
