@@ -123,35 +123,49 @@ function buildFaceTexture(
 const FONT_URL = '/dejavu_bold.typeface.json';
 const TEXT_DEPTH = 0.06;
 
-function WatchFaceText3D({ text, mode, handsColor }: {
-  text: string; mode: 'center' | 'circular'; handsColor: string;
+function WatchFaceText3D({ text, mode, handsColor, faceZ }: {
+  text: string; mode: 'center' | 'circular'; handsColor: string; faceZ: number;
 }) {
   const trimmed = text.trim().toUpperCase();
+  const chars   = Array.from(trimmed);
+
+  // Arc geometry — computed unconditionally so hooks are never called conditionally.
+  // 0.27 rad/char keeps letters comfortably spaced; cap at 0.88π so they stay in the top hemisphere.
+  const arcSpan = Math.min(Math.PI * 0.88, chars.length * 0.27);
+  const arcLeft = Math.PI / 2 + arcSpan / 2;           // leftmost char angle (10-11 o'clock)
+  const step    = chars.length > 0 ? arcSpan / chars.length : 1;
+  const circR   = 1.26;
+
+  // Pre-compute per-letter position + quaternion using explicit makeBasis so axes are unambiguous:
+  //   right   = CW-tangent  → (sin a, -cos a, 0)  — letters read left→right
+  //   up      = outward-radial → (cos a,  sin a, 0)  — letter bottom faces center
+  //   forward = +Z                                  — face always toward viewer
+  const letterData = useMemo(() => chars.map((_, i) => {
+    const angle   = arcLeft - (i + 0.5) * step;
+    const x       = circR * Math.cos(angle);
+    const y       = circR * Math.sin(angle);
+    const right   = new THREE.Vector3( Math.sin(angle), -Math.cos(angle), 0);
+    const outward = new THREE.Vector3( Math.cos(angle),  Math.sin(angle), 0);
+    const m       = new THREE.Matrix4().makeBasis(right, outward, new THREE.Vector3(0, 0, 1));
+    const q       = new THREE.Quaternion().setFromRotationMatrix(m);
+    return { x, y, q };
+  }), [trimmed, arcLeft, step]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!trimmed) return null;
-  const mat = <meshStandardMaterial color={handsColor} metalness={0.55} roughness={0.2} />;
+
+  // textZ: just above the face disc surface, always below the crystal.
+  // faceZ is passed from the parent (starFaceZ) so it adapts to geometry variant.
+  const textZ = faceZ + 0.01;
+  const mat   = <meshStandardMaterial color={handsColor} metalness={0.55} roughness={0.2} />;
 
   if (mode === 'circular') {
-    const chars = Array.from(trimmed);
-    // Keep arc within the top half — letters never dip below the equator.
-    // 0.27 rad per character gives comfortable spacing without crowding.
-    const arcSpan = Math.min(Math.PI * 0.88, chars.length * 0.27);
-    // Place char[0] at the LEFT (high-angle / 10–11 o'clock side) and
-    // decrement angle clockwise so the text reads left → right naturally.
-    const arcLeft  = Math.PI / 2 + arcSpan / 2;
-    const step     = arcSpan / chars.length;
-    const circR    = 1.26;
     const fontSize = Math.max(0.09, Math.min(0.17, 0.78 / Math.max(chars.length, 4)));
     return (
-      <group position={[0, 0, 0.61]}>
+      <group position={[0, 0, textZ]}>
         {chars.map((ch, i) => {
-          // Decreasing angle = clockwise = left-to-right reading order
-          const angle = arcLeft - (i + 0.5) * step;
-          const x = circR * Math.cos(angle);
-          const y = circR * Math.sin(angle);
-          // rot aligns each letter's top with the outward radial direction
-          const rot = angle - Math.PI / 2;
+          const { x, y, q } = letterData[i];
           return (
-            <group key={i} position={[x, y, 0]} rotation={[0, 0, rot]}>
+            <group key={i} position={[x, y, 0]} quaternion={q}>
               <Center>
                 <Text3D font={FONT_URL} size={fontSize} height={TEXT_DEPTH}
                   bevelEnabled bevelSize={0.008} bevelThickness={0.008} bevelSegments={3} curveSegments={6}>
@@ -173,24 +187,24 @@ function WatchFaceText3D({ text, mode, handsColor }: {
     );
   }
 
-  const lines = trimmed.split('\n').filter(Boolean).slice(0, 4);
-  const maxLen = Math.max(...lines.map(l => l.length), 1);
-  const fontSize = Math.min(0.28, Math.max(0.08, 0.7 / maxLen));
-  const lineH = fontSize * 1.4;
-  const totalH = (lines.length - 1) * lineH;
+  const lines   = trimmed.split('\n').filter(Boolean).slice(0, 4);
+  const maxLen  = Math.max(...lines.map(l => l.length), 1);
+  const fSize   = Math.min(0.28, Math.max(0.08, 0.7 / maxLen));
+  const lineH   = fSize * 1.4;
+  const totalH  = (lines.length - 1) * lineH;
   return (
-    <group position={[0, 0, 0.61]}>
+    <group position={[0, 0, textZ]}>
       {lines.map((line, i) => (
         <group key={i} position={[0, totalH / 2 - i * lineH, 0]}>
           <Center>
-            <Text3D font={FONT_URL} size={fontSize} height={TEXT_DEPTH}
+            <Text3D font={FONT_URL} size={fSize} height={TEXT_DEPTH}
               bevelEnabled bevelSize={0.012} bevelThickness={0.012} bevelSegments={3} curveSegments={8}>
               {line}{mat}
             </Text3D>
           </Center>
         </group>
       ))}
-      <group position={[0, -totalH / 2 - fontSize * 0.85, 0]}>
+      <group position={[0, -totalH / 2 - fSize * 0.85, 0]}>
         <Center>
           <Text3D font={FONT_URL} size={0.06} height={0.02} bevelEnabled={false} curveSegments={4}>
             {'ЧЕБЛЯЧАС'}
@@ -639,6 +653,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
             text={config.watchfaceText ?? ''}
             mode={config.watchfaceTextMode ?? 'center'}
             handsColor={config.handsColor}
+            faceZ={starFaceZ}
           />
         </Suspense>
       )}
