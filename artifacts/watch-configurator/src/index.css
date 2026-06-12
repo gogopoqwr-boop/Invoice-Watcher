@@ -2,6 +2,16 @@
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
 
+#replit-pill,
+[id^="replit-"],
+[class*="replit-badge"],
+iframe[src*="replit.com/badge"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
 @custom-variant dark (&:is([data-theme="dark"] *));
 
 @theme inline {

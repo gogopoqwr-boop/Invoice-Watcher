@@ -28,7 +28,20 @@ function MouseGlassTracker() {
       document.documentElement.style.setProperty("--mouse-y", `${e.clientY}px`);
     };
     window.addEventListener("mousemove", update, { passive: true });
-    return () => window.removeEventListener("mousemove", update);
+
+    const purgeReplitBadge = () => {
+      const pill = document.getElementById("replit-pill");
+      if (pill) pill.remove();
+      document.querySelectorAll<HTMLElement>('[class*="replit-badge"], iframe[src*="replit.com/badge"]').forEach(el => el.remove());
+    };
+    purgeReplitBadge();
+    const obs = new MutationObserver(purgeReplitBadge);
+    obs.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      window.removeEventListener("mousemove", update);
+      obs.disconnect();
+    };
   }, []);
   return null;
 }

@@ -322,12 +322,6 @@ export default function Configure() {
                   onClick={() => updateConfig({ braceletColor: c })}
                 />
               ))}
-              <input
-                type="color"
-                value={config.braceletColor}
-                onChange={e => updateConfig({ braceletColor: e.target.value })}
-                className="w-8 h-8 rounded-full cursor-pointer border border-black/10 bg-transparent"
-              />
             </div>
           </div>
 
