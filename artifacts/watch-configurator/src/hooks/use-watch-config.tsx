@@ -11,6 +11,7 @@ import {
 type ApiConfigState = Omit<WatchConfigInput, "sessionId">;
 
 export type ExtendedConfigState = ApiConfigState & {
+  presetId?: number;
   watchfaceText?: string;
   watchfaceTextMode?: "center" | "circular";
   handsCount?: number; // 0 | 2 | 3

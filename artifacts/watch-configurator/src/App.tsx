@@ -16,6 +16,7 @@ import NotFound from "@/pages/not-found";
 import { WatchConfigProvider } from "@/hooks/use-watch-config";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
+import { CartProvider } from "@/hooks/use-cart";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const queryClient = new QueryClient();
@@ -54,15 +55,16 @@ function App() {
         <TooltipProvider>
           <AuthProvider>
             <WatchConfigProvider>
-              <MouseGlassTracker />
-              {/* Global theme toggle — fixed top-right on all pages */}
-              <div className="fixed top-4 right-4 z-50">
-                <ThemeToggle />
-              </div>
-              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                <Router />
-              </WouterRouter>
-              <Toaster />
+              <CartProvider>
+                <MouseGlassTracker />
+                <div className="fixed top-4 right-4 z-50">
+                  <ThemeToggle />
+                </div>
+                <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                  <Router />
+                </WouterRouter>
+                <Toaster />
+              </CartProvider>
             </WatchConfigProvider>
           </AuthProvider>
         </TooltipProvider>

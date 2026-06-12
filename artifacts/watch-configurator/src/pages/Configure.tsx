@@ -136,7 +136,8 @@ function Watch3DView({ step, lastInteractionRef }: { step: number; lastInteracti
 export default function Configure() {
   const { config, updateConfig, sessionId } = useWatchConfig();
   const [, setLocation] = useLocation();
-  const [step, setStep] = useState(0);
+  const isPresetMode = !!config.presetId;
+  const [step, setStep] = useState(() => (config.presetId ? 2 : 0));
   const [submitting, setSubmitting] = useState(false);
   const [bagOpen, setBagOpen] = useState(false);
 
@@ -222,8 +223,12 @@ export default function Configure() {
     finally { setSubmitting(false); }
   };
 
-  const goBack = () => setStep(s => Math.max(0, s - 1));
+  const goBack = () => {
+    if (isPresetMode) setLocation('/collections');
+    else setStep(s => Math.max(0, s - 1));
+  };
   const goNext = () => {
+    if (isPresetMode) { handleOrder(); return; }
     if (step < STEPS.length - 1) setStep(s => s + 1);
     else handleOrder();
   };
@@ -273,12 +278,29 @@ export default function Configure() {
       {/* Right — Step Panel */}
       <div className="w-full md:w-[48%] md:h-screen flex flex-col bg-background/80 backdrop-blur-xl border-l border-border/60">
 
+        {/* Preset mode lock banner */}
+        {isPresetMode && (
+          <div className="mx-5 mt-5 mb-1 flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-2xl px-4 py-2.5">
+            <span className="text-base">🔒</span>
+            <div className="min-w-0">
+              <p className="text-xs font-black text-primary uppercase tracking-widest leading-none">Коллекционная модель</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Только ремешок доступен для замены</p>
+            </div>
+            <button
+              onClick={() => { updateConfig({ presetId: undefined }); setStep(0); }}
+              className="ml-auto text-[10px] text-muted-foreground hover:text-foreground underline shrink-0"
+            >
+              Сбросить
+            </button>
+          </div>
+        )}
+
         {/* Progress Bar — pr-14 to avoid overlap with fixed ThemeToggle */}
         <div className="px-5 pr-14 pt-5 pb-3">
           <div className="flex items-center gap-1">
             {STEPS.map((s, i) => (
               <React.Fragment key={s.id}>
-                <button onClick={() => setStep(i)} className={cn('flex flex-col items-center gap-1 transition-all', i <= step ? 'opacity-100' : 'opacity-35')}>
+                <button onClick={() => { if (!isPresetMode || i === 2) setStep(i); }} className={cn('flex flex-col items-center gap-1 transition-all', isPresetMode && i !== 2 ? 'opacity-20 cursor-not-allowed' : i <= step ? 'opacity-100' : 'opacity-35')}>
                   <div className={cn('w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all', i < step ? 'bg-primary border-primary text-white' : i === step ? 'border-primary text-primary bg-primary/10' : 'border-border text-muted-foreground')}>
                     {i < step ? '✓' : i + 1}
                   </div>

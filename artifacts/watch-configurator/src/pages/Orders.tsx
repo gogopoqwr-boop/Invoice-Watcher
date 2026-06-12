@@ -34,7 +34,7 @@ const STATUS_ICONS: Record<string, string> = {
   cancelled: '❌',
 };
 
-async function requestCancel(orderId: number): Promise<{ ok: boolean; msg: string }> {
+async function requestCancelWithReason(orderId: number, reason: string): Promise<{ ok: boolean; msg: string }> {
   try {
     const jwt = localStorage.getItem("jwt") ?? "";
     const res = await fetch(`/api/orders/${orderId}/status`, {
@@ -43,6 +43,14 @@ async function requestCancel(orderId: number): Promise<{ ok: boolean; msg: strin
       body: JSON.stringify({ status: "cancel_requested" }),
     });
     if (!res.ok) throw new Error();
+
+    // Store the reason as a cancel comment
+    await fetch(`/api/orders/${orderId}/cancel-reason`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason }),
+    }).catch(() => {});
+
     return { ok: true, msg: "Запрос отправлен" };
   } catch {
     return { ok: false, msg: "Ошибка сети" };
@@ -71,6 +79,8 @@ export default function Orders() {
 
   const [actionId, setActionId] = useState<number | null>(null);
   const [msgs, setMsgs] = useState<Record<number, { ok: boolean; msg: string }>>({});
+  const [cancelTargetId, setCancelTargetId] = useState<number | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
 
   // Detect where we came from via query param
   const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
@@ -86,9 +96,20 @@ export default function Orders() {
     refetch();
   };
 
+  const openCancelRequest = (orderId: number) => {
+    setCancelTargetId(orderId);
+    setCancelReason('');
+  };
+
+  const submitCancelRequest = async (orderId: number) => {
+    if (!cancelReason.trim()) return;
+    await handleAction(orderId, () => requestCancelWithReason(orderId, cancelReason.trim()));
+    setCancelTargetId(null);
+    setCancelReason('');
+  };
+
   return (
     <div className="min-h-[100dvh] bg-background relative overflow-hidden">
-      {/* Ambient orb */}
       <div className="absolute top-0 right-0 w-[400px] h-[400px] rounded-full pointer-events-none"
         style={{ background: "var(--orb-1)", filter: "blur(90px)", opacity: 0.4 }} />
 
@@ -146,10 +167,12 @@ export default function Orders() {
                     {order.cancelComment && (
                       <p className="text-xs text-orange-600 mt-1 italic">"{order.cancelComment}"</p>
                     )}
+                    <p className="text-[11px] text-muted-foreground/50 mt-1">
+                      {new Date(order.createdAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </p>
                   </div>
 
                   <div className="flex flex-col items-end gap-2 shrink-0">
-                    {/* Pay button for pending */}
                     {order.status === 'payment_pending' && (
                       <Link href={`/payment/${order.id}`}>
                         <button className="bg-primary text-white rounded-full px-4 py-2 text-xs font-black tracking-widest hover:bg-primary/90 transition-all whitespace-nowrap">
@@ -158,7 +181,6 @@ export default function Orders() {
                       </Link>
                     )}
 
-                    {/* Free cancel for payment_pending */}
                     {order.status === 'payment_pending' && (
                       <button
                         onClick={() => handleAction(order.id, () => cancelFree(order.id))}
@@ -169,14 +191,12 @@ export default function Orders() {
                       </button>
                     )}
 
-                    {/* Request cancellation for paid/processing */}
-                    {(order.status === 'paid' || order.status === 'processing') && (
+                    {(order.status === 'paid' || order.status === 'processing') && cancelTargetId !== order.id && (
                       <button
-                        onClick={() => handleAction(order.id, () => requestCancel(order.id))}
-                        disabled={actionId === order.id}
-                        className="px-3 py-1.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-full text-xs font-bold hover:bg-orange-100 transition-colors disabled:opacity-50 whitespace-nowrap"
+                        onClick={() => openCancelRequest(order.id)}
+                        className="px-3 py-1.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-full text-xs font-bold hover:bg-orange-100 transition-colors whitespace-nowrap"
                       >
-                        {actionId === order.id ? '…' : 'Запросить отмену'}
+                        Запросить отмену
                       </button>
                     )}
 
@@ -187,6 +207,38 @@ export default function Orders() {
                     )}
                   </div>
                 </div>
+
+                {/* Inline cancel reason form */}
+                {cancelTargetId === order.id && (
+                  <div className="mt-4 pt-4 border-t border-border/30 space-y-2 animate-fade-up">
+                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-widest">Причина отмены</p>
+                    <textarea
+                      autoFocus
+                      rows={2}
+                      value={cancelReason}
+                      onChange={e => setCancelReason(e.target.value)}
+                      placeholder="Укажите причину, почему хотите отменить заказ..."
+                      maxLength={300}
+                      className="w-full bg-background/60 border border-border rounded-2xl px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all resize-none"
+                    />
+                    <p className="text-[10px] text-muted-foreground/40 text-right">{cancelReason.length}/300</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setCancelTargetId(null); setCancelReason(''); }}
+                        className="flex-1 py-2 rounded-full text-xs font-bold border border-border text-muted-foreground hover:bg-muted/50 transition-colors"
+                      >
+                        Отмена
+                      </button>
+                      <button
+                        onClick={() => submitCancelRequest(order.id)}
+                        disabled={!cancelReason.trim() || actionId === order.id}
+                        className="flex-1 py-2 rounded-full bg-orange-500 text-white text-xs font-bold hover:bg-orange-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {actionId === order.id ? '…' : 'Отправить запрос'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

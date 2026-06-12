@@ -1,7 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { db, adminUsersTable } from "@workspace/db";
-import { count, eq } from "drizzle-orm";
+import { db, adminUsersTable, ordersTable } from "@workspace/db";
+import { count, eq, lt, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 const rawPort = process.env["PORT"];
@@ -68,6 +68,47 @@ async function registerWebhook() {
   }
 }
 
+// ── Payment expiration worker ─────────────────────────────────────────────────
+// Cancels payment_pending orders older than 10 minutes every 60 seconds.
+function startPaymentExpirationWorker() {
+  const TEN_MINUTES = 10 * 60 * 1000;
+  const CHECK_INTERVAL = 60_000;
+
+  const check = async () => {
+    try {
+      const cutoff = new Date(Date.now() - TEN_MINUTES);
+      const expired = await db
+        .select({ id: ordersTable.id })
+        .from(ordersTable)
+        .where(
+          and(
+            eq(ordersTable.status, "payment_pending"),
+            lt(ordersTable.createdAt, cutoff),
+          ),
+        );
+
+      if (expired.length === 0) return;
+
+      for (const { id } of expired) {
+        await db
+          .update(ordersTable)
+          .set({
+            status: "cancelled",
+            cancelComment: "Истёк срок оплаты (10 мин)",
+            updatedAt: new Date(),
+          })
+          .where(eq(ordersTable.id, id));
+        logger.info({ orderId: id }, "Order auto-cancelled: payment expired");
+      }
+    } catch (err) {
+      logger.error({ err }, "Payment expiration worker error");
+    }
+  };
+
+  setInterval(check, CHECK_INTERVAL);
+  logger.info("Payment expiration worker started (checks every 60s)");
+}
+
 app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
@@ -77,4 +118,5 @@ app.listen(port, (err) => {
 
   ensureAdminUsers().catch((err) => logger.error({ err }, "Admin seed error"));
   registerWebhook().catch((err) => logger.error({ err }, "Webhook registration error"));
+  startPaymentExpirationWorker();
 });

@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useListPresets, useGetMyOrders } from '@workspace/api-client-react';
 import { useLocation, Link } from 'wouter';
 import { useWatchConfig } from '@/hooks/use-watch-config';
+import { useCart } from '@/hooks/use-cart';
 import WatchSVG from '@/components/WatchSVG';
 import { cn } from '@/lib/utils';
 
@@ -40,8 +41,11 @@ const STRAP_COLORS = [
   '#7f1d1d', '#3b0764', '#0c4a6e', '#f8fafc',
 ];
 
+const PAGE_SIZE = 10;
+
 type InventoryData = Record<string, { sold: number; max: number }>;
 
+// ── Tilt physics ──────────────────────────────────────────────────────────────
 function useTilt() {
   const [tilt, setTilt] = useState<{ rx: number; ry: number } | null>(null);
   const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -54,10 +58,107 @@ function useTilt() {
   return { tilt, onMove, onLeave };
 }
 
+// ── Comments thread ───────────────────────────────────────────────────────────
+function PresetComments({ presetId }: { presetId: number }) {
+  const [comments, setComments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [authorName, setAuthorName] = useState('');
+  const [text, setText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/presets/${presetId}/comments`)
+      .then(r => r.json())
+      .then(data => { setComments(Array.isArray(data) ? data : []); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [presetId]);
+
+  const submit = async () => {
+    if (!text.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/presets/${presetId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ authorName: authorName.trim() || 'Аноним', text: text.trim() }),
+      });
+      if (res.ok) {
+        const comment = await res.json();
+        setComments(prev => [comment, ...prev]);
+        setText('');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="border-t border-border/20 pt-4 mt-2">
+      <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3 font-semibold">Обсуждение</p>
+      {loading ? (
+        <div className="h-8 bg-muted/20 rounded-lg animate-pulse mb-3" />
+      ) : comments.length === 0 ? (
+        <p className="text-xs text-muted-foreground/50 text-center py-3 mb-3">Будьте первым — напишите комментарий</p>
+      ) : (
+        <div className="space-y-2 mb-3 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
+          {comments.map((c: any) => (
+            <div key={c.id} className="bg-white/5 rounded-xl p-2.5">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-xs font-bold">{c.authorName}</span>
+                <span className="text-[10px] text-muted-foreground/40">
+                  {new Date(c.createdAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">{c.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <input
+          placeholder="Имя"
+          value={authorName}
+          onChange={e => setAuthorName(e.target.value)}
+          className="w-24 bg-background/60 border border-border rounded-full px-3 py-1.5 text-xs focus:outline-none focus:border-primary/60 transition-colors"
+          maxLength={30}
+        />
+        <input
+          placeholder="Ваш комментарий..."
+          value={text}
+          onChange={e => setText(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) submit(); }}
+          className="flex-1 bg-background/60 border border-border rounded-full px-3 py-1.5 text-xs focus:outline-none focus:border-primary/60 transition-colors"
+          maxLength={500}
+        />
+        <button
+          onClick={submit}
+          disabled={!text.trim() || submitting}
+          className="bg-primary/20 text-primary rounded-full px-3 py-1.5 text-xs font-bold hover:bg-primary/30 transition-colors disabled:opacity-40 shrink-0"
+        >
+          {submitting ? '…' : '→'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Filter pill ───────────────────────────────────────────────────────────────
+const FILTER_OPTIONS = [
+  { key: 'all', label: 'Все', emoji: '🌐' },
+  { key: 'РОФЛ', label: 'РОФЛ', emoji: '😂' },
+  { key: 'ГИПЕРСЕРЬЕЗНОСТЬ', label: 'ГИПЕРСЕРЬЕЗНОСТЬ', emoji: '🖤' },
+  { key: 'ЖИВНОСТЬ', label: 'ЖИВНОСТЬ', emoji: '🌿' },
+  { key: 'classics', label: 'Классика', emoji: '⌚' },
+];
+
+// ── Main component ────────────────────────────────────────────────────────────
 export default function Collections() {
   const { data: presets, isLoading } = useListPresets();
   const [, setLocation] = useLocation();
   const { updateConfig, sessionId } = useWatchConfig();
+  const { items: cartItems, addItem: addToCart, removeItem: removeFromCart } = useCart();
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const { data: myOrders } = useGetMyOrders({ sessionId }, { query: { enabled: !!sessionId } } as any);
   const hasOrders = Array.isArray(myOrders) && (myOrders as any[]).length > 0;
@@ -68,6 +169,9 @@ export default function Collections() {
   const [buyError, setBuyError] = useState('');
 
   const [inventory, setInventory] = useState<InventoryData>({});
+  const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [cartOpen, setCartOpen] = useState(false);
 
   useEffect(() => {
     fetch('/api/presets/inventory')
@@ -75,6 +179,9 @@ export default function Collections() {
       .then(data => { if (data?.byCollection) setInventory(data.byCollection); })
       .catch(() => {});
   }, []);
+
+  // Reset page on filter change
+  useEffect(() => { setCurrentPage(1); }, [activeFilter]);
 
   const expandedPreset = expandedId !== null
     ? (presets as any[] | undefined)?.find((p: any) => p.id === expandedId) ?? null
@@ -166,6 +273,18 @@ export default function Collections() {
   const allPresets = (presets as any[] | undefined) ?? [];
   const collectionOrder = ['РОФЛ', 'ГИПЕРСЕРЬЕЗНОСТЬ', 'ЖИВНОСТЬ'];
   const classics = allPresets.filter((p: any) => !p.collectionName);
+
+  // Filtered flat list for paginated view
+  const filteredFlat: any[] = activeFilter === 'all'
+    ? allPresets
+    : activeFilter === 'classics'
+    ? classics
+    : allPresets.filter((p: any) => p.collectionName === activeFilter);
+
+  const totalPages = Math.ceil(filteredFlat.length / PAGE_SIZE);
+  const paginatedItems = filteredFlat.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // Grouped view (only for "Все")
   const grouped: Array<{ name: string | null; items: any[] }> = [
     ...collectionOrder.map(name => ({
       name,
@@ -174,12 +293,17 @@ export default function Collections() {
     ...(classics.length > 0 ? [{ name: null, items: classics }] : []),
   ];
 
+  // Cart total
+  const cartTotal = cartItems.reduce((s, i) => s + i.priceStars, 0);
+
+  // ── Preset Card ─────────────────────────────────────────────────────────────
   const PresetCard = ({ preset, idx }: { preset: any; idx: number }) => {
     const isExpanded = expandedId === preset.id;
     const { tilt, onMove, onLeave } = useTilt();
     const collectionKey = preset.collectionName ?? 'classics';
     const inv = inventory[collectionKey];
     const soldOut = inv ? inv.sold >= inv.max : false;
+    const inCart = cartItems.some(i => i.presetId === preset.id);
 
     return (
       <div
@@ -227,6 +351,11 @@ export default function Collections() {
             <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs font-black text-yellow-300">
               {preset.priceStars} ⭐
             </div>
+            {inCart && (
+              <div className="absolute top-2 left-2 bg-primary/80 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs font-black text-white">
+                В корзине
+              </div>
+            )}
             {soldOut && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-t-3xl">
                 <span className="text-white text-xs font-black uppercase tracking-widest bg-black/60 px-3 py-1.5 rounded-full">
@@ -243,7 +372,6 @@ export default function Collections() {
               <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{preset.description}</p>
             )}
 
-            {/* Expanded materials */}
             <div
               className="overflow-hidden transition-all duration-300"
               style={{ maxHeight: isExpanded ? '200px' : '0px', opacity: isExpanded ? 1 : 0 }}
@@ -290,7 +418,7 @@ export default function Collections() {
           </div>
         </button>
 
-        {/* КУПИТЬ button — always visible below card */}
+        {/* КУПИТЬ button */}
         <div
           role="button"
           tabIndex={0}
@@ -319,7 +447,7 @@ export default function Collections() {
 
       <div className="relative z-10 max-w-5xl mx-auto px-5 py-8 md:py-12">
         {/* Header */}
-        <div className="flex items-end justify-between mb-10">
+        <div className="flex items-end justify-between mb-8">
           <div>
             <Link href="/">
               <button className="text-xs text-muted-foreground hover:text-foreground transition-colors mb-3 flex items-center gap-1 liquid-button px-3 py-1.5">
@@ -339,6 +467,17 @@ export default function Collections() {
                 С нуля →
               </button>
             </Link>
+            {cartItems.length > 0 && (
+              <button
+                onClick={() => setCartOpen(true)}
+                className="liquid-button px-4 py-2 text-xs font-semibold relative"
+              >
+                🛒 Корзина
+                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary text-white rounded-full text-[10px] font-black flex items-center justify-center">
+                  {cartItems.length}
+                </span>
+              </button>
+            )}
             {hasOrders && (
               <Link href="/orders">
                 <button className="liquid-button px-4 py-2 text-xs font-semibold">
@@ -347,6 +486,25 @@ export default function Collections() {
               </Link>
             )}
           </div>
+        </div>
+
+        {/* Filter tabs */}
+        <div className="flex gap-2 flex-wrap mb-8 animate-fade-up">
+          {FILTER_OPTIONS.map(opt => (
+            <button
+              key={opt.key}
+              onClick={() => setActiveFilter(opt.key)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold tracking-wide transition-all',
+                activeFilter === opt.key
+                  ? 'bg-primary text-white shadow-md shadow-primary/25'
+                  : 'liquid-glass text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <span>{opt.emoji}</span>
+              <span>{opt.label}</span>
+            </button>
+          ))}
         </div>
 
         {isLoading ? (
@@ -362,7 +520,8 @@ export default function Collections() {
               </div>
             ))}
           </div>
-        ) : (
+        ) : activeFilter === 'all' ? (
+          /* ── Grouped view ── */
           <div className="space-y-14">
             {grouped.map((group, gi) => {
               const meta = group.name ? COLLECTION_META[group.name] : null;
@@ -372,7 +531,6 @@ export default function Collections() {
 
               return (
                 <section key={group.name ?? '__classics'} className="animate-fade-up" style={{ animationDelay: `${gi * 0.1}s` }}>
-                  {/* Collection header */}
                   {group.name ? (
                     <div className="flex items-center gap-3 mb-5">
                       <div
@@ -413,15 +571,12 @@ export default function Collections() {
                       </div>
                     </div>
                   )}
-
-                  {/* Accent line */}
                   {meta && (
                     <div
                       className="h-px mb-5 rounded-full"
                       style={{ background: `linear-gradient(to right, ${meta.accentColor}80, transparent)` }}
                     />
                   )}
-
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                     {group.items.map((preset: any, idx: number) => (
                       <PresetCard key={preset.id} preset={preset} idx={idx} />
@@ -430,6 +585,45 @@ export default function Collections() {
                 </section>
               );
             })}
+          </div>
+        ) : (
+          /* ── Filtered + paginated view ── */
+          <div className="space-y-6">
+            {paginatedItems.length === 0 ? (
+              <div className="liquid-glass rounded-3xl p-12 text-center">
+                <p className="text-muted-foreground text-sm">Моделей в этой коллекции пока нет</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {paginatedItems.map((preset: any, idx: number) => (
+                    <PresetCard key={preset.id} preset={preset} idx={idx} />
+                  ))}
+                </div>
+
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-3 pt-4">
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="liquid-button px-4 py-2 text-xs font-bold disabled:opacity-30"
+                    >
+                      ← Назад
+                    </button>
+                    <span className="text-sm text-muted-foreground">
+                      <span className="font-black text-foreground">{currentPage}</span> / {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="liquid-button px-4 py-2 text-xs font-bold disabled:opacity-30"
+                    >
+                      Вперёд →
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
@@ -449,10 +643,11 @@ export default function Collections() {
         >
           <div
             className="liquid-glass rounded-3xl w-full max-w-sm md:max-w-md overflow-hidden animate-fade-up"
+            style={{ maxHeight: '90dvh', overflowY: 'auto' }}
             onClick={e => e.stopPropagation()}
           >
             <div
-              className="h-64 flex items-center justify-center relative"
+              className="h-64 flex items-center justify-center relative shrink-0"
               style={{ background: `linear-gradient(135deg, ${expandedPreset.watchfaceColor}33, ${expandedPreset.braceletColor}22)` }}
             >
               <div className="w-32 h-52">
@@ -514,7 +709,7 @@ export default function Collections() {
                 ))}
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 mb-2">
                 <button
                   onClick={() => { setExpandedId(null); handleBuyOpen({ stopPropagation: () => {} } as any, expandedPreset); }}
                   className="flex-1 py-3.5 rounded-2xl bg-primary text-white font-black text-sm tracking-widest uppercase shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all"
@@ -528,6 +723,35 @@ export default function Collections() {
                   Настроить
                 </button>
               </div>
+
+              {/* Cart add button */}
+              {cartItems.some(i => i.presetId === expandedPreset.id) ? (
+                <button
+                  onClick={() => {
+                    const item = cartItems.find(i => i.presetId === expandedPreset.id);
+                    if (item) removeFromCart(item.key);
+                  }}
+                  className="w-full py-2 rounded-2xl border border-destructive/30 text-destructive text-xs font-bold hover:bg-destructive/10 transition-colors"
+                >
+                  ✕ Убрать из корзины
+                </button>
+              ) : (
+                <button
+                  onClick={() => addToCart({
+                    presetId: expandedPreset.id,
+                    presetName: expandedPreset.name,
+                    priceStars: expandedPreset.priceStars,
+                    braceletColor: expandedPreset.braceletColor,
+                    watchfaceColor: expandedPreset.watchfaceColor,
+                  })}
+                  className="w-full py-2 rounded-2xl border border-border text-muted-foreground text-xs font-bold hover:bg-muted/30 transition-colors"
+                >
+                  + В корзину
+                </button>
+              )}
+
+              {/* Comments */}
+              <PresetComments presetId={expandedPreset.id} />
             </div>
           </div>
         </div>
@@ -544,7 +768,6 @@ export default function Collections() {
             className="liquid-glass rounded-3xl w-full max-w-xs overflow-hidden animate-fade-up"
             onClick={e => e.stopPropagation()}
           >
-            {/* Watch preview with live strap color */}
             <div
               className="h-52 flex items-center justify-center relative"
               style={{ background: `linear-gradient(135deg, ${buyModal.watchfaceColor}33, ${buyStrapColor}22)` }}
@@ -581,7 +804,6 @@ export default function Collections() {
               <h3 className="text-lg font-black mb-0.5">{buyModal.name}</h3>
               <p className="text-xs text-muted-foreground mb-4">Выберите цвет ремешка</p>
 
-              {/* Strap color swatches */}
               <div className="flex flex-wrap gap-2 mb-5">
                 {STRAP_COLORS.map(c => (
                   <button
@@ -619,6 +841,77 @@ export default function Collections() {
               >
                 {buying ? 'Оформляем…' : `Купить — ${buyModal.priceStars} ⭐`}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cart drawer */}
+      {cartOpen && (
+        <div
+          className="fixed inset-0 z-[70] flex items-end md:items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(16px)' }}
+          onClick={() => setCartOpen(false)}
+        >
+          <div
+            className="liquid-glass rounded-3xl w-full max-w-sm overflow-hidden animate-fade-up"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-xl font-black">Корзина 🛒</h2>
+                <button
+                  onClick={() => setCartOpen(false)}
+                  className="w-8 h-8 rounded-full bg-muted/50 text-muted-foreground text-sm flex items-center justify-center hover:bg-muted transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {cartItems.length === 0 ? (
+                <p className="text-center text-muted-foreground text-sm py-8">Корзина пуста</p>
+              ) : (
+                <div className="space-y-3 mb-5">
+                  {cartItems.map(item => (
+                    <div key={item.key} className="flex items-center gap-3 bg-white/5 rounded-2xl p-3">
+                      <div
+                        className="w-10 h-10 rounded-full border-2 border-white/20 shrink-0"
+                        style={{ backgroundColor: item.watchfaceColor }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold truncate">{item.presetName}</p>
+                        <p className="text-xs text-yellow-400 font-black">{item.priceStars} ⭐</p>
+                      </div>
+                      <button
+                        onClick={() => removeFromCart(item.key)}
+                        className="text-muted-foreground hover:text-destructive text-xs transition-colors"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {cartItems.length > 0 && (
+                <>
+                  <div className="flex justify-between text-sm font-bold mb-4 px-1">
+                    <span className="text-muted-foreground">Итого</span>
+                    <span className="text-yellow-400 font-black">{cartTotal} ⭐</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center mb-2">
+                    Для оплаты откройте каждый товар по отдельности
+                  </p>
+                  <Link href="/orders">
+                    <button
+                      onClick={() => setCartOpen(false)}
+                      className="w-full py-3 rounded-2xl bg-primary text-white font-black text-sm tracking-widest uppercase hover:bg-primary/90 transition-all active:scale-[0.98]"
+                    >
+                      Мои заказы
+                    </button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

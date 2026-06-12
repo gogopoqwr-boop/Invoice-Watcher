@@ -33,7 +33,7 @@ export default function Login() {
     <div className="min-h-[100dvh] bg-background flex items-center justify-center p-4">
       <div className="liquid-glass rounded-3xl p-8 w-full max-w-sm">
         <div className="text-center mb-8">
-          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">НА_УТРАХ_4</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">ЧЕБЛЯЧАС</p>
           <h1 className="text-2xl font-bold tracking-tight">Вход</h1>
         </div>
 
