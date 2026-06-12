@@ -64,11 +64,124 @@ function WatchScene() {
   );
 }
 
+// ── Bracelet bottom sheet ─────────────────────────────────────────────────────
+function BraceletSheet({
+  open,
+  onClose,
+  selectedId,
+  onSelect,
+}: {
+  open: boolean;
+  onClose: () => void;
+  selectedId: string | null;
+  onSelect: (combo: typeof BRACELET_COMBOS[number]) => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, onClose]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex flex-col justify-end md:justify-center md:items-center"
+      style={{
+        pointerEvents: open ? 'auto' : 'none',
+        opacity: open ? 1 : 0,
+        transition: 'opacity 0.18s ease',
+      }}
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0"
+        style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(16px)' }}
+        onClick={onClose}
+      />
+
+      {/* Sheet panel */}
+      <div
+        className="relative z-10 w-full md:w-[480px] md:rounded-3xl overflow-hidden"
+        style={{
+          background: 'rgba(14,14,20,0.96)',
+          backdropFilter: 'blur(32px)',
+          border: '1px solid rgba(255,255,255,0.09)',
+          transform: open ? 'translateY(0)' : 'translateY(100%)',
+          transition: 'transform 0.32s cubic-bezier(0.32,0.08,0.08,1)',
+          maxHeight: '80dvh',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {/* Handle / header */}
+        <div className="px-5 pt-4 pb-3 flex items-center justify-between shrink-0 border-b border-white/[0.07]">
+          <div>
+            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-3 md:hidden" />
+            <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 font-semibold">Выберите ремешок</p>
+            <p className="text-base font-black text-white mt-0.5">12 вариантов</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-white/50 hover:text-white transition-colors shrink-0"
+            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.10)' }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Combo grid */}
+        <div className="overflow-y-auto p-4">
+          <div className="grid grid-cols-3 gap-2.5">
+            {BRACELET_COMBOS.map(combo => {
+              const active = selectedId === combo.id;
+              return (
+                <button
+                  key={combo.id}
+                  onClick={() => { onSelect(combo); onClose(); }}
+                  className={cn(
+                    'flex flex-col items-center gap-2 p-3 rounded-2xl transition-all duration-100 text-center',
+                    active ? 'ring-2 ring-blue-400 bg-blue-400/10' : 'hover:bg-white/6 active:scale-95'
+                  )}
+                  style={{ border: active ? undefined : '1px solid rgba(255,255,255,0.07)' }}
+                >
+                  {/* Big colour dot */}
+                  <div
+                    className="w-11 h-11 rounded-full border-[3px] shrink-0 shadow-lg"
+                    style={{
+                      backgroundColor: combo.color,
+                      borderColor: active ? 'rgba(96,165,250,0.9)' : 'rgba(255,255,255,0.18)',
+                      boxShadow: active ? '0 0 14px rgba(96,165,250,0.35)' : 'inset 0 0 0 1px rgba(255,255,255,0.06)',
+                    }}
+                  />
+                  <div>
+                    <p className="text-[11px] font-bold text-white leading-tight">{combo.label}</p>
+                    <p className="text-[9px] text-white/38 mt-0.5">{MAT_LABELS[combo.material] ?? combo.material}</p>
+                  </div>
+                  {active && (
+                    <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">✓ выбран</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ── Main viewer ───────────────────────────────────────────────────────────────
 export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfigure, originRect }: Props) {
   const { updateConfig } = useWatchConfig();
-  const [selectedCombo, setSelectedCombo] = useState<string | null>(null);
-  const [localColor, setLocalColor] = useState(preset.braceletColor ?? '#1c1917');
-  const [localMat, setLocalMat] = useState(preset.braceletMaterial ?? 'leather');
+
+  // Find the initial combo that matches the preset's bracelet
+  const initialCombo = BRACELET_COMBOS.find(
+    c => c.color === preset.braceletColor && c.material === preset.braceletMaterial
+  ) ?? BRACELET_COMBOS[0];
+
+  const [selectedCombo, setSelectedCombo] = useState(initialCombo);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [entering, setEntering] = useState(true);
 
   // Compute the starting clip-path from the origin card rect
@@ -90,42 +203,41 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
     return () => cancelAnimationFrame(t);
   }, []);
 
+  // Sync selected combo → 3D model instantly
   useEffect(() => {
     updateConfig({
       presetId: preset.id,
       watchfaceGeometry: preset.watchfaceGeometry,
       watchfaceMaterial: preset.watchfaceMaterial,
       watchfaceColor: preset.watchfaceColor,
-      braceletMaterial: localMat,
+      braceletMaterial: selectedCombo.material,
       braceletType: preset.braceletType,
-      braceletColor: localColor,
+      braceletColor: selectedCombo.color,
       handsEnabled: preset.handsEnabled,
       handsColor: preset.handsColor ?? '#cbd5e1',
       watchfaceText: preset.watchfaceText ?? '',
       watchfaceTextMode: preset.watchfaceTextMode ?? 'center',
       handsCount: 3,
     });
-  }, [preset.id, localColor, localMat]);
+  }, [preset.id, selectedCombo.color, selectedCombo.material]);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape' && !sheetOpen) onClose(); };
     window.addEventListener('keydown', handler);
     document.body.style.overflow = 'hidden';
     return () => {
       window.removeEventListener('keydown', handler);
       document.body.style.overflow = '';
     };
-  }, [onClose]);
+  }, [onClose, sheetOpen]);
 
   const handleSelectCombo = useCallback((combo: typeof BRACELET_COMBOS[number]) => {
-    setSelectedCombo(combo.id);
-    setLocalColor(combo.color);
-    setLocalMat(combo.material);
+    setSelectedCombo(combo);
   }, []);
 
   const handleBuy = useCallback(() => {
-    onBuy(preset, localColor, localMat);
-  }, [preset, localColor, localMat, onBuy]);
+    onBuy(preset, selectedCombo.color, selectedCombo.material);
+  }, [preset, selectedCombo, onBuy]);
 
   const content = (
     <div
@@ -147,11 +259,11 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
 
       {/* ── 3D Canvas ── top half on mobile, left side on desktop */}
       <div className="relative z-10 flex-none h-[50dvh] md:h-auto md:flex-1 md:w-[58%]">
-        {/* Colour gradient backdrop */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: `radial-gradient(ellipse at 50% 35%, ${preset.watchfaceColor}28 0%, ${preset.braceletColor}16 55%, transparent 88%)`,
+            background: `radial-gradient(ellipse at 50% 35%, ${preset.watchfaceColor}28 0%, ${selectedCombo.color}16 55%, transparent 88%)`,
+            transition: 'background 0.4s ease',
           }}
         />
 
@@ -165,20 +277,15 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
           <WatchScene />
         </Canvas>
 
-        {/* Close button */}
+        {/* Close */}
         <button
           onClick={onClose}
           className="absolute top-4 left-4 w-9 h-9 rounded-full flex items-center justify-center text-white/70 hover:text-white transition-colors"
-          style={{
-            background: 'rgba(255,255,255,0.08)',
-            border: '1px solid rgba(255,255,255,0.14)',
-            backdropFilter: 'blur(12px)',
-          }}
+          style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)', backdropFilter: 'blur(12px)' }}
         >
           ✕
         </button>
 
-        {/* Collection badge */}
         {preset.collectionName && (
           <div
             className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest"
@@ -188,17 +295,14 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
           </div>
         )}
 
-        {/* Drag hint */}
         <div className="absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none">
-          <span className="text-[10px] uppercase tracking-[0.25em] text-white/22 font-semibold">
-            Потяни · Прокрути
-          </span>
+          <span className="text-[10px] uppercase tracking-[0.25em] text-white/22 font-semibold">Потяни · Прокрути</span>
         </div>
       </div>
 
       {/* ── Details panel ── bottom half on mobile, right side on desktop */}
       <div
-        className="relative z-10 flex-none h-[50dvh] md:h-auto md:w-[42%] flex flex-col overflow-y-auto"
+        className="relative z-10 flex-none h-[50dvh] md:h-auto md:w-[42%] flex flex-col overflow-hidden"
         style={{
           background: 'rgba(10,10,14,0.94)',
           backdropFilter: 'blur(32px)',
@@ -229,9 +333,9 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
           <div className="grid grid-cols-2 gap-2">
             {[
               ['Корпус', MAT_LABELS[preset.watchfaceMaterial] ?? preset.watchfaceMaterial],
-              ['Ремешок', MAT_LABELS[localMat] ?? localMat],
               ['Форма', preset.watchfaceGeometry],
               ['Стрелки', preset.handsEnabled ? '3 стрелки' : 'без стрелок'],
+              ['Серия', preset.collectionName ?? 'Классика'],
             ].map(([k, v]) => (
               <div key={k} className="rounded-xl px-3 py-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
                 <p className="text-[10px] uppercase tracking-widest text-white/28 mb-0.5">{k}</p>
@@ -241,45 +345,44 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
           </div>
         </div>
 
-        {/* ─ Bracelet selection ─ */}
-        <div className="px-5 py-3 border-b border-white/[0.06] flex-1 min-h-0 overflow-y-auto">
-          <p className="text-[10px] uppercase tracking-[0.3em] text-white/30 mb-2.5 font-semibold">
-            Ремешок
-          </p>
-          <div className="grid grid-cols-4 gap-2">
-            {BRACELET_COMBOS.map(combo => {
-              const active = selectedCombo === combo.id || (!selectedCombo && combo.color === localColor && combo.material === localMat);
-              return (
-                <button
-                  key={combo.id}
-                  onClick={() => handleSelectCombo(combo)}
-                  className={cn(
-                    'flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all duration-120 text-center',
-                    active
-                      ? 'ring-2 ring-blue-400 bg-blue-400/10'
-                      : 'hover:bg-white/5'
-                  )}
-                  style={{ border: active ? undefined : '1px solid rgba(255,255,255,0.06)' }}
-                >
-                  <div
-                    className="w-7 h-7 rounded-full border-2 shrink-0"
-                    style={{
-                      backgroundColor: combo.color,
-                      borderColor: active ? 'rgba(96,165,250,0.8)' : 'rgba(255,255,255,0.15)',
-                      boxShadow: active ? '0 0 10px rgba(96,165,250,0.3)' : 'none',
-                    }}
-                  />
-                  <span className="text-[9px] font-semibold text-white/55 leading-tight">
-                    {combo.label}
-                  </span>
-                </button>
-              );
-            })}
+        {/* ─ Selected bracelet + choose button ─ */}
+        <div className="px-5 py-4 border-b border-white/[0.06] shrink-0">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-white/30 mb-3 font-semibold">Ремешок</p>
+
+          {/* Currently selected combo chip */}
+          <div className="flex items-center gap-3 mb-3">
+            <div
+              className="w-10 h-10 rounded-full border-2 shrink-0 shadow-md"
+              style={{
+                backgroundColor: selectedCombo.color,
+                borderColor: 'rgba(255,255,255,0.22)',
+                boxShadow: `0 0 12px ${selectedCombo.color}55`,
+              }}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-black text-white leading-none">{selectedCombo.label}</p>
+              <p className="text-[11px] text-white/40 mt-0.5">{MAT_LABELS[selectedCombo.material] ?? selectedCombo.material}</p>
+            </div>
           </div>
+
+          {/* Choose button */}
+          <button
+            onClick={() => setSheetOpen(true)}
+            className="w-full py-2.5 rounded-2xl text-xs font-bold tracking-wide transition-all active:scale-[0.97] flex items-center justify-center gap-2"
+            style={{
+              background: 'rgba(255,255,255,0.07)',
+              border: '1px solid rgba(255,255,255,0.13)',
+              color: 'rgba(255,255,255,0.75)',
+            }}
+          >
+            <span>Выбрать ремешок</span>
+            <span className="opacity-50">›</span>
+            <span className="ml-auto text-[10px] opacity-40">12 вариантов</span>
+          </button>
         </div>
 
         {/* ─ Actions ─ */}
-        <div className="px-5 py-4 space-y-2 shrink-0">
+        <div className="px-5 py-4 space-y-2 shrink-0 mt-auto">
           <button
             onClick={handleBuy}
             className="w-full py-3 rounded-2xl font-black text-sm tracking-widest uppercase transition-all active:scale-[0.98]"
@@ -303,5 +406,15 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
     </div>
   );
 
-  return createPortal(content, document.body);
+  return (
+    <>
+      {createPortal(content, document.body)}
+      <BraceletSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        selectedId={selectedCombo.id}
+        onSelect={handleSelectCombo}
+      />
+    </>
+  );
 }

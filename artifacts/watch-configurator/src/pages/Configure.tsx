@@ -6,11 +6,11 @@ import WatchModel, { CameraRig } from '@/components/WatchModel';
 import WatchSVG from '@/components/WatchSVG';
 import { WebGLErrorBoundary } from '@/components/WebGLErrorBoundary';
 import { useWatchConfig } from '@/hooks/use-watch-config';
+import { BRACELET_COMBOS } from '@/components/WatchFullscreenViewer';
 import {
   useCreateConfiguration,
   useCreateOrder,
   useCalculatePrice,
-  WatchConfigInputBraceletMaterial,
   WatchConfigInputBraceletType,
 } from '@workspace/api-client-react';
 import { useLocation, Link } from 'wouter';
@@ -23,40 +23,24 @@ function isWebGLAvailable(): boolean {
   } catch { return false; }
 }
 
-const BRACELET_MATERIALS: { value: WatchConfigInputBraceletMaterial; label: string; desc: string; pattern: string }[] = [
-  { value: 'metal_solid', label: 'Металл', desc: 'Монолитный', pattern: '▬▬▬' },
-  { value: 'metal_segmented', label: 'Сетка', desc: 'Плетёная', pattern: '≡≡≡' },
-  { value: 'plastic_solid', label: 'Резина', desc: 'Силикон', pattern: '━━━' },
-  { value: 'leather', label: 'Кожа', desc: 'Натуральная', pattern: '───' },
-  { value: 'cotton_fabric', label: 'NATO', desc: 'Нейлон', pattern: '═══' },
-  { value: 'resin', label: 'Смола', desc: 'Полупроз.', pattern: '···' },
-];
-
 const BRACELET_TYPES: { value: WatchConfigInputBraceletType; label: string; desc: string }[] = [
-  { value: 'solid', label: 'Монолитная', desc: 'Скрытая кнопка-замок' },
-  { value: 'segmented', label: 'Звеньевая', desc: 'Раскладная застёжка' },
+  { value: 'solid',     label: 'Монолитная', desc: 'Скрытая кнопка-замок' },
+  { value: 'segmented', label: 'Звеньевая',  desc: 'Раскладная застёжка'  },
 ];
 
-const STRAP_COLORS = ['#0f172a', '#1e293b', '#78350f', '#1c1917', '#064e3b', '#1e1b4b', '#c0c0c0', '#374151'];
+const MAT_LABELS: Record<string, string> = {
+  metal_solid: 'Металл', metal_segmented: 'Сетка',
+  plastic_solid: 'Резина', leather: 'Кожа',
+  cotton_fabric: 'NATO нейлон', resin: 'Смола',
+};
 
-function ColorSwatch({ color, selected, onClick }: { color: string; selected: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn('rounded-full transition-all duration-150 border-2 shrink-0', selected ? 'border-primary scale-110 shadow-md' : 'border-transparent hover:scale-105')}
-      style={{ backgroundColor: color, width: 32, height: 32 }}
-    />
-  );
-}
-
-function OptionCard({ selected, onClick, children, className }: { selected: boolean; onClick: () => void; children: React.ReactNode; className?: string }) {
+function OptionCard({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       onClick={onClick}
       className={cn(
         'rounded-2xl border-2 p-3 text-left transition-all duration-150',
         selected ? 'border-primary bg-primary/10 shadow-sm' : 'border-border/60 bg-card/60 hover:border-border hover:bg-card/80',
-        className
       )}
     >
       {children}
@@ -70,42 +54,34 @@ function PresentationBox() {
   const accentMat = { color: '#1e293b', metalness: 0.55, roughness: 0.35 };
   return (
     <group position={[0, -6.2, 0]}>
-      {/* Base platform */}
       <mesh receiveShadow castShadow>
         <boxGeometry args={[5.2, 0.3, 3.2]} />
         <meshStandardMaterial {...boxMat} />
       </mesh>
-      {/* Watch cushion/pillow */}
       <mesh position={[0, 0.32, 0]} receiveShadow>
         <boxGeometry args={[1.8, 0.35, 1.0]} />
         <meshStandardMaterial color="#1e293b" roughness={0.95} metalness={0} />
       </mesh>
-      {/* Left wall */}
       <mesh position={[-2.5, 1.4, 0]} receiveShadow>
         <boxGeometry args={[0.22, 2.5, 3.2]} />
         <meshStandardMaterial {...boxMat} />
       </mesh>
-      {/* Right wall */}
       <mesh position={[2.5, 1.4, 0]} receiveShadow>
         <boxGeometry args={[0.22, 2.5, 3.2]} />
         <meshStandardMaterial {...boxMat} />
       </mesh>
-      {/* Back wall */}
       <mesh position={[0, 1.4, -1.5]} receiveShadow>
         <boxGeometry args={[5.2, 2.5, 0.22]} />
         <meshStandardMaterial {...boxMat} />
       </mesh>
-      {/* Front lip */}
       <mesh position={[0, 0.5, 1.5]} receiveShadow>
         <boxGeometry args={[5.2, 0.7, 0.22]} />
         <meshStandardMaterial {...boxMat} />
       </mesh>
-      {/* Inner floor */}
       <mesh position={[0, 0.17, 0]} receiveShadow>
         <boxGeometry args={[5.0, 0.06, 3.0]} />
         <meshStandardMaterial {...accentMat} />
       </mesh>
-      {/* Bottom logo strip */}
       <mesh position={[0, -0.16, 0.6]} receiveShadow>
         <boxGeometry args={[2.4, 0.01, 0.06]} />
         <meshStandardMaterial color="#334155" metalness={0.9} roughness={0.1} />
@@ -172,6 +148,20 @@ export default function Configure() {
   const createConfig = useCreateConfiguration();
   const createOrder = useCreateOrder();
   const calcPrice = useCalculatePrice();
+
+  // Derive which combo is currently selected (fallback to first)
+  const activeComboid = useMemo(() => {
+    const match = BRACELET_COMBOS.find(
+      c => c.color === config.braceletColor && c.material === config.braceletMaterial
+    );
+    return match?.id ?? null;
+  }, [config.braceletColor, config.braceletMaterial]);
+
+  const activeCombo = BRACELET_COMBOS.find(c => c.id === activeComboid) ?? BRACELET_COMBOS[0];
+
+  const handleSelectCombo = (combo: typeof BRACELET_COMBOS[number]) => {
+    updateConfig({ braceletColor: combo.color, braceletMaterial: combo.material });
+  };
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -256,12 +246,10 @@ export default function Configure() {
           </div>
         )}
 
-        {/* Wrist toggle overlay button */}
         {webglAvailable && (
           <button
             onClick={() => setShowWrist(v => !v)}
             className="absolute bottom-3 right-3 z-10 liquid-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"
-            title="Показать/скрыть запястье"
           >
             <span>{showWrist ? '🙈' : '🖐️'}</span>
             <span>{showWrist ? 'Без запястья' : 'На запястье'}</span>
@@ -283,32 +271,52 @@ export default function Configure() {
           </div>
         </div>
 
-        {/* Step Panel — Bracelet only */}
-        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-5">
+        {/* Config panel */}
+        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-6">
 
-          {/* Bracelet Material */}
+          {/* ── Bracelet preset picker ── */}
           <div>
-            <h2 className="text-xl font-bold tracking-tight mb-3">Материал ремешка</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {BRACELET_MATERIALS.map(m => (
-                <OptionCard
-                  key={m.value}
-                  selected={config.braceletMaterial === m.value}
-                  onClick={() => updateConfig({ braceletMaterial: m.value })}
-                >
-                  <div className="flex items-center justify-between mb-0.5">
-                    <p className={cn('text-sm font-bold', config.braceletMaterial === m.value ? 'text-primary' : '')}>{m.label}</p>
-                    <span className="text-base leading-none opacity-60">{m.pattern}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{m.desc}</p>
-                </OptionCard>
-              ))}
+            <h2 className="text-lg font-bold tracking-tight mb-1">Ремешок</h2>
+            <p className="text-xs text-muted-foreground mb-3">Выберите готовую комбинацию материала и цвета</p>
+
+            <div className="grid grid-cols-3 gap-2">
+              {BRACELET_COMBOS.map(combo => {
+                const active = activeCombo.id === combo.id;
+                return (
+                  <button
+                    key={combo.id}
+                    onClick={() => handleSelectCombo(combo)}
+                    className={cn(
+                      'flex flex-col items-center gap-2 p-3 rounded-2xl transition-all duration-100 text-center',
+                      active
+                        ? 'ring-2 ring-primary bg-primary/10 shadow-sm'
+                        : 'border border-border/60 bg-card/60 hover:bg-card/80'
+                    )}
+                  >
+                    <div
+                      className="w-9 h-9 rounded-full border-2 shadow-sm shrink-0"
+                      style={{
+                        backgroundColor: combo.color,
+                        borderColor: active ? 'var(--primary)' : 'rgba(0,0,0,0.14)',
+                      }}
+                    />
+                    <div>
+                      <p className={cn('text-[11px] font-bold leading-tight', active ? 'text-primary' : 'text-foreground')}>
+                        {combo.label}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {MAT_LABELS[combo.material] ?? combo.material}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Closing Mechanism */}
+          {/* ── Closing mechanism ── */}
           <div>
-            <h2 className="text-xl font-bold tracking-tight mb-3">Застёжка</h2>
+            <h2 className="text-lg font-bold tracking-tight mb-3">Застёжка</h2>
             <div className="grid grid-cols-2 gap-3">
               {BRACELET_TYPES.map(t => (
                 <OptionCard
@@ -323,27 +331,13 @@ export default function Configure() {
             </div>
           </div>
 
-          {/* Strap Color */}
-          <div>
-            <h2 className="text-xl font-bold tracking-tight mb-3">Цвет ремешка</h2>
-            <div className="flex flex-wrap gap-2 items-center">
-              {STRAP_COLORS.map(c => (
-                <ColorSwatch
-                  key={c}
-                  color={c}
-                  selected={config.braceletColor === c}
-                  onClick={() => updateConfig({ braceletColor: c })}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Summary */}
+          {/* ── Summary ── */}
           <div className="liquid-glass rounded-2xl p-4 space-y-2 text-sm">
             {([
               ['Коллекция', config.presetId ? `#${config.presetId}` : '—'],
               ['Корпус', config.watchfaceMaterial === 'metal' ? 'Нержавейка' : 'Пластик'],
-              ['Ремешок', BRACELET_MATERIALS.find(m => m.value === config.braceletMaterial)?.label ?? config.braceletMaterial],
+              ['Ремешок', activeCombo.label],
+              ['Материал', MAT_LABELS[activeCombo.material] ?? activeCombo.material],
               ['Застёжка', BRACELET_TYPES.find(t => t.value === config.braceletType)?.label ?? config.braceletType],
             ] as [string, string][]).map(([k, v]) => (
               <div key={k} className="flex justify-between">
@@ -356,14 +350,12 @@ export default function Configure() {
 
         {/* Navigation Footer */}
         <div className="px-5 pb-6 pt-3 border-t border-border/40 space-y-3">
-          {/* Price */}
           <div className="flex items-center justify-between px-1">
             <span className="text-xs text-muted-foreground uppercase tracking-widest">Стоимость</span>
             <span className={cn('text-sm font-bold transition-opacity', priceLoading ? 'opacity-40' : 'opacity-100')}>
               {livePrice !== null ? `${livePrice} ⭐` : priceLoading ? '…' : '—'}
             </span>
           </div>
-          {/* Buttons */}
           <div className="flex gap-3">
             <Link href="/collections" className="flex-none">
               <button className="liquid-button h-full px-5 py-3 text-sm font-semibold">← Назад</button>
