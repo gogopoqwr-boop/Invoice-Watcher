@@ -12,6 +12,7 @@ type ApiConfigState = Omit<WatchConfigInput, "sessionId">;
 
 export type ExtendedConfigState = ApiConfigState & {
   presetId?: number;
+  collectionName?: string;   // drives box theme on the BoxReveal page
   watchfaceText?: string;
   watchfaceTextMode?: "center" | "circular";
   handsCount?: number; // 0 | 2 | 3

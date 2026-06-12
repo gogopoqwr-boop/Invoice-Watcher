@@ -191,6 +191,7 @@ export default function Collections() {
   const handleSelectPreset = (preset: any) => {
     updateConfig({
       presetId: preset.id,
+      collectionName: preset.collectionName ?? undefined,
       watchfaceGeometry: preset.watchfaceGeometry,
       watchfaceMaterial: preset.watchfaceMaterial,
       watchfaceColor: preset.watchfaceColor,
