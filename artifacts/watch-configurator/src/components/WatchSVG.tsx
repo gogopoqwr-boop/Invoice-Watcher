@@ -80,9 +80,9 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
 
   const gradId = `bg-grad-${mini ? 'm' : 'f'}`;
 
-  // Circular text path: arc starting at 8 o'clock (lower-left) going clockwise
-  // so text is centered at 12 o'clock (top of dial)
-  const circR = faceR - 10;
+  // Circular text path: arc starting at 8 o'clock going clockwise, centered at 12
+  // Push radius close to the dot-marker ring
+  const circR = faceR - 6;
   // Start arc at -150° (i.e., 210° CCW from 3 o'clock = 8 o'clock position)
   // Text centered at top (12 o'clock = 0% of this arc)
   const circStartX = cx + circR * Math.cos((-150 * Math.PI) / 180);
@@ -145,7 +145,11 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
       viewBox="0 0 120 200"
       xmlns="http://www.w3.org/2000/svg"
       className={mini ? 'w-full h-full' : 'w-full h-full max-h-[420px]'}
-      style={mini ? {} : { filter: 'drop-shadow(0 2px 24px rgba(0,0,0,0.18))' }}
+      style={mini ? {} : {
+        filter: 'drop-shadow(0 8px 32px rgba(0,0,0,0.38)) drop-shadow(0 2px 6px rgba(0,0,0,0.22))',
+        transform: 'perspective(520px) rotateX(14deg)',
+        transformOrigin: '50% 58%',
+      }}
       onClick={onClick}
     >
       <defs>
@@ -223,20 +227,47 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
         {/* Center dot */}
         {handsEnabled && <circle cx={cx} cy={cy} r="2.5" fill={handsColor} opacity="0.9" />}
 
-        {/* Hour hand */}
-        {handsEnabled && handsCount >= 2 && (
-          <line x1={cx} y1={cy} x2={cx + 18 * Math.cos((210 - 90) * Math.PI / 180)} y2={cy + 18 * Math.sin((210 - 90) * Math.PI / 180)} stroke={handsColor} strokeWidth="3" strokeLinecap="round" />
-        )}
+        {/* Hour hand — flat tapered rectangle, pivots at center */}
+        {handsEnabled && handsCount >= 2 && (() => {
+          const angleDeg = 210; const rad = (angleDeg - 90) * Math.PI / 180;
+          const len = 18; const cw = 5; const w = 2.8;
+          return (
+            <g transform={`rotate(${angleDeg}, ${cx}, ${cy})`}>
+              <rect x={cx - w / 2} y={cy - len} width={w} height={len + cw} rx="1"
+                fill={handsColor} opacity="0.95" />
+              <rect x={cx - w * 0.9} y={cy} width={w * 1.8} height={cw} rx="1"
+                fill={handsColor} opacity="0.85" />
+            </g>
+          );
+        })()}
 
-        {/* Minute hand */}
-        {handsEnabled && handsCount >= 2 && (
-          <line x1={cx} y1={cy} x2={cx + 27 * Math.cos((60 - 90) * Math.PI / 180)} y2={cy + 27 * Math.sin((60 - 90) * Math.PI / 180)} stroke={handsColor} strokeWidth="2" strokeLinecap="round" />
-        )}
+        {/* Minute hand — longer, slimmer */}
+        {handsEnabled && handsCount >= 2 && (() => {
+          const angleDeg = 60; const rad = (angleDeg - 90) * Math.PI / 180;
+          const len = 27; const cw = 6; const w = 1.8;
+          return (
+            <g transform={`rotate(${angleDeg}, ${cx}, ${cy})`}>
+              <rect x={cx - w / 2} y={cy - len} width={w} height={len + cw} rx="1"
+                fill={handsColor} opacity="0.95" />
+              <rect x={cx - w * 1.1} y={cy} width={w * 2.2} height={cw} rx="1"
+                fill={handsColor} opacity="0.85" />
+            </g>
+          );
+        })()}
 
-        {/* Second hand */}
-        {handsEnabled && handsCount >= 3 && (
-          <line x1={cx} y1={cy} x2={cx + 30 * Math.cos((120 - 90) * Math.PI / 180)} y2={cy + 30 * Math.sin((120 - 90) * Math.PI / 180)} stroke="#ef4444" strokeWidth="1" strokeLinecap="round" />
-        )}
+        {/* Second hand — ultra-thin red needle with lollipop tip */}
+        {handsEnabled && handsCount >= 3 && (() => {
+          const angleDeg = 120; const len = 30; const cw = 8;
+          return (
+            <g transform={`rotate(${angleDeg}, ${cx}, ${cy})`}>
+              <rect x={cx - 0.4} y={cy - len} width="0.8" height={len + cw} rx="0.4"
+                fill="#ef4444" opacity="0.95" />
+              <circle cx={cx} cy={cy - len + 3} r="2.2" fill="#ef4444" />
+              <rect x={cx - 1.2} y={cy + 2} width="2.4" height={cw - 2} rx="1"
+                fill="#ef4444" opacity="0.8" />
+            </g>
+          );
+        })()}
       </g>
 
       {/* Crown */}

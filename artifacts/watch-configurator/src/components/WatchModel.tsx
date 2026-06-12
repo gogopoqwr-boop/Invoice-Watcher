@@ -133,9 +133,9 @@ function WatchFaceText3D({
     const arcSpan = Math.min(Math.PI * 1.4, chars.length * 0.32);
     // Centre the arc at the top (π/2 = 12 o'clock in Three.js where y is up)
     const startAngle = Math.PI / 2 - arcSpan / 2;
-    // Larger radius pushes text to sit cleanly adjacent to outer dot markers
-    const circR = 1.05;
-    const fontSize = Math.max(0.08, Math.min(0.17, 0.72 / Math.max(chars.length, 4)));
+    // Larger radius pushes text out to sit cleanly along the dot-marker ring
+    const circR = 1.22;
+    const fontSize = Math.max(0.10, Math.min(0.20, 0.90 / Math.max(chars.length, 4)));
 
     return (
       <group position={[0, 0, 0.61]}>
@@ -303,11 +303,11 @@ export function CameraRig({ step, lastInteractionRef }: {
 }) {
   const { camera } = useThree();
   const targets: [number, number, number][] = [
-    [0, 0.5, 9],
-    [0, 0.5, 9],
-    [0, -3.5, 8],
-    [0, 0.5, 9],
-    [0, 0.5, 9],
+    [0, 1.2, 7.5],
+    [0, 1.2, 7.5],
+    [0, -3.0, 7.0],
+    [0, 1.2, 7.5],
+    [0, 1.2, 7.5],
   ];
   const pos = targets[Math.min(step, targets.length - 1)];
   const vec = useMemo(() => new THREE.Vector3(...pos), [step]);
@@ -483,8 +483,9 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
     prevStepRef.current = step;
   }, [step]);
 
+  // Default -0.32 gives "looking down at wrist" angle; bracelet step tilts further
   const { tiltX } = useSpring({
-    tiltX: step === 2 ? 0.55 : 0,
+    tiltX: step === 2 ? 0.52 : -0.32,
     config: { mass: 1, tension: 110, friction: 22 },
   });
 
@@ -602,81 +603,109 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
       </mesh>
 
       {config.handsEnabled && (
-        <group position={[0, 0, 0.58]}>
-          {/* Hour hand — short, wide, tapered leaf shape */}
+        <group position={[0, 0, 0.57]}>
+          {/* Hour hand — flat, tapered box, short & wide like a real watch */}
           <group rotation={[0, 0, Math.PI / 5]}>
-            <mesh position={[0, 0.19, 0]} castShadow>
-              <cylinderGeometry args={[0.014, 0.042, 0.52, 8]} />
-              <meshStandardMaterial color={config.handsColor} metalness={0.92} roughness={0.08} />
+            {/* Main body: tapers from base to tip via two stacked boxes */}
+            <mesh position={[0, 0.26, 0]} castShadow>
+              <boxGeometry args={[0.058, 0.52, 0.018]} />
+              <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
             </mesh>
-            <mesh position={[0, -0.09, 0]} castShadow>
-              <cylinderGeometry args={[0.022, 0.014, 0.13, 8]} />
-              <meshStandardMaterial color={config.handsColor} metalness={0.92} roughness={0.08} />
+            {/* Taper cap at tip */}
+            <mesh position={[0, 0.52, 0]} castShadow>
+              <boxGeometry args={[0.034, 0.06, 0.018]} />
+              <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
+            </mesh>
+            {/* Counterweight stub */}
+            <mesh position={[0, -0.072, 0]} castShadow>
+              <boxGeometry args={[0.072, 0.10, 0.022]} />
+              <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
             </mesh>
           </group>
 
-          {/* Minute hand — longer, slimmer, tapered */}
+          {/* Minute hand — flat, long & slim */}
           <group rotation={[0, 0, -Math.PI / 3.5]}>
-            <mesh position={[0, 0.3, 0]} castShadow>
-              <cylinderGeometry args={[0.007, 0.026, 0.74, 8]} />
-              <meshStandardMaterial color={config.handsColor} metalness={0.92} roughness={0.08} />
+            <mesh position={[0, 0.38, 0]} castShadow>
+              <boxGeometry args={[0.040, 0.76, 0.016]} />
+              <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
             </mesh>
-            <mesh position={[0, -0.11, 0]} castShadow>
-              <cylinderGeometry args={[0.016, 0.010, 0.16, 8]} />
-              <meshStandardMaterial color={config.handsColor} metalness={0.92} roughness={0.08} />
+            {/* Taper cap */}
+            <mesh position={[0, 0.76, 0]} castShadow>
+              <boxGeometry args={[0.022, 0.04, 0.016]} />
+              <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
+            </mesh>
+            {/* Counterweight */}
+            <mesh position={[0, -0.08, 0]} castShadow>
+              <boxGeometry args={[0.055, 0.12, 0.020]} />
+              <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
             </mesh>
           </group>
 
-          {/* Second hand — ultra-thin needle + counterweight */}
+          {/* Second hand — ultra-thin flat needle */}
           {(config.handsCount ?? 3) >= 3 && (
             <group rotation={[0, 0, Math.PI * 0.75]}>
-              <mesh position={[0, 0.35, 0]} castShadow>
-                <cylinderGeometry args={[0.003, 0.007, 0.68, 6]} />
-                <meshStandardMaterial color="#ef4444" metalness={0.7} roughness={0.2} />
+              <mesh position={[0, 0.34, 0.002]} castShadow>
+                <boxGeometry args={[0.010, 0.68, 0.008]} />
+                <meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} />
               </mesh>
-              <mesh position={[0, -0.13, 0]} castShadow>
-                <cylinderGeometry args={[0.016, 0.005, 0.19, 6]} />
-                <meshStandardMaterial color="#ef4444" metalness={0.7} roughness={0.2} />
+              {/* Round lollipop at tip */}
+              <mesh position={[0, 0.62, 0.002]}>
+                <cylinderGeometry args={[0.022, 0.022, 0.008, 12]} />
+                <meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} />
+              </mesh>
+              {/* Counterweight */}
+              <mesh position={[0, -0.10, 0.002]} castShadow>
+                <boxGeometry args={[0.024, 0.16, 0.010]} />
+                <meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} />
               </mesh>
             </group>
           )}
 
-          {/* Center pivot — flat disc, no extrusion */}
+          {/* Center pivot — polished flat disc */}
           <mesh rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.062, 0.062, 0.007, 24]} />
+            <cylinderGeometry args={[0.058, 0.058, 0.006, 28]} />
             <meshStandardMaterial color={config.handsColor} metalness={1} roughness={0.02} />
           </mesh>
-          {/* Center pip — red accent dot on top */}
+          {/* Red accent pip */}
           <mesh position={[0, 0, 0.007]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.026, 0.026, 0.004, 16]} />
-            <meshStandardMaterial color="#ef4444" metalness={0.8} roughness={0.1} />
+            <cylinderGeometry args={[0.024, 0.024, 0.004, 16]} />
+            <meshStandardMaterial color="#ef4444" metalness={0.85} roughness={0.08} />
           </mesh>
         </group>
       )}
 
-      <mesh position={[1.68, 0, 0.05]} rotation={[0, 0, Math.PI / 2]} castShadow>
-        <cylinderGeometry args={[0.1, 0.1, 0.38, 16]} />
+      {/* Crown — right side, proper case-edge position */}
+      <mesh position={[1.62, 0.18, 0.10]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.09, 0.085, 0.28, 18]} />
         <meshStandardMaterial {...caseMat} />
       </mesh>
+      {/* Crown knurl ring */}
+      <mesh position={[1.66, 0.18, 0.10]} rotation={[0, 0, Math.PI / 2]}>
+        <torusGeometry args={[0.09, 0.018, 8, 18]} />
+        <meshStandardMaterial color={caseMat.color} metalness={caseMat.metalness} roughness={Math.min(1, caseMat.roughness + 0.15)} />
+      </mesh>
 
-      {[1.78, -1.78].map((y) => (
-        <mesh key={y} position={[0, y, 0.02]} castShadow>
-          <boxGeometry args={[1.22, 0.2, 0.18]} />
+      {/* Lugs — top and bottom, seamlessly bridge case to strap */}
+      {[1.60, -1.60].map((y) => (
+        <mesh key={y} position={[0, y, 0.01]} castShadow>
+          <boxGeometry args={[1.12, 0.38, 0.20]} />
           <meshStandardMaterial {...caseMat} />
         </mesh>
       ))}
 
+      {/* Upper strap — positioned so its bottom edge meets the lug top */}
       <animated.group position-z={spread}>
         {isSegmented
-          ? <SegmentedStrap posY={3.3} color={config.braceletColor} />
-          : <SolidStrap posY={3.3} color={config.braceletColor} mat={config.braceletMaterial} />
+          ? <SegmentedStrap posY={3.05} color={config.braceletColor} />
+          : <SolidStrap posY={3.05} color={config.braceletColor} mat={config.braceletMaterial} />
         }
       </animated.group>
 
+      {/* Lower strap */}
       <animated.group position-z={spread}>
         {isSegmented
-          ? <SegmentedStrap posY={-3.3} color={config.braceletColor} />
-          : <SolidStrap posY={-3.3} color={config.braceletColor} mat={config.braceletMaterial} />
+          ? <SegmentedStrap posY={-3.05} color={config.braceletColor} />
+          : <SolidStrap posY={-3.05} color={config.braceletColor} mat={config.braceletMaterial} />
         }
       </animated.group>
 
