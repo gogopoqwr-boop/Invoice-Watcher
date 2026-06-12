@@ -289,7 +289,10 @@ function SolidStrap({ posY, color, mat }: { posY: number; color: string; mat: st
 
 // ─── Camera controller ────────────────────────────────────────────────────
 
-const INTERACTION_PAUSE_MS = 10_000;
+// How long after the last drag event before auto-camera and auto-rotation resume
+const INTERACTION_PAUSE_MS = 2_000;
+// How long (ms) to ramp rotation speed from 0 back to full after interaction ends
+const RESUME_RAMP_MS = 800;
 
 export function CameraRig({ step, lastInteractionRef }: {
   step: number;
@@ -305,16 +308,94 @@ export function CameraRig({ step, lastInteractionRef }: {
   ];
   const pos = targets[Math.min(step, targets.length - 1)];
   const vec = useMemo(() => new THREE.Vector3(...pos), [step]);
+  const resumeStartRef = useRef<number | null>(null);
 
   useFrame(() => {
     const userActive = lastInteractionRef?.current
       ? Date.now() - lastInteractionRef.current < INTERACTION_PAUSE_MS
       : false;
-    if (userActive) return;
-    camera.position.lerp(vec, 0.05);
+    if (userActive) { resumeStartRef.current = null; return; }
+
+    if (resumeStartRef.current === null) resumeStartRef.current = Date.now();
+    const t = Math.min(1, (Date.now() - resumeStartRef.current) / RESUME_RAMP_MS);
+    const lerpSpeed = 0.02 + 0.03 * t; // ease from slow to normal
+
+    camera.position.lerp(vec, lerpSpeed);
     camera.lookAt(0, 0, 0);
   });
   return null;
+}
+
+// ─── Back panel with engraved brand + serial number ───────────────────────
+
+function WatchBackPanel({ geom, caseColor, serial }: {
+  geom: string;
+  caseColor: string;
+  serial?: string;
+}) {
+  const backDiscGeo = useMemo(() => {
+    const shape = buildFaceShape(geom);
+    return new THREE.ShapeGeometry(shape, 72);
+  }, [geom]);
+
+  // Slightly darker / more brushed than the case
+  const panelColor = useMemo(
+    () => new THREE.Color(caseColor).multiplyScalar(0.75).getStyle(),
+    [caseColor],
+  );
+  const engraveMat = { color: panelColor, metalness: 0.95, roughness: 0.06 };
+
+  return (
+    <>
+      {/* Brushed-metal back disc */}
+      <mesh position={[0, 0, -0.11]} rotation={[0, Math.PI, 0]}>
+        <primitive object={backDiscGeo} />
+        <meshStandardMaterial {...engraveMat} />
+      </mesh>
+
+      {/* Engraved text — faces −Z, readable when watch is flipped around Y */}
+      <Suspense fallback={null}>
+        <group position={[0, 0, -0.13]} rotation={[0, Math.PI, 0]}>
+          {/* Brand name */}
+          <group position={[0, serial ? 0.16 : 0, 0]}>
+            <Center>
+              <Text3D
+                font={FONT_URL}
+                size={0.13}
+                height={0.018}
+                bevelEnabled
+                bevelSize={0.007}
+                bevelThickness={0.007}
+                bevelSegments={2}
+                curveSegments={6}
+              >
+                {'ЧЕБЛЯЧАС'}
+                <meshStandardMaterial {...engraveMat} />
+              </Text3D>
+            </Center>
+          </group>
+
+          {/* Serial number (optional) */}
+          {serial && (
+            <group position={[0, -0.04, 0]}>
+              <Center>
+                <Text3D
+                  font={FONT_URL}
+                  size={0.065}
+                  height={0.012}
+                  bevelEnabled={false}
+                  curveSegments={4}
+                >
+                  {serial.toUpperCase()}
+                  <meshStandardMaterial {...engraveMat} />
+                </Text3D>
+              </Center>
+            </group>
+          )}
+        </group>
+      </Suspense>
+    </>
+  );
 }
 
 // ─── Main watch model ─────────────────────────────────────────────────────
@@ -329,6 +410,7 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
   const groupRef = useRef<THREE.Group>(null);
   const prevStepRef = useRef(step);
   const faceSnapTargetRef = useRef<number | null>(null);
+  const rotResumeStartRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (step === 3 && prevStepRef.current !== 3 && groupRef.current) {
@@ -355,17 +437,25 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
     const userActive = lastInteractionRef?.current
       ? Date.now() - lastInteractionRef.current < INTERACTION_PAUSE_MS
       : false;
-    if (userActive) return;
+
+    if (userActive) {
+      rotResumeStartRef.current = null;
+      return;
+    }
+
+    // Smooth speed ramp-up after interaction ends — avoids jarring snap
+    if (rotResumeStartRef.current === null) rotResumeStartRef.current = Date.now();
+    const speedFactor = Math.min(1, (Date.now() - rotResumeStartRef.current) / RESUME_RAMP_MS);
 
     if (faceSnapTargetRef.current !== null) {
       const target = faceSnapTargetRef.current;
-      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, target, 0.06);
+      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, target, 0.06 * speedFactor);
       if (Math.abs(groupRef.current.rotation.y - target) < 0.001) {
         groupRef.current.rotation.y = target;
         faceSnapTargetRef.current = null;
       }
     } else {
-      groupRef.current.rotation.y += 0.004;
+      groupRef.current.rotation.y += 0.004 * speedFactor;
     }
   });
 
@@ -419,6 +509,13 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
         <primitive object={bodyGeo} />
         <meshStandardMaterial {...caseMat} />
       </mesh>
+
+      {/* Back panel — engraved brand name + serial number */}
+      <WatchBackPanel
+        geom={config.watchfaceGeometry}
+        caseColor={config.watchfaceColor}
+        serial={config.serialNumber || undefined}
+      />
 
       {/* Face disc with corrected UV texture */}
       <mesh position={[0, 0, 0.48]}>
