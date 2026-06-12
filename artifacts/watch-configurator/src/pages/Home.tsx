@@ -4,7 +4,7 @@ import { Link } from "wouter";
 function FloatingWatch() {
   return (
     <div className="animate-float-watch select-none pointer-events-none" style={{ filter: "drop-shadow(0 24px 48px rgba(80,130,255,0.22))" }}>
-      <svg viewBox="0 0 120 200" width="140" height="234" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 120 200" width="180" height="300" xmlns="http://www.w3.org/2000/svg">
         {/* Top strap */}
         <rect x="45" y="0" width="30" height="48" rx="6" fill="currentColor" className="text-slate-700 dark:text-slate-300" opacity="0.85"/>
         <rect x="50" y="20" width="20" height="3" rx="1.5" fill="white" opacity="0.3"/>
@@ -70,9 +70,7 @@ function FloatingWatch() {
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const footerRef = useRef<HTMLDivElement>(null);
 
-  // Subtle particle field
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -87,7 +85,7 @@ export default function Home() {
     };
     window.addEventListener("resize", onResize);
 
-    const particles = Array.from({ length: 38 }, () => ({
+    const particles = Array.from({ length: 50 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       r: Math.random() * 1.8 + 0.4,
@@ -119,118 +117,111 @@ export default function Home() {
     return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", onResize); };
   }, []);
 
-  // Fade in footer on scroll
-  useEffect(() => {
-    const footer = footerRef.current;
-    if (!footer) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) footer.style.opacity = "1";
-        else footer.style.opacity = "0";
-      },
-      { threshold: 0.3 }
-    );
-    obs.observe(footer);
-    return () => obs.disconnect();
-  }, []);
-
   return (
-    <div className="w-full bg-background overflow-x-hidden">
-      {/* Hero section — full viewport */}
-      <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center overflow-hidden relative select-none">
-        {/* Particle canvas */}
-        <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-0" style={{ opacity: 0.8 }} />
+    <div
+      className="w-full bg-background"
+      style={{
+        height: "100dvh",
+        overflowY: "scroll",
+        overflowX: "hidden",
+        scrollSnapType: "y mandatory",
+      }}
+    >
+      {/* Ambient orbs — fixed so they persist across slides */}
+      <div className="fixed top-[15%] left-[20%] w-[520px] h-[520px] rounded-full pointer-events-none animate-float-orb z-0"
+        style={{ background: "var(--orb-1)", filter: "blur(90px)", animationDelay: "0s" }} />
+      <div className="fixed bottom-[20%] right-[15%] w-[380px] h-[380px] rounded-full pointer-events-none animate-float-orb z-0"
+        style={{ background: "var(--orb-2)", filter: "blur(80px)", animationDelay: "2.5s" }} />
+      <div className="fixed top-[55%] left-[55%] w-[260px] h-[260px] rounded-full pointer-events-none animate-float-orb z-0"
+        style={{ background: "var(--orb-3)", filter: "blur(70px)", animationDelay: "1.2s" }} />
 
-        {/* Ambient orbs */}
-        <div className="absolute top-[15%] left-[20%] w-[520px] h-[520px] rounded-full pointer-events-none animate-float-orb"
-          style={{ background: "var(--orb-1)", filter: "blur(90px)", animationDelay: "0s" }} />
-        <div className="absolute bottom-[20%] right-[15%] w-[380px] h-[380px] rounded-full pointer-events-none animate-float-orb"
-          style={{ background: "var(--orb-2)", filter: "blur(80px)", animationDelay: "2.5s" }} />
-        <div className="absolute top-[55%] left-[55%] w-[260px] h-[260px] rounded-full pointer-events-none animate-float-orb"
-          style={{ background: "var(--orb-3)", filter: "blur(70px)", animationDelay: "1.2s" }} />
+      {/* Particle canvas — fixed to viewport */}
+      <canvas
+        ref={canvasRef}
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{ opacity: 0.8 }}
+      />
 
-        {/* Main content */}
-        <div className="z-10 flex flex-col items-center gap-0 w-full px-6">
+      {/* ── SLIDE 1: Title + buttons ── */}
+      <section
+        className="relative z-10 flex flex-col items-center justify-center select-none px-6"
+        style={{ height: "100dvh", scrollSnapAlign: "start" }}
+      >
+        <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground mb-6 animate-fade-up">
+          Чеблячас
+        </p>
 
-          {/* Brand label */}
-          <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground mb-6 animate-fade-up">
-            Чеблячас
-          </p>
+        <h1 className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tight text-foreground leading-[0.9] mb-10 animate-fade-up delay-100">
+          Че хоч?
+        </h1>
 
-          {/* Watch + headline row */}
-          <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-14 mb-10">
-            <div className="animate-fade-up delay-100">
-              <FloatingWatch />
-            </div>
-
-            <div className="text-center md:text-left animate-fade-up delay-200">
-              <h1 className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tight text-foreground leading-[0.9] mb-3">
-                Че<br/>хоч?
-              </h1>
-              <p className="text-muted-foreground text-sm md:text-base tracking-wide">
-                твои часы · твои правила
-              </p>
-            </div>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs sm:max-w-none sm:w-auto animate-fade-up delay-300">
-            <Link href="/collections">
-              <button className="liquid-button w-full sm:w-auto px-12 py-4 text-sm font-bold tracking-[0.2em] uppercase">
-                ⌚ Часы
-              </button>
-            </Link>
-
-            <button
-              disabled
-              className="liquid-button w-full sm:w-auto px-12 py-4 text-sm font-bold tracking-[0.2em] uppercase opacity-30 cursor-not-allowed"
-              title="Coming soon"
-            >
-              Мерч
-            </button>
-          </div>
-
-          {/* My orders */}
-          <Link href="/orders" className="z-10 mt-4 animate-fade-up delay-400">
-            <button className="liquid-button px-7 py-2.5 text-sm font-semibold tracking-widest">
-              📦 Мои заказы
+        <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs sm:max-w-none sm:w-auto animate-fade-up delay-200">
+          <Link href="/collections">
+            <button className="liquid-button w-full sm:w-auto px-12 py-4 text-sm font-bold tracking-[0.2em] uppercase">
+              ⌚ Часы
             </button>
           </Link>
-
-          {/* Footer inline */}
-          <div className="mt-8 flex items-center gap-4 animate-fade-up delay-500">
-            <p className="text-xs text-muted-foreground/40 tracking-[0.25em] uppercase">
-              Чеблячас · версия 4
-            </p>
-            <span className="text-muted-foreground/20">·</span>
-            <Link href="/login">
-              <button className="text-xs text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors tracking-widest uppercase">
-                панель
-              </button>
-            </Link>
-          </div>
-
-          {/* Scroll hint */}
-          <div className="mt-6 animate-fade-up delay-500">
-            <div className="w-px h-10 bg-gradient-to-b from-muted-foreground/30 to-transparent mx-auto animate-pulse" />
-          </div>
+          <button
+            disabled
+            className="liquid-button w-full sm:w-auto px-12 py-4 text-sm font-bold tracking-[0.2em] uppercase opacity-30 cursor-not-allowed"
+            title="Coming soon"
+          >
+            Мерч
+          </button>
         </div>
-      </div>
 
-      {/* Below-the-fold copyright section */}
-      <div
-        ref={footerRef}
-        className="min-h-[40dvh] flex items-center justify-center px-6 transition-opacity duration-700"
-        style={{ opacity: 0 }}
+        <Link href="/orders" className="z-10 mt-4 animate-fade-up delay-300">
+          <button className="liquid-button px-7 py-2.5 text-sm font-semibold tracking-widest">
+            📦 Мои заказы
+          </button>
+        </Link>
+
+        <div className="mt-8 flex items-center gap-4 animate-fade-up delay-400">
+          <p className="text-xs text-muted-foreground/40 tracking-[0.25em] uppercase">
+            Чеблячас · версия 4
+          </p>
+          <span className="text-muted-foreground/20">·</span>
+          <Link href="/login">
+            <button className="text-xs text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors tracking-widest uppercase">
+              панель
+            </button>
+          </Link>
+        </div>
+
+        {/* Scroll hint */}
+        <div className="absolute bottom-8 animate-fade-up delay-500">
+          <div className="w-px h-10 bg-gradient-to-b from-muted-foreground/30 to-transparent mx-auto animate-pulse" />
+        </div>
+      </section>
+
+      {/* ── SLIDE 2: Floating watch ── */}
+      <section
+        className="relative z-10 flex flex-col items-center justify-center select-none px-6"
+        style={{ height: "100dvh", scrollSnapAlign: "start" }}
+      >
+        <FloatingWatch />
+        <p className="mt-8 text-xs uppercase tracking-[0.45em] text-muted-foreground/50 animate-fade-up">
+          Чеблячас
+        </p>
+
+        {/* Scroll hint */}
+        <div className="absolute bottom-8">
+          <div className="w-px h-10 bg-gradient-to-b from-muted-foreground/30 to-transparent mx-auto animate-pulse" />
+        </div>
+      </section>
+
+      {/* ── SLIDE 3: Copyright ── */}
+      <section
+        className="relative z-10 flex items-center justify-center px-6"
+        style={{ height: "100dvh", scrollSnapAlign: "start" }}
       >
         <p
           className="text-center text-muted-foreground/50 text-sm md:text-base tracking-[0.15em] leading-relaxed select-none"
-          style={{ fontVariant: 'small-caps' }}
+          style={{ fontVariant: "small-caps" }}
         >
-          Чеблячас © 2026.<br/>
-          <span className="text-muted-foreground/30">Сборка приостановлена из-за полного дзена.</span>
+          Чеблячас все у права мои у меня пон?
         </p>
-      </div>
+      </section>
     </div>
   );
 }

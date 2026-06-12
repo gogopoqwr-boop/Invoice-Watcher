@@ -129,8 +129,10 @@ function WatchFaceText3D({
 
   if (mode === 'circular') {
     const chars = Array.from(trimmed);
-    const arcSpan = Math.min(Math.PI * 1.7, chars.length * 0.32);
-    const startAngle = -Math.PI / 2 - arcSpan / 2;
+    // Cap arc to ~252° so letters stay in the upper portion, leaving the bottom clear
+    const arcSpan = Math.min(Math.PI * 1.4, chars.length * 0.32);
+    // Centre the arc at the top (π/2 = 12 o'clock in Three.js where y is up)
+    const startAngle = Math.PI / 2 - arcSpan / 2;
     const circR = 0.72;
     const fontSize = Math.max(0.055, Math.min(0.13, 0.55 / Math.max(chars.length, 4)));
 
