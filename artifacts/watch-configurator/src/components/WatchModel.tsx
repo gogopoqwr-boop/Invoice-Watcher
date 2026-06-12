@@ -132,16 +132,23 @@ function WatchFaceText3D({ text, mode, handsColor }: {
 
   if (mode === 'circular') {
     const chars = Array.from(trimmed);
-    const arcSpan = Math.min(Math.PI * 1.4, chars.length * 0.32);
-    const startAngle = Math.PI / 2 - arcSpan / 2;
-    const circR = 1.30;
-    const fontSize = Math.max(0.10, Math.min(0.18, 0.82 / Math.max(chars.length, 4)));
+    // Keep arc within the top half — letters never dip below the equator.
+    // 0.27 rad per character gives comfortable spacing without crowding.
+    const arcSpan = Math.min(Math.PI * 0.88, chars.length * 0.27);
+    // Place char[0] at the LEFT (high-angle / 10–11 o'clock side) and
+    // decrement angle clockwise so the text reads left → right naturally.
+    const arcLeft  = Math.PI / 2 + arcSpan / 2;
+    const step     = arcSpan / chars.length;
+    const circR    = 1.26;
+    const fontSize = Math.max(0.09, Math.min(0.17, 0.78 / Math.max(chars.length, 4)));
     return (
       <group position={[0, 0, 0.61]}>
         {chars.map((ch, i) => {
-          const angle = startAngle + (i + 0.5) * (arcSpan / chars.length);
+          // Decreasing angle = clockwise = left-to-right reading order
+          const angle = arcLeft - (i + 0.5) * step;
           const x = circR * Math.cos(angle);
           const y = circR * Math.sin(angle);
+          // rot aligns each letter's top with the outward radial direction
           const rot = angle - Math.PI / 2;
           return (
             <group key={i} position={[x, y, 0]} rotation={[0, 0, rot]}>
