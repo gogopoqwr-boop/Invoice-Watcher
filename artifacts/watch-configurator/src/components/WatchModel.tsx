@@ -133,8 +133,9 @@ function WatchFaceText3D({
     const arcSpan = Math.min(Math.PI * 1.4, chars.length * 0.32);
     // Centre the arc at the top (π/2 = 12 o'clock in Three.js where y is up)
     const startAngle = Math.PI / 2 - arcSpan / 2;
-    const circR = 0.72;
-    const fontSize = Math.max(0.055, Math.min(0.13, 0.55 / Math.max(chars.length, 4)));
+    // Larger radius pushes text to sit cleanly adjacent to outer dot markers
+    const circR = 1.05;
+    const fontSize = Math.max(0.08, Math.min(0.17, 0.72 / Math.max(chars.length, 4)));
 
     return (
       <group position={[0, 0, 0.61]}>
@@ -602,23 +603,53 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
 
       {config.handsEnabled && (
         <group position={[0, 0, 0.58]}>
-          <mesh rotation={[0, 0, Math.PI / 5]} castShadow>
-            <boxGeometry args={[0.065, 0.8, 0.04]} />
-            <meshStandardMaterial color={config.handsColor} metalness={0.92} roughness={0.08} />
-          </mesh>
-          <mesh rotation={[0, 0, -Math.PI / 3.5]} castShadow>
-            <boxGeometry args={[0.045, 1.1, 0.04]} />
-            <meshStandardMaterial color={config.handsColor} metalness={0.92} roughness={0.08} />
-          </mesh>
-          {(config.handsCount ?? 3) >= 3 && (
-            <mesh rotation={[0, 0, Math.PI * 0.75]} castShadow>
-              <boxGeometry args={[0.028, 1.0, 0.04]} />
-              <meshStandardMaterial color="#ef4444" metalness={0.7} roughness={0.2} />
+          {/* Hour hand — short, wide, tapered leaf shape */}
+          <group rotation={[0, 0, Math.PI / 5]}>
+            <mesh position={[0, 0.19, 0]} castShadow>
+              <cylinderGeometry args={[0.014, 0.042, 0.52, 8]} />
+              <meshStandardMaterial color={config.handsColor} metalness={0.92} roughness={0.08} />
             </mesh>
+            <mesh position={[0, -0.09, 0]} castShadow>
+              <cylinderGeometry args={[0.022, 0.014, 0.13, 8]} />
+              <meshStandardMaterial color={config.handsColor} metalness={0.92} roughness={0.08} />
+            </mesh>
+          </group>
+
+          {/* Minute hand — longer, slimmer, tapered */}
+          <group rotation={[0, 0, -Math.PI / 3.5]}>
+            <mesh position={[0, 0.3, 0]} castShadow>
+              <cylinderGeometry args={[0.007, 0.026, 0.74, 8]} />
+              <meshStandardMaterial color={config.handsColor} metalness={0.92} roughness={0.08} />
+            </mesh>
+            <mesh position={[0, -0.11, 0]} castShadow>
+              <cylinderGeometry args={[0.016, 0.010, 0.16, 8]} />
+              <meshStandardMaterial color={config.handsColor} metalness={0.92} roughness={0.08} />
+            </mesh>
+          </group>
+
+          {/* Second hand — ultra-thin needle + counterweight */}
+          {(config.handsCount ?? 3) >= 3 && (
+            <group rotation={[0, 0, Math.PI * 0.75]}>
+              <mesh position={[0, 0.35, 0]} castShadow>
+                <cylinderGeometry args={[0.003, 0.007, 0.68, 6]} />
+                <meshStandardMaterial color="#ef4444" metalness={0.7} roughness={0.2} />
+              </mesh>
+              <mesh position={[0, -0.13, 0]} castShadow>
+                <cylinderGeometry args={[0.016, 0.005, 0.19, 6]} />
+                <meshStandardMaterial color="#ef4444" metalness={0.7} roughness={0.2} />
+              </mesh>
+            </group>
           )}
-          <mesh>
-            <cylinderGeometry args={[0.07, 0.07, 0.06, 16]} />
-            <meshStandardMaterial color={config.handsColor} metalness={1} roughness={0.05} />
+
+          {/* Center pivot — flat disc, no extrusion */}
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.062, 0.062, 0.007, 24]} />
+            <meshStandardMaterial color={config.handsColor} metalness={1} roughness={0.02} />
+          </mesh>
+          {/* Center pip — red accent dot on top */}
+          <mesh position={[0, 0, 0.007]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.026, 0.026, 0.004, 16]} />
+            <meshStandardMaterial color="#ef4444" metalness={0.8} roughness={0.1} />
           </mesh>
         </group>
       )}

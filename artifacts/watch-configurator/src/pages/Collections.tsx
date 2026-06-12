@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useListPresets } from '@workspace/api-client-react';
+import { useListPresets, useGetMyOrders } from '@workspace/api-client-react';
 import { useLocation, Link } from 'wouter';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import WatchSVG from '@/components/WatchSVG';
@@ -59,6 +59,8 @@ export default function Collections() {
   const [, setLocation] = useLocation();
   const { updateConfig, sessionId } = useWatchConfig();
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const { data: myOrders } = useGetMyOrders({ sessionId }, { query: { enabled: !!sessionId } } as any);
+  const hasOrders = Array.isArray(myOrders) && (myOrders as any[]).length > 0;
 
   const [buyModal, setBuyModal] = useState<any | null>(null);
   const [buyStrapColor, setBuyStrapColor] = useState('');
@@ -337,11 +339,13 @@ export default function Collections() {
                 С нуля →
               </button>
             </Link>
-            <Link href="/orders">
-              <button className="liquid-button px-4 py-2 text-xs font-semibold">
-                📦 Мои заказы
-              </button>
-            </Link>
+            {hasOrders && (
+              <Link href="/orders">
+                <button className="liquid-button px-4 py-2 text-xs font-semibold">
+                  📦 Мои заказы
+                </button>
+              </Link>
+            )}
           </div>
         </div>
 

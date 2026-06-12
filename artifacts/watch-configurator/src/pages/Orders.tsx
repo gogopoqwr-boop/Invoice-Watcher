@@ -105,7 +105,7 @@ export default function Orders() {
           </div>
           <div className="flex flex-col gap-2 items-end animate-fade-up delay-200">
             <Link href="/collections">
-              <button className="liquid-button px-5 py-2.5 text-sm font-bold">+ Новый</button>
+              <button className="liquid-button px-5 py-2.5 text-sm font-bold">Заказать</button>
             </Link>
           </div>
         </div>

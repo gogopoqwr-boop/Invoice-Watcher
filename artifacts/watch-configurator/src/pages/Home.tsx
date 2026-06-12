@@ -1,10 +1,12 @@
 import React, { useEffect, useRef } from "react";
 import { Link } from "wouter";
+import { useWatchConfig } from "@/hooks/use-watch-config";
+import { useGetMyOrders } from "@workspace/api-client-react";
 
 function FloatingWatch() {
   return (
     <div className="animate-float-watch select-none pointer-events-none" style={{ filter: "drop-shadow(0 24px 48px rgba(80,130,255,0.22))" }}>
-      <svg viewBox="0 0 120 200" width="180" height="300" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 120 200" width="220" height="366" xmlns="http://www.w3.org/2000/svg">
         {/* Top strap */}
         <rect x="45" y="0" width="30" height="48" rx="6" fill="currentColor" className="text-slate-700 dark:text-slate-300" opacity="0.85"/>
         <rect x="50" y="20" width="20" height="3" rx="1.5" fill="white" opacity="0.3"/>
@@ -70,6 +72,12 @@ function FloatingWatch() {
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { sessionId } = useWatchConfig();
+  const { data: orders } = useGetMyOrders(
+    { sessionId },
+    { query: { enabled: !!sessionId } } as any
+  );
+  const hasOrders = Array.isArray(orders) && (orders as any[]).length > 0;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -170,13 +178,15 @@ export default function Home() {
           </button>
         </div>
 
-        <Link href="/orders" className="z-10 mt-4 animate-fade-up delay-300">
-          <button className="liquid-button px-7 py-2.5 text-sm font-semibold tracking-widest">
-            📦 Мои заказы
-          </button>
-        </Link>
+        {hasOrders && (
+          <Link href="/orders" className="z-10 mt-4 animate-fade-up delay-300">
+            <button className="liquid-button px-7 py-2.5 text-sm font-semibold tracking-widest">
+              📦 Мои заказы
+            </button>
+          </Link>
+        )}
 
-        <div className="mt-8 flex items-center gap-4 animate-fade-up delay-400">
+        <div className="mt-4 flex items-center gap-4 animate-fade-up delay-400">
           <p className="text-xs text-muted-foreground/40 tracking-[0.25em] uppercase">
             Чеблячас · версия 4
           </p>
@@ -194,15 +204,29 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── SLIDE 2: Floating watch ── */}
+      {/* ── SLIDE 2: Floating watch + specs ── */}
       <section
         className="relative z-10 flex flex-col items-center justify-center select-none px-6"
         style={{ height: "100dvh", scrollSnapAlign: "start" }}
       >
         <FloatingWatch />
-        <p className="mt-8 text-xs uppercase tracking-[0.45em] text-muted-foreground/50 animate-fade-up">
+        <p className="mt-6 text-xs uppercase tracking-[0.45em] text-muted-foreground/50 animate-fade-up">
           Чеблячас
         </p>
+
+        {/* Specs row to fill horizontal space on large screens */}
+        <div className="mt-8 flex items-center gap-8 md:gap-14 animate-fade-up">
+          {[
+            { label: "материал", value: "нерж. сталь" },
+            { label: "лимит", value: "1 000 экз." },
+            { label: "оплата", value: "Telegram ⭐" },
+          ].map(({ label, value }) => (
+            <div key={label} className="text-center">
+              <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground/40 mb-1">{label}</p>
+              <p className="text-xs font-bold text-muted-foreground/70 tracking-wide">{value}</p>
+            </div>
+          ))}
+        </div>
 
         {/* Scroll hint */}
         <div className="absolute bottom-8">
@@ -215,12 +239,20 @@ export default function Home() {
         className="relative z-10 flex items-center justify-center px-6"
         style={{ height: "100dvh", scrollSnapAlign: "start" }}
       >
-        <p
-          className="text-center text-muted-foreground/50 text-sm md:text-base tracking-[0.15em] leading-relaxed select-none"
-          style={{ fontVariant: "small-caps" }}
-        >
-          Чеблячас все у права мои у меня пон?
-        </p>
+        <div className="text-center space-y-3 select-none">
+          <p
+            className="text-muted-foreground/50 text-sm md:text-base tracking-[0.15em] leading-relaxed"
+            style={{ fontVariant: "small-caps" }}
+          >
+            Чеблячас все у права мои у меня пон?
+          </p>
+          <p
+            className="text-muted-foreground/30 text-xs md:text-sm tracking-[0.12em] leading-relaxed"
+            style={{ fontVariant: "small-caps" }}
+          >
+            Чеблячас © 2026. Сборка приостановлена из-за полного дзена.
+          </p>
+        </div>
       </section>
     </div>
   );
