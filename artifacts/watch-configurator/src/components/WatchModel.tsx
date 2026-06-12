@@ -602,7 +602,20 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   }, [config.watchfaceGeometry]);
 
   const discGeo = useMemo(() => new THREE.ShapeGeometry(buildFaceShape(config.watchfaceGeometry), 72), [config.watchfaceGeometry]);
-  const crystalGeo = useMemo(() => new THREE.ShapeGeometry(buildFaceShape(config.watchfaceGeometry), 72), [config.watchfaceGeometry]);
+  // Domed crystal — ExtrudeGeometry so the crystal has visible thickness from
+  // the side and bevelled edges that catch light like real sapphire/mineral glass.
+  // bevelSegments=10 creates smooth dome-like rounded edges; depth=0.04 is the flat
+  // slab between the two bevels.
+  const crystalGeo = useMemo(() => {
+    const shape = buildFaceShape(config.watchfaceGeometry);
+    return new THREE.ExtrudeGeometry(shape, {
+      depth: 0.04,
+      bevelEnabled: true,
+      bevelSize: 0.04,
+      bevelThickness: 0.04,
+      bevelSegments: 10,
+    });
+  }, [config.watchfaceGeometry]);
 
   const isCircular = (config.watchfaceTextMode ?? 'center') === 'circular';
   const faceTexture = useMemo(
@@ -664,17 +677,28 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         </Suspense>
       )}
 
-      {/* Crystal — physical glass with transmission */}
+      {/* Crystal — high-fidelity sapphire glass */}
+      {/* Sits at starCrystalZ so the bevelled bottom starts just above the hands.
+          transmission + clearcoat together produce two distinct visual layers:
+            1. The transmissive body lets the dial + hands show through with IOR distortion
+            2. The clearcoat surface acts as a real mirror/reflection plane for env highlights */}
       <mesh position={[0, 0, starCrystalZ]}>
         <primitive object={crystalGeo} />
         <meshPhysicalMaterial
-          color="#d8eeff"
+          color="#daeeff"
           metalness={0}
-          roughness={0.01}
-          transmission={1.0}
+          roughness={0.0}
+          transmission={0.97}
           ior={1.52}
-          thickness={0.20}
-          envMapIntensity={2.0}
+          thickness={0.08}
+          envMapIntensity={5.0}
+          clearcoat={1.0}
+          clearcoatRoughness={0.03}
+          reflectivity={0.7}
+          specularIntensity={2.0}
+          specularColor="#ffffff"
+          attenuationDistance={0.6}
+          attenuationColor="#cce8ff"
         />
       </mesh>
 

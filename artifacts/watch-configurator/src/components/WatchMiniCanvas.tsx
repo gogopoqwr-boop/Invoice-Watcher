@@ -64,7 +64,16 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
   }, [watchfaceGeometry]);
 
   const faceGeo = useMemo(() => new THREE.ShapeGeometry(buildShape(watchfaceGeometry), 48), [watchfaceGeometry]);
-  const crystalGeo = useMemo(() => new THREE.ShapeGeometry(buildShape(watchfaceGeometry), 48), [watchfaceGeometry]);
+  const crystalGeo = useMemo(() => {
+    const shape = buildShape(watchfaceGeometry);
+    return new THREE.ExtrudeGeometry(shape, {
+      depth: 0.04,
+      bevelEnabled: true,
+      bevelSize: 0.035,
+      bevelThickness: 0.035,
+      bevelSegments: 8,
+    });
+  }, [watchfaceGeometry]);
 
   useEffect(() => () => { bodyGeo.dispose(); faceGeo.dispose(); crystalGeo.dispose(); }, [bodyGeo, faceGeo, crystalGeo]);
 
@@ -94,15 +103,20 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
       <mesh position={[0, 0, 0.54]}>
         <primitive object={crystalGeo} />
         <meshPhysicalMaterial
-          color="#c4dff5"
+          color="#daeeff"
           metalness={0}
-          roughness={0.01}
-          transmission={0.92}
+          roughness={0.0}
+          transmission={0.95}
           ior={1.52}
-          thickness={0.12}
-          envMapIntensity={1.6}
-          transparent
-          opacity={0.88}
+          thickness={0.08}
+          envMapIntensity={4.0}
+          clearcoat={1.0}
+          clearcoatRoughness={0.04}
+          reflectivity={0.6}
+          specularIntensity={1.8}
+          specularColor="#ffffff"
+          attenuationDistance={0.6}
+          attenuationColor="#cce8ff"
         />
       </mesh>
 
