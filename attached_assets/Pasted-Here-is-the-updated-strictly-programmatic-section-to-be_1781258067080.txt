@@ -1,0 +1,54 @@
+Here is the updated, strictly programmatic section to be added directly into your `TODO.md` file, incorporating all your latest bug fixes, UI adjustments, and JavaScript injection tasks.
+
+---
+
+# Append to TODO.md: Latest Code Fixes & Feature Polish
+
+## 1. Conditional Logic & UI Elements
+
+* [ ] **Orders Button Visibility:** Implement a conditional check across the main screen (`/`) and configuration pages: `if (orders.length === 0)` -> do not render or inject the "My Orders" button into the DOM.
+
+
+* [ ] **Button Relabeling:** Locate the `"Новый"` text token/button and rename it to `"Заказать"` (or `"Order"`).
+
+
+* [ ] **Theme Switcher Polish:** Redesign the theme switcher component to feature premium, high-fidelity "Liquid Glass" hover micro-interactions and transitions.
+
+
+* [ ] **Whitespace Engineering:** Refactor layout spacing to fill empty visual dead-zones on large screens while strictly preserving the hyper-minimalist design language.
+
+
+* [ ] **Replit Pill Override:** Add an explicit JavaScript snippet to the global execution context to target and hide the Replit branding element:
+```javascript
+document.addEventListener("DOMContentLoaded", () => {
+  const replitPill = document.getElementById("replit-pill");
+  if (replitPill) replitPill.style.display = "none";
+});
+
+```
+
+
+
+```
+
+## 2. 3D WebGL Engine & Layout Fixes
+*   [ ] **Watch Hands Mesh Reconstruction:** Delete the glitched/fragmented 3D hand objects[cite: 1]. Replace them with clean, classic, realistic 3D watch hand geometries aligned correctly to the axis[cite: 1].
+*   [ ] **Center Pivot Point:** Flat-render the center placement point so it displays as a clean, minimalist drawn element rather than an extruded 3D artifact[cite: 1].
+*   [ ] **Circular Text Radius Logic:** Update the trigonometric layout functions for text placed "Around the watch"[cite: 1]. Increase the text size mesh and push the placement radius farther outward so words sit cleanly adjacent to the outer boundary dot markers[cite: 1].
+*   [ ] **Collections Grid Overhaul:** Ensure all collection item viewports are initialized perfectly within their grid states[cite: 1].
+
+## 3. Interactive Collection Cards & Checkout Pipeline
+*   [ ] **Draggable 3D Cards:** Refactor the collections grid cards into separate interactive Three.js/WebGL canvas contexts, enabling users to drag and rotate the 3D models directly on the card preview surface[cite: 1].
+*   [ ] **Amplification Transition Trigger:** Code an `onTap` / `onClick` event listener on each 3D collection card that initiates an amplifying scaling animation[cite: 1].
+*   [ ] **Configuration Lock Restrictions:** The amplifying transition must pass the collection properties to the configuration pipeline while keeping **coloring, watchface geometry, and watchface material read-only (locked)**[cite: 1]. Only expose the strap/stripe swapping settings[cite: 1].
+*   [ ] **Box Config Integration:** Implement the final step of the collection purchase funnel to include selection and rendering of the collection-specific custom box configuration[cite: 1].
+
+## 4. Production Build & Footer Assembly
+*   [ ] **Footer Cleanup (Git Conflict Fix):** Completely remove the Git conflict markers (`<<<<<<< HEAD`, `=======`, `>>>>>>> main`) from the code template and commit the unified text layout[cite: 1]:
+    ```html
+    <footer>
+      <p>Чеблячас все у права мои у меня пон?</p>
+      <p>Чеблячас © 2026. Сборка приостановлена из-за полного дзена.</p>
+    </footer>
+
+```
