@@ -57,7 +57,7 @@ function App() {
             <WatchConfigProvider>
               <CartProvider>
                 <MouseGlassTracker />
-                <div className="fixed top-4 right-4 z-50">
+                <div className="fixed bottom-5 right-5 z-50">
                   <ThemeToggle />
                 </div>
                 <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>

@@ -342,7 +342,7 @@ export default function Collections() {
               ? `radial-gradient(ellipse at center, ${preset.watchfaceColor}55 0%, ${preset.braceletColor}33 100%)`
               : `linear-gradient(135deg, ${preset.watchfaceColor}22, ${preset.braceletColor}18)` }}
           >
-            <div className="w-20 h-36 flex items-center justify-center">
+            <div className="w-20 h-36 flex items-center justify-center relative">
               {alive ? (
                 <LivingEyeSVG
                   eyeType={parseEyeType(preset.watchfaceText)}
@@ -370,6 +370,17 @@ export default function Collections() {
                   }}
                 />
               )}
+              {/* Dynamic drop shadow beneath watch */}
+              <div
+                className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-none"
+                style={{
+                  width: '60px',
+                  height: '14px',
+                  background: `radial-gradient(ellipse at center, ${preset.watchfaceColor}88 0%, transparent 70%)`,
+                  filter: 'blur(4px)',
+                  transform: 'translateX(-50%) scaleY(0.5)',
+                }}
+              />
             </div>
             <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs font-black text-yellow-300">
               {preset.priceStars} ⭐
@@ -496,11 +507,6 @@ export default function Collections() {
             </h1>
           </div>
           <div className="flex flex-col items-end gap-2 animate-fade-up delay-200">
-            <Link href="/configure">
-              <button className="liquid-button px-6 py-3 text-sm font-bold tracking-widest uppercase">
-                С нуля →
-              </button>
-            </Link>
             {cartItems.length > 0 && (
               <button
                 onClick={() => setCartOpen(true)}
