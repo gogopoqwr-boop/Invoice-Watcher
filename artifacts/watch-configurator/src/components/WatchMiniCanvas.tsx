@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
+import { Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import WatchSVG from './WatchSVG';
 
@@ -252,10 +253,11 @@ export default function WatchMiniCanvas({ preset }: WatchMiniCanvasProps) {
           style={{ background: 'transparent', width: '100%', height: '100%' }}
           dpr={[1, 1.5]}
         >
-          <ambientLight intensity={0.70} />
-          <directionalLight position={[4, 6, 5]} intensity={1.15} castShadow />
-          <directionalLight position={[-2, -2, -3]} intensity={0.22} />
-          <hemisphereLight intensity={0.30} />
+          <ambientLight intensity={0.55} />
+          <directionalLight position={[4, 6, 5]} intensity={1.0} castShadow />
+          <directionalLight position={[-2, -2, -3]} intensity={0.18} />
+          <hemisphereLight intensity={0.22} />
+          <Environment preset="city" />
           <MiniWatch
             watchfaceGeometry={preset.watchfaceGeometry ?? 'rounded'}
             watchfaceColor={preset.watchfaceColor ?? '#888888'}

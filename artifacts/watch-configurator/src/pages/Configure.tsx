@@ -114,7 +114,7 @@ function PresentationBox() {
   );
 }
 
-function Watch3DView({ lastInteractionRef }: { lastInteractionRef: React.RefObject<number> }) {
+function Watch3DView({ lastInteractionRef, showWrist }: { lastInteractionRef: React.RefObject<number>; showWrist: boolean }) {
   const BRACELET_STEP = 2;
   const markInteraction = () => {
     (lastInteractionRef as React.MutableRefObject<number>).current = Date.now();
@@ -132,7 +132,7 @@ function Watch3DView({ lastInteractionRef }: { lastInteractionRef: React.RefObje
       <pointLight position={[5, -2, 3]} intensity={0.4} color="#f0f4ff" />
       <pointLight position={[0, -5, 4]} intensity={0.3} color="#c4b5fd" />
       <Suspense fallback={null}>
-        <WatchModel step={BRACELET_STEP} lastInteractionRef={lastInteractionRef} />
+        <WatchModel step={BRACELET_STEP} lastInteractionRef={lastInteractionRef} showWrist={showWrist} />
         <CameraRig step={BRACELET_STEP} lastInteractionRef={lastInteractionRef} />
         <PresentationBox />
         <Environment preset="city" />
@@ -165,6 +165,7 @@ export default function Configure() {
   const [submitting, setSubmitting] = useState(false);
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
+  const [showWrist, setShowWrist] = useState(false);
   const lastInteractionRef = useRef<number>(0);
   const webglAvailable = useMemo(() => isWebGLAvailable(), []);
 
@@ -247,12 +248,24 @@ export default function Configure() {
               <WatchSVG />
             </div>
           }>
-            <Watch3DView lastInteractionRef={lastInteractionRef} />
+            <Watch3DView lastInteractionRef={lastInteractionRef} showWrist={showWrist} />
           </WebGLErrorBoundary>
         ) : (
           <div className="w-full h-full flex items-center justify-center p-10">
             <WatchSVG />
           </div>
+        )}
+
+        {/* Wrist toggle overlay button */}
+        {webglAvailable && (
+          <button
+            onClick={() => setShowWrist(v => !v)}
+            className="absolute bottom-3 right-3 z-10 liquid-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"
+            title="Показать/скрыть запястье"
+          >
+            <span>{showWrist ? '🙈' : '🖐️'}</span>
+            <span>{showWrist ? 'Без запястья' : 'На запястье'}</span>
+          </button>
         )}
       </div>
 

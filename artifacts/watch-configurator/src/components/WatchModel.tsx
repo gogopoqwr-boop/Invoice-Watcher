@@ -134,8 +134,8 @@ function WatchFaceText3D({
     // Centre the arc at the top (π/2 = 12 o'clock in Three.js where y is up)
     const startAngle = Math.PI / 2 - arcSpan / 2;
     // Larger radius pushes text out to sit cleanly along the dot-marker ring
-    const circR = 1.22;
-    const fontSize = Math.max(0.10, Math.min(0.20, 0.90 / Math.max(chars.length, 4)));
+    const circR = 1.30;
+    const fontSize = Math.max(0.10, Math.min(0.18, 0.82 / Math.max(chars.length, 4)));
 
     return (
       <group position={[0, 0, 0.61]}>
@@ -143,6 +143,7 @@ function WatchFaceText3D({
           const angle = startAngle + (i + 0.5) * (arcSpan / chars.length);
           const x = circR * Math.cos(angle);
           const y = circR * Math.sin(angle);
+          // lookAt: bottom of letter faces center — top faces outward along angle
           const rot = angle - Math.PI / 2;
           return (
             <group key={i} position={[x, y, 0]} rotation={[0, 0, rot]}>
@@ -459,14 +460,76 @@ function WatchBackPanel({ geom, caseColor, serial }: {
   );
 }
 
+// ─── Machined bezel ring around crystal ───────────────────────────────────
+
+function BezelRing({ geom, caseMat }: { geom: string; caseMat: { color: string; metalness: number; roughness: number } }) {
+  const geo = useMemo(() => {
+    const outer = buildFaceShape(geom);
+    // Scale up slightly for outer edge, scale down for inner cutout
+    const scaleFn = (s: THREE.Shape, f: number) => {
+      const pts = s.getPoints(48);
+      const ns = new THREE.Shape(pts.map(p => new THREE.Vector2(p.x * f, p.y * f)));
+      return ns;
+    };
+    const outerS = scaleFn(buildFaceShape(geom), 1.055);
+    const innerS = scaleFn(buildFaceShape(geom), 1.005);
+    outerS.holes = [innerS];
+    return new THREE.ExtrudeGeometry(outerS, {
+      depth: 0.14,
+      bevelEnabled: true,
+      bevelSize: 0.022,
+      bevelThickness: 0.022,
+      bevelSegments: 5,
+    });
+  }, [geom]);
+
+  useEffect(() => () => geo.dispose(), [geo]);
+
+  return (
+    <mesh position={[0, 0, 0.44]} castShadow>
+      <primitive object={geo} />
+      <meshStandardMaterial
+        color={caseMat.color}
+        metalness={Math.min(1, caseMat.metalness + 0.06)}
+        roughness={Math.max(0.04, caseMat.roughness - 0.06)}
+        envMapIntensity={1.4}
+      />
+    </mesh>
+  );
+}
+
+// ─── Low-poly wrist mannequin ─────────────────────────────────────────────
+
+export function WristMannequin() {
+  return (
+    <group position={[0, 0, -1.4]} rotation={[Math.PI / 2, 0, 0]}>
+      {/* Main wrist cylinder — elliptical cross-section */}
+      <mesh receiveShadow>
+        <cylinderGeometry args={[1.45, 1.55, 7.5, 24, 1]} />
+        <meshStandardMaterial color="#d4a98a" roughness={0.82} metalness={0.0} />
+      </mesh>
+      {/* Subtle wrist bone highlight */}
+      <mesh position={[0.72, 0, 0]}>
+        <sphereGeometry args={[0.28, 10, 8]} />
+        <meshStandardMaterial color="#c49070" roughness={0.9} metalness={0} />
+      </mesh>
+      <mesh position={[-0.72, 0, 0]}>
+        <sphereGeometry args={[0.22, 10, 8]} />
+        <meshStandardMaterial color="#c49070" roughness={0.9} metalness={0} />
+      </mesh>
+    </group>
+  );
+}
+
 // ─── Main watch model ─────────────────────────────────────────────────────
 
 export interface WatchModelProps {
   step?: number;
   lastInteractionRef?: React.RefObject<number>;
+  showWrist?: boolean;
 }
 
-export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelProps) {
+export default function WatchModel({ step = 0, lastInteractionRef, showWrist = false }: WatchModelProps) {
   const { config } = useWatchConfig();
   const groupRef = useRef<THREE.Group>(null);
   const prevStepRef = useRef(step);
@@ -492,6 +555,13 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
   const { spread } = useSpring({
     spread: step === 2 ? 0.5 : 0,
     config: { mass: 1, tension: 120, friction: 20 },
+  });
+
+  // Strap wrapping animation — bend straps around wrist when in bracelet step
+  const { wrapUpper, wrapLower } = useSpring({
+    wrapUpper: step === 2 ? -0.48 : 0,
+    wrapLower: step === 2 ? 0.48 : 0,
+    config: { mass: 1.2, tension: 95, friction: 26 },
   });
 
   useFrame(() => {
@@ -565,6 +635,7 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
   const hasText = (config.watchfaceText ?? '').trim().length > 0;
 
   return (
+    <>
     <animated.group ref={groupRef} rotation-x={tiltX}>
 
       <mesh castShadow receiveShadow>
@@ -596,18 +667,17 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
         </Suspense>
       )}
 
-      {/* Crystal glass layer — physical domed glass */}
-      <mesh position={[0, 0, 0.54]}>
+      {/* Crystal glass layer — physical domed glass, transmission=1.0 */}
+      <mesh position={[0, 0, 0.56]}>
         <primitive object={crystalGeo} />
         <meshPhysicalMaterial
-          color="#c4dff5"
+          color="#d8eeff"
           metalness={0}
-          roughness={0.02}
-          transmission={0.92}
-          ior={1.52}
-          thickness={0.12}
-          transparent
-          opacity={0.88}
+          roughness={0.01}
+          transmission={1.0}
+          ior={1.5}
+          thickness={0.18}
+          envMapIntensity={1.8}
         />
       </mesh>
 
@@ -709,22 +779,29 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
         </group>
       ))}
 
-      {/* Upper strap — positioned so its bottom edge meets the lug top */}
-      <animated.group position-z={spread}>
+      {/* Upper strap — wraps forward when in bracelet preview step */}
+      <animated.group position-z={spread} rotation-x={wrapUpper}>
         {isSegmented
           ? <SegmentedStrap posY={3.05} color={config.braceletColor} />
           : <SolidStrap posY={3.05} color={config.braceletColor} mat={config.braceletMaterial} />
         }
       </animated.group>
 
-      {/* Lower strap */}
-      <animated.group position-z={spread}>
+      {/* Lower strap — wraps in opposite direction */}
+      <animated.group position-z={spread} rotation-x={wrapLower}>
         {isSegmented
           ? <SegmentedStrap posY={-3.05} color={config.braceletColor} />
           : <SolidStrap posY={-3.05} color={config.braceletColor} mat={config.braceletMaterial} />
         }
       </animated.group>
 
+      {/* Bezel ring — machined metal overlay around the crystal */}
+      <BezelRing geom={config.watchfaceGeometry} caseMat={caseMat} />
+
     </animated.group>
+
+    {/* Wrist mannequin — low-poly preview beneath the watch */}
+    {showWrist && <WristMannequin />}
+    </>
   );
 }

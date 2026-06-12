@@ -68,8 +68,11 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
   const [entering, setEntering] = useState(true);
 
   useEffect(() => {
-    const t = setTimeout(() => setEntering(false), 20);
-    return () => clearTimeout(t);
+    // Two-frame delay for a smooth scale-up interpolation from card size
+    const t = requestAnimationFrame(() =>
+      requestAnimationFrame(() => setEntering(false))
+    );
+    return () => cancelAnimationFrame(t);
   }, []);
 
   useEffect(() => {
