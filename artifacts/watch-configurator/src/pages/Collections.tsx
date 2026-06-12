@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useListPresets } from '@workspace/api-client-react';
 import { useLocation, Link } from 'wouter';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import WatchSVG from '@/components/WatchSVG';
+import { cn } from '@/lib/utils';
 
 const MAT_LABELS: Record<string, string> = {
   metal: 'Нержавейка',
@@ -33,11 +34,45 @@ const COLLECTION_META: Record<string, { emoji: string; subtitle: string; accentC
   },
 };
 
+const STRAP_COLORS = [
+  '#0f172a', '#1e293b', '#78350f', '#1c1917',
+  '#064e3b', '#1e1b4b', '#c0c0c0', '#374151',
+  '#7f1d1d', '#3b0764', '#0c4a6e', '#f8fafc',
+];
+
+type InventoryData = Record<string, { sold: number; max: number }>;
+
+function useTilt() {
+  const [tilt, setTilt] = useState<{ rx: number; ry: number } | null>(null);
+  const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    setTilt({ rx: y * 14, ry: x * -14 });
+  }, []);
+  const onLeave = useCallback(() => setTilt(null), []);
+  return { tilt, onMove, onLeave };
+}
+
 export default function Collections() {
   const { data: presets, isLoading } = useListPresets();
   const [, setLocation] = useLocation();
-  const { updateConfig } = useWatchConfig();
+  const { updateConfig, sessionId } = useWatchConfig();
   const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  const [buyModal, setBuyModal] = useState<any | null>(null);
+  const [buyStrapColor, setBuyStrapColor] = useState('');
+  const [buying, setBuying] = useState(false);
+  const [buyError, setBuyError] = useState('');
+
+  const [inventory, setInventory] = useState<InventoryData>({});
+
+  useEffect(() => {
+    fetch('/api/presets/inventory')
+      .then(r => r.json())
+      .then(data => { if (data?.byCollection) setInventory(data.byCollection); })
+      .catch(() => {});
+  }, []);
 
   const expandedPreset = expandedId !== null
     ? (presets as any[] | undefined)?.find((p: any) => p.id === expandedId) ?? null
@@ -61,7 +96,71 @@ export default function Collections() {
     setLocation('/configure');
   };
 
-  // Group presets: named collections first in order, then classics at bottom
+  const handleBuyOpen = (e: React.MouseEvent, preset: any) => {
+    e.stopPropagation();
+    setBuyModal(preset);
+    setBuyStrapColor(preset.braceletColor);
+    setBuyError('');
+  };
+
+  const handleBuyConfirm = async () => {
+    if (!buyModal || buying) return;
+    setBuying(true);
+    setBuyError('');
+    try {
+      const cfgRes = await fetch('/api/configurations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          presetId: buyModal.id,
+          watchfaceGeometry: buyModal.watchfaceGeometry,
+          watchfaceMaterial: buyModal.watchfaceMaterial,
+          watchfaceColor: buyModal.watchfaceColor,
+          braceletMaterial: buyModal.braceletMaterial,
+          braceletType: buyModal.braceletType,
+          braceletColor: buyStrapColor,
+          handsEnabled: buyModal.handsEnabled,
+          handsColor: buyModal.handsColor ?? '#FFFFFF',
+          handsStyle: buyModal.watchfaceText ?? '',
+          serialNumber: null,
+        }),
+      });
+      if (!cfgRes.ok) throw new Error('config');
+      const cfg = await cfgRes.json();
+
+      const priceRes = await fetch('/api/price', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          watchfaceMaterial: buyModal.watchfaceMaterial,
+          braceletMaterial: buyModal.braceletMaterial,
+          handsEnabled: buyModal.handsEnabled,
+        }),
+      });
+      if (!priceRes.ok) throw new Error('price');
+      const price = await priceRes.json();
+
+      const orderRes = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          configId: cfg.id,
+          sessionId,
+          totalStars: price.totalStars ?? buyModal.priceStars,
+        }),
+      });
+      if (!orderRes.ok) throw new Error('order');
+      const order = await orderRes.json();
+
+      setLocation(`/payment/${order.id}`);
+    } catch {
+      setBuyError('Не удалось создать заказ. Попробуйте ещё раз.');
+    } finally {
+      setBuying(false);
+    }
+  };
+
   const allPresets = (presets as any[] | undefined) ?? [];
   const collectionOrder = ['РОФЛ', 'ГИПЕРСЕРЬЕЗНОСТЬ', 'ЖИВНОСТЬ'];
   const classics = allPresets.filter((p: any) => !p.collectionName);
@@ -75,114 +174,146 @@ export default function Collections() {
 
   const PresetCard = ({ preset, idx }: { preset: any; idx: number }) => {
     const isExpanded = expandedId === preset.id;
+    const { tilt, onMove, onLeave } = useTilt();
+    const collectionKey = preset.collectionName ?? 'classics';
+    const inv = inventory[collectionKey];
+    const soldOut = inv ? inv.sold >= inv.max : false;
+
     return (
-      <button
-        key={preset.id}
-        onClick={() => setExpandedId(isExpanded ? null : preset.id)}
-        className="liquid-glass rounded-3xl overflow-hidden text-left group focus:outline-none focus:ring-2 focus:ring-primary/40 animate-fade-up transition-all duration-300"
+      <div
+        onMouseMove={onMove}
+        onMouseLeave={onLeave}
+        className="relative"
         style={{
-          animationDelay: `${idx * 0.06}s`,
-          transform: isExpanded ? 'scale(1.03)' : 'scale(1)',
-          boxShadow: isExpanded ? '0 8px 40px rgba(99,102,241,0.25)' : undefined,
-          border: isExpanded ? '1.5px solid rgba(99,102,241,0.4)' : undefined,
+          transform: tilt
+            ? `perspective(800px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg) scale(1.03)`
+            : 'perspective(800px) rotateX(0deg) rotateY(0deg) scale(1)',
+          transition: tilt ? 'transform 0.05s ease-out' : 'transform 0.35s cubic-bezier(0.4,0,0.2,1)',
         }}
       >
-        {/* Watch preview */}
-        <div
-          className="h-44 flex items-center justify-center overflow-hidden p-4 relative transition-transform duration-300 group-hover:scale-[1.04]"
-          style={{ background: `linear-gradient(135deg, ${preset.watchfaceColor}22, ${preset.braceletColor}18)` }}
+        <button
+          onClick={() => setExpandedId(isExpanded ? null : preset.id)}
+          className={cn(
+            'liquid-glass rounded-3xl overflow-hidden text-left group focus:outline-none focus:ring-2 focus:ring-primary/40 animate-fade-up transition-all duration-300 w-full',
+            isExpanded && 'ring-2 ring-primary/40',
+          )}
+          style={{ animationDelay: `${idx * 0.06}s` }}
         >
-          <div className="w-20 h-36">
-            <WatchSVG
-              mini
-              config={{
-                watchfaceGeometry: preset.watchfaceGeometry as any,
-                watchfaceColor: preset.watchfaceColor,
-                braceletColor: preset.braceletColor,
-                braceletMaterial: preset.braceletMaterial as any,
-                braceletType: preset.braceletType as any,
-                handsEnabled: preset.handsEnabled,
-                handsColor: preset.handsColor ?? '#cbd5e1',
-                handsCount: 3,
-                watchfaceText: preset.watchfaceText ?? '',
-                watchfaceTextMode: preset.watchfaceTextMode ?? 'center',
-                watchfaceBackgroundType: 'solid',
-              }}
-            />
-          </div>
-          <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs font-black text-yellow-300">
-            {preset.priceStars} ⭐
-          </div>
-          {preset.watchfaceText && (
-            <div className="absolute bottom-2 left-2 bg-black/30 backdrop-blur-sm rounded-full px-2 py-0.5 text-[9px] font-bold text-white/70 uppercase tracking-wider">
-              {preset.watchfaceTextMode === 'circular' ? '⌀ кольцом' : 'текст'}
-            </div>
-          )}
-        </div>
-
-        {/* Info */}
-        <div className="p-4">
-          <p className="font-black text-sm tracking-tight mb-0.5">{preset.name}</p>
-          {preset.description && (
-            <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{preset.description}</p>
-          )}
-
-          {/* Expanded materials */}
+          {/* Watch preview */}
           <div
-            className="overflow-hidden transition-all duration-300"
-            style={{ maxHeight: isExpanded ? '200px' : '0px', opacity: isExpanded ? 1 : 0 }}
+            className="h-44 flex items-center justify-center overflow-hidden p-4 relative"
+            style={{ background: `linear-gradient(135deg, ${preset.watchfaceColor}22, ${preset.braceletColor}18)` }}
           >
-            <div className="border-t border-border/30 pt-2 mb-3 space-y-1">
-              <div className="flex justify-between text-[11px]">
-                <span className="text-muted-foreground">Корпус</span>
-                <span className="font-semibold">{MAT_LABELS[preset.watchfaceMaterial] ?? preset.watchfaceMaterial}</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-muted-foreground">Ремешок</span>
-                <span className="font-semibold">{MAT_LABELS[preset.braceletMaterial] ?? preset.braceletMaterial}</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-muted-foreground">Форма</span>
-                <span className="font-semibold capitalize">{preset.watchfaceGeometry}</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-muted-foreground">Стрелки</span>
-                <span className="font-semibold">{preset.handsEnabled ? '✓' : '✗'}</span>
-              </div>
+            <div className="w-20 h-36">
+              <WatchSVG
+                mini
+                config={{
+                  watchfaceGeometry: preset.watchfaceGeometry as any,
+                  watchfaceColor: preset.watchfaceColor,
+                  braceletColor: preset.braceletColor,
+                  braceletMaterial: preset.braceletMaterial as any,
+                  braceletType: preset.braceletType as any,
+                  handsEnabled: preset.handsEnabled,
+                  handsColor: preset.handsColor ?? '#cbd5e1',
+                  handsCount: 3,
+                  watchfaceText: preset.watchfaceText ?? '',
+                  watchfaceTextMode: preset.watchfaceTextMode ?? 'center',
+                  watchfaceBackgroundType: 'solid',
+                }}
+              />
             </div>
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={(e) => { e.stopPropagation(); handleSelectPreset(preset); }}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); handleSelectPreset(preset); } }}
-              className="w-full py-2 rounded-xl bg-primary text-white text-xs font-bold tracking-widest uppercase text-center cursor-pointer hover:bg-primary/90 transition-colors active:scale-[0.98]"
-            >
-              Выбрать →
+            <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs font-black text-yellow-300">
+              {preset.priceStars} ⭐
             </div>
+            {soldOut && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-t-3xl">
+                <span className="text-white text-xs font-black uppercase tracking-widest bg-black/60 px-3 py-1.5 rounded-full">
+                  Распродано
+                </span>
+              </div>
+            )}
           </div>
 
-          {!isExpanded && (
-            <div className="flex items-center justify-between mt-1">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                {MAT_LABELS[preset.braceletMaterial] ?? preset.braceletMaterial}
-              </span>
-              <span className="text-xs text-primary font-bold group-hover:text-primary/80 transition-colors">
-                Смотреть →
-              </span>
+          {/* Info */}
+          <div className="p-4">
+            <p className="font-black text-sm tracking-tight mb-0.5">{preset.name}</p>
+            {preset.description && (
+              <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{preset.description}</p>
+            )}
+
+            {/* Expanded materials */}
+            <div
+              className="overflow-hidden transition-all duration-300"
+              style={{ maxHeight: isExpanded ? '200px' : '0px', opacity: isExpanded ? 1 : 0 }}
+            >
+              <div className="border-t border-border/30 pt-2 mb-3 space-y-1">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-muted-foreground">Корпус</span>
+                  <span className="font-semibold">{MAT_LABELS[preset.watchfaceMaterial] ?? preset.watchfaceMaterial}</span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-muted-foreground">Ремешок</span>
+                  <span className="font-semibold">{MAT_LABELS[preset.braceletMaterial] ?? preset.braceletMaterial}</span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-muted-foreground">Форма</span>
+                  <span className="font-semibold capitalize">{preset.watchfaceGeometry}</span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-muted-foreground">Стрелки</span>
+                  <span className="font-semibold">{preset.handsEnabled ? '✓' : '✗'}</span>
+                </div>
+              </div>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); handleSelectPreset(preset); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); handleSelectPreset(preset); } }}
+                className="w-full py-2 rounded-xl bg-primary/20 text-primary text-xs font-bold tracking-widest uppercase text-center cursor-pointer hover:bg-primary/30 transition-colors active:scale-[0.98] border border-primary/30"
+              >
+                Настроить →
+              </div>
             </div>
+
+            {!isExpanded && (
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                  {MAT_LABELS[preset.braceletMaterial] ?? preset.braceletMaterial}
+                </span>
+                <span className="text-xs text-primary font-bold group-hover:text-primary/80 transition-colors">
+                  Смотреть →
+                </span>
+              </div>
+            )}
+          </div>
+        </button>
+
+        {/* КУПИТЬ button — always visible below card */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={(e) => handleBuyOpen(e, preset)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleBuyOpen(e as any, preset); }}
+          className={cn(
+            'mt-2 w-full py-2.5 rounded-2xl text-xs font-black tracking-widest uppercase text-center cursor-pointer transition-all',
+            soldOut
+              ? 'opacity-30 cursor-not-allowed bg-muted text-muted-foreground border border-border pointer-events-none'
+              : 'bg-primary text-white hover:bg-primary/90 active:scale-[0.98] shadow-md shadow-primary/20'
           )}
+          aria-disabled={soldOut}
+        >
+          {soldOut ? 'Распродано' : 'КУПИТЬ'}
         </div>
-      </button>
+      </div>
     );
   };
 
   return (
     <div className="min-h-[100dvh] bg-background relative overflow-hidden">
-      {/* Ambient orbs */}
       <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full pointer-events-none"
-        style={{ background: "var(--orb-1)", filter: "blur(100px)", opacity: 0.5 }} />
+        style={{ background: 'var(--orb-1)', filter: 'blur(100px)', opacity: 0.5 }} />
       <div className="absolute bottom-[-5%] left-[-5%] w-[400px] h-[400px] rounded-full pointer-events-none"
-        style={{ background: "var(--orb-2)", filter: "blur(90px)", opacity: 0.35 }} />
+        style={{ background: 'var(--orb-2)', filter: 'blur(90px)', opacity: 0.35 }} />
 
       <div className="relative z-10 max-w-5xl mx-auto px-5 py-8 md:py-12">
         {/* Header */}
@@ -197,18 +328,15 @@ export default function Collections() {
               Чеблячас · Коллекции
             </p>
             <h1 className="text-4xl md:text-5xl font-black tracking-tight animate-fade-up delay-100">
-              Готовые<br/>коллекции
+              Готовые<br />коллекции
             </h1>
           </div>
           <div className="flex flex-col items-end gap-2 animate-fade-up delay-200">
-            <button
-              disabled
-              className="liquid-button px-6 py-3 text-sm font-bold tracking-widest uppercase opacity-30 cursor-not-allowed"
-              title="Конфигуратор временно недоступен"
-            >
-              С нуля —
-            </button>
-            <p className="text-[10px] text-muted-foreground/50 tracking-wider text-right">скоро</p>
+            <Link href="/configure">
+              <button className="liquid-button px-6 py-3 text-sm font-bold tracking-widest uppercase">
+                С нуля →
+              </button>
+            </Link>
             <Link href="/orders">
               <button className="liquid-button px-4 py-2 text-xs font-semibold">
                 📦 Мои заказы
@@ -234,6 +362,10 @@ export default function Collections() {
           <div className="space-y-14">
             {grouped.map((group, gi) => {
               const meta = group.name ? COLLECTION_META[group.name] : null;
+              const inv = group.name ? inventory[group.name] : null;
+              const remaining = inv ? Math.max(0, inv.max - inv.sold) : null;
+              const soldOut = inv ? inv.sold >= inv.max : false;
+
               return (
                 <section key={group.name ?? '__classics'} className="animate-fade-up" style={{ animationDelay: `${gi * 0.1}s` }}>
                   {/* Collection header */}
@@ -251,8 +383,19 @@ export default function Collections() {
                           <p className="text-xs text-muted-foreground mt-0.5">{meta.subtitle}</p>
                         )}
                       </div>
-                      <div className="ml-auto text-[10px] uppercase tracking-widest text-muted-foreground/50 font-semibold">
-                        {group.items.length} моделей · 1000 экз
+                      <div className="ml-auto text-right">
+                        {remaining !== null ? (
+                          <>
+                            <p className={cn('text-xs font-black tabular-nums', soldOut ? 'text-red-500' : remaining < 50 ? 'text-orange-500' : 'text-muted-foreground')}>
+                              {soldOut ? '— распродано' : `${remaining} / 1000`}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-widest">осталось</p>
+                          </>
+                        ) : (
+                          <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-semibold">
+                            {group.items.length} моделей · 1000 экз
+                          </p>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -286,7 +429,6 @@ export default function Collections() {
           </div>
         )}
 
-        {/* Footer scroll hint */}
         <div className="mt-20 text-center">
           <p className="text-[11px] uppercase tracking-[0.4em] text-muted-foreground/30 font-semibold">
             Чеблячас © 2026
@@ -294,7 +436,7 @@ export default function Collections() {
         </div>
       </div>
 
-      {/* Expanded preset fullscreen overlay */}
+      {/* Expanded preset overlay */}
       {expandedPreset && (
         <div
           className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4 md:p-8"
@@ -368,11 +510,110 @@ export default function Collections() {
                 ))}
               </div>
 
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setExpandedId(null); handleBuyOpen({ stopPropagation: () => {} } as any, expandedPreset); }}
+                  className="flex-1 py-3.5 rounded-2xl bg-primary text-white font-black text-sm tracking-widest uppercase shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all"
+                >
+                  Купить
+                </button>
+                <button
+                  onClick={() => handleSelectPreset(expandedPreset)}
+                  className="flex-1 py-3.5 rounded-2xl liquid-glass font-black text-sm tracking-widest uppercase active:scale-[0.98] transition-all"
+                >
+                  Настроить
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* КУПИТЬ modal — strap color picker */}
+      {buyModal && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end md:items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(20px)' }}
+          onClick={() => { if (!buying) setBuyModal(null); }}
+        >
+          <div
+            className="liquid-glass rounded-3xl w-full max-w-xs overflow-hidden animate-fade-up"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Watch preview with live strap color */}
+            <div
+              className="h-52 flex items-center justify-center relative"
+              style={{ background: `linear-gradient(135deg, ${buyModal.watchfaceColor}33, ${buyStrapColor}22)` }}
+            >
+              <div className="w-28 h-44">
+                <WatchSVG
+                  config={{
+                    watchfaceGeometry: buyModal.watchfaceGeometry as any,
+                    watchfaceColor: buyModal.watchfaceColor,
+                    braceletColor: buyStrapColor,
+                    braceletMaterial: buyModal.braceletMaterial as any,
+                    braceletType: buyModal.braceletType as any,
+                    handsEnabled: buyModal.handsEnabled,
+                    handsColor: buyModal.handsColor ?? '#FFFFFF',
+                    handsCount: 3,
+                    watchfaceText: buyModal.watchfaceText ?? '',
+                    watchfaceTextMode: buyModal.watchfaceTextMode ?? 'center',
+                    watchfaceBackgroundType: 'solid',
+                  }}
+                />
+              </div>
               <button
-                onClick={() => handleSelectPreset(expandedPreset)}
-                className="w-full py-3.5 rounded-2xl bg-primary text-white font-black text-sm tracking-widest uppercase shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all"
+                onClick={() => setBuyModal(null)}
+                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 text-white text-sm flex items-center justify-center hover:bg-black/60 transition-colors"
               >
-                Выбрать эту коллекцию →
+                ✕
+              </button>
+              <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm rounded-full px-3 py-1">
+                <p className="text-yellow-300 text-xs font-black">{buyModal.priceStars} ⭐</p>
+              </div>
+            </div>
+
+            <div className="p-5">
+              <h3 className="text-lg font-black mb-0.5">{buyModal.name}</h3>
+              <p className="text-xs text-muted-foreground mb-4">Выберите цвет ремешка</p>
+
+              {/* Strap color swatches */}
+              <div className="flex flex-wrap gap-2 mb-5">
+                {STRAP_COLORS.map(c => (
+                  <button
+                    key={c}
+                    onClick={() => setBuyStrapColor(c)}
+                    className={cn(
+                      'w-8 h-8 rounded-full transition-all border-2',
+                      buyStrapColor === c ? 'border-primary scale-110 shadow-md shadow-primary/30' : 'border-transparent hover:scale-105'
+                    )}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+                <label className="relative w-8 h-8 rounded-full overflow-hidden cursor-pointer border-2 border-transparent hover:scale-105 transition-all">
+                  <input
+                    type="color"
+                    value={buyStrapColor}
+                    onChange={e => setBuyStrapColor(e.target.value)}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                  <div
+                    className="w-full h-full rounded-full border border-white/20"
+                    style={{ backgroundColor: buyStrapColor }}
+                  />
+                </label>
+              </div>
+
+              {buyError && (
+                <p className="text-xs text-red-500 mb-3 font-semibold">{buyError}</p>
+              )}
+
+              <button
+                onClick={handleBuyConfirm}
+                disabled={buying}
+                className="w-full py-3.5 rounded-2xl bg-primary text-white font-black text-sm tracking-widest uppercase shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-60"
+              >
+                {buying ? 'Оформляем…' : `Купить — ${buyModal.priceStars} ⭐`}
               </button>
             </div>
           </div>
