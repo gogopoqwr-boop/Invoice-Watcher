@@ -326,7 +326,105 @@ export function CameraRig({ step, lastInteractionRef }: {
   return null;
 }
 
-// ─── Back panel with engraved brand + serial number ───────────────────────
+// ─── Back panel — canvas texture, letters evenly around the face ──────────
+
+function buildBackTexture(
+  geom: string,
+  caseColor: string,
+  serial?: string,
+): THREE.CanvasTexture {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = S; cv.height = S;
+  const ctx = cv.getContext('2d')!;
+
+  // Background — darker metallic variant of the case color
+  const bgCol = new THREE.Color(caseColor).multiplyScalar(0.72);
+  ctx.fillStyle = bgCol.getStyle();
+  ctx.fillRect(0, 0, S, S);
+
+  // Radial sheen
+  const grad = ctx.createRadialGradient(S * 0.38, S * 0.35, 0, S * 0.5, S * 0.5, S * 0.55);
+  grad.addColorStop(0, 'rgba(255,255,255,0.09)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.14)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, S, S);
+
+  // Engraving color — brighter variant
+  const engCol = new THREE.Color(caseColor).multiplyScalar(1.5);
+  engCol.r = Math.min(1, engCol.r);
+  engCol.g = Math.min(1, engCol.g);
+  engCol.b = Math.min(1, engCol.b);
+  const engStyle = engCol.getStyle();
+
+  const cx = S / 2, cy = S / 2;
+  // Same orbital radius as the front-face hour markers
+  const letterR = S * 0.33;
+
+  // Thin decorative orbit ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, letterR * 1.32, 0, Math.PI * 2);
+  ctx.strokeStyle = engStyle;
+  ctx.globalAlpha = 0.22;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // ── Brand letters placed like clock numbers ────────────────────────────
+  // UV note: tex.repeat.x is set to -rep (negative) to flip U horizontally.
+  // This cancels the UV mirror that occurs when the watch body rotates ~180°
+  // and the back face is viewed from behind, so canvas is drawn un-flipped here.
+  const letters = 'ЧЕБЛЯЧАС'.split('');
+  const n = letters.length;
+
+  ctx.font = `bold ${Math.round(S * 0.064)}px Arial, sans-serif`;
+  ctx.fillStyle = engStyle;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  letters.forEach((letter, i) => {
+    // Start at 12 o'clock (π/2) going clockwise (decreasing a)
+    const a = Math.PI / 2 - (i / n) * Math.PI * 2;
+    // Canvas y-axis is inverted vs Three.js y
+    const x = cx + letterR * Math.cos(a);
+    const y = cy - letterR * Math.sin(a);
+
+    ctx.save();
+    ctx.translate(x, y);
+    // Rotate so each letter's top points outward from the center
+    ctx.rotate(Math.PI / 2 - a);
+    ctx.fillText(letter, 0, 0);
+    ctx.restore();
+  });
+
+  // Serial number centred below the middle
+  if (serial) {
+    ctx.font = `bold ${Math.round(S * 0.043)}px monospace`;
+    ctx.fillStyle = engStyle;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.globalAlpha = 0.9;
+    ctx.fillText(serial.toUpperCase(), cx, cy + S * 0.065);
+    ctx.globalAlpha = 1;
+  }
+
+  // Centre pip
+  ctx.beginPath();
+  ctx.arc(cx, cy, S * 0.013, 0, Math.PI * 2);
+  ctx.fillStyle = engStyle;
+  ctx.globalAlpha = 0.75;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  const tex = new THREE.CanvasTexture(cv);
+  const half = shapeHalfWidth(geom);
+  const rep = 0.5 / half;
+  // Negative x-repeat flips U so the back disc shows correctly from behind
+  tex.offset.set(0.5, 0.5);
+  tex.repeat.set(-rep, rep);
+  tex.needsUpdate = true;
+  return tex;
+}
 
 function WatchBackPanel({ geom, caseColor, serial }: {
   geom: string;
@@ -338,63 +436,23 @@ function WatchBackPanel({ geom, caseColor, serial }: {
     return new THREE.ShapeGeometry(shape, 72);
   }, [geom]);
 
-  // Slightly darker / more brushed than the case
-  const panelColor = useMemo(
-    () => new THREE.Color(caseColor).multiplyScalar(0.75).getStyle(),
-    [caseColor],
+  const backTexture = useMemo(
+    () => buildBackTexture(geom, caseColor, serial),
+    [geom, caseColor, serial],
   );
-  const engraveMat = { color: panelColor, metalness: 0.95, roughness: 0.06 };
 
   return (
-    <>
-      {/* Brushed-metal back disc */}
-      <mesh position={[0, 0, -0.11]} rotation={[0, Math.PI, 0]}>
-        <primitive object={backDiscGeo} />
-        <meshStandardMaterial {...engraveMat} />
-      </mesh>
-
-      {/* Engraved text — faces −Z, readable when watch is flipped around Y */}
-      <Suspense fallback={null}>
-        <group position={[0, 0, -0.13]} rotation={[0, Math.PI, 0]}>
-          {/* Brand name */}
-          <group position={[0, serial ? 0.16 : 0, 0]}>
-            <Center>
-              <Text3D
-                font={FONT_URL}
-                size={0.13}
-                height={0.018}
-                bevelEnabled
-                bevelSize={0.007}
-                bevelThickness={0.007}
-                bevelSegments={2}
-                curveSegments={6}
-              >
-                {'ЧЕБЛЯЧАС'}
-                <meshStandardMaterial {...engraveMat} />
-              </Text3D>
-            </Center>
-          </group>
-
-          {/* Serial number (optional) */}
-          {serial && (
-            <group position={[0, -0.04, 0]}>
-              <Center>
-                <Text3D
-                  font={FONT_URL}
-                  size={0.065}
-                  height={0.012}
-                  bevelEnabled={false}
-                  curveSegments={4}
-                >
-                  {serial.toUpperCase()}
-                  <meshStandardMaterial {...engraveMat} />
-                </Text3D>
-              </Center>
-            </group>
-          )}
-        </group>
-      </Suspense>
-    </>
+    // No rotation needed — BackSide material renders only when face points away
+    // from the camera, i.e. when the watch has rotated ~180° to show its back.
+    <mesh position={[0, 0, -0.12]}>
+      <primitive object={backDiscGeo} />
+      <meshStandardMaterial
+        map={backTexture}
+        metalness={0.88}
+        roughness={0.2}
+        side={THREE.BackSide}
+      />
+    </mesh>
   );
 }
 
