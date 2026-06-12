@@ -218,16 +218,18 @@ function WatchFaceText3D({ text, mode, handsColor, faceZ }: {
 
 // ─── Strap renderers ───────────────────────────────────────────────────────
 
-// posY is the center of the strap, relative to its animated parent group
+// Segmented metal-link strap — starts at y=0 (the pivot/spring-bar plane) and
+// grows outward in the sign(posY) direction.  Never centered around posY so
+// segments cannot clip back into the lug body above the attachment point.
 function SegmentedStrap({ posY, color }: { posY: number; color: string }) {
+  const sign  = Math.sign(posY) || 1;
   const count = 9;
-  const segH = 0.28;
-  const gap = 0.06;
-  const totalH = count * (segH + gap);
+  const segH  = 0.28;
+  const gap   = 0.06;
   return (
-    <group position={[0, posY, 0]}>
+    <group>
       {Array.from({ length: count }).map((_, i) => (
-        <mesh key={i} position={[0, i * (segH + gap) - totalH / 2 + segH / 2, 0]} castShadow>
+        <mesh key={i} position={[0, sign * (i * (segH + gap) + segH / 2), 0]} castShadow>
           <boxGeometry args={[1.05, segH, 0.15]} />
           <meshStandardMaterial color={color} metalness={0.92} roughness={0.07} />
         </mesh>
@@ -523,10 +525,11 @@ export interface WatchModelProps {
   showWrist?: boolean;
 }
 
-// Lug geometry measurements (shared constants so lugs and straps always agree)
-const LUG_TIP_Y = 1.85;   // |y| of the lug tip (where strap attaches)
-const LUG_CY = 1.60;      // |y| of lug center-box
-const STRAP_HALF = 1.2;   // half-length of each strap (center-to-end)
+// Lug geometry measurements — all three constants kept in lockstep so
+// the lug arm, spring bar, and strap attachment always share the same Y and Z origin.
+const LUG_TIP_Y  = 1.85;  // |y| of spring bar / strap attachment (top of lug arm)
+const LUG_ARM_Z  = 0.10;  // Z center for lug body, spring bar, and strap — single source of truth
+const STRAP_HALF = 1.2;   // half-length of each strap (center relative to pivot)
 
 export default function WatchModel({ step = 0, lastInteractionRef, showWrist = false }: WatchModelProps) {
   const { config } = useWatchConfig();
@@ -617,6 +620,9 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   const isSegmented = config.braceletMaterial === 'metal_segmented';
   const isStar = config.watchfaceGeometry === 'star';
   const hasText = (config.watchfaceText ?? '').trim().length > 0;
+  // How far from the origin the case body reaches in ±Y — used to root the lug arm
+  // inside the case body rather than floating above it.
+  const caseHalf = shapeHalfWidth(config.watchfaceGeometry);
 
   // Vertical Z offset when star (thicker case) to keep face disc at right z
   const starFaceZ = isStar ? 0.62 : 0.48;
@@ -740,49 +746,54 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         <meshStandardMaterial color={caseMat.color} metalness={caseMat.metalness} roughness={Math.min(1, caseMat.roughness + 0.15)} />
       </mesh>
 
-      {/* ── Lugs: physically shaped arms extending from case ── */}
-      {([LUG_CY, -LUG_CY] as const).map((y) => (
-        <group key={y}>
-          {/* Lug arm body — tapered from case to tip */}
-          <mesh position={[0, y, 0.02]} castShadow receiveShadow>
-            <boxGeometry args={[1.14, 0.52, 0.26]} />
-            <meshStandardMaterial {...caseMat} envMapIntensity={1.5} />
-          </mesh>
-          {/* Lug chamfer strips — polished edges on the outer face */}
-          <mesh position={[0, y, 0.16]} castShadow>
-            <boxGeometry args={[1.10, 0.52, 0.04]} />
-            <meshStandardMaterial
-              color={caseMat.color}
-              metalness={Math.min(1, caseMat.metalness + 0.08)}
-              roughness={Math.max(0.03, caseMat.roughness - 0.08)}
-              envMapIntensity={2.0}
-            />
-          </mesh>
-          {/* Spring bar pin — passes through lug holes, holds the strap */}
-          <mesh position={[0, y, 0.13]} rotation={[0, 0, Math.PI / 2]} castShadow>
-            <cylinderGeometry args={[0.036, 0.036, 1.22, 14]} />
-            <meshStandardMaterial
-              color={caseMat.color}
-              metalness={0.97}
-              roughness={0.02}
-              envMapIntensity={2.2}
-            />
-          </mesh>
-          {/* Spring bar keeper rings (left + right ends of bar) */}
-          {[-0.56, 0.56].map((x) => (
-            <mesh key={x} position={[x, y, 0.13]} rotation={[0, 0, Math.PI / 2]}>
-              <torusGeometry args={[0.036, 0.016, 8, 12]} />
-              <meshStandardMaterial color={caseMat.color} metalness={0.98} roughness={0.02} />
+      {/* ── Lugs — geometry-aware arm + spring bar ── */}
+      {/* The lug arm starts 0.12 units inside the case body (caseHalf - 0.12) so it
+          is always physically rooted regardless of case geometry (circle / square /
+          drawn / star).  The spring bar sits at the tip (LUG_TIP_Y) — the exact
+          same Y as the strap pivot — so the strap attaches flush to the pin.
+          All lug parts share LUG_ARM_Z so straps never float in a different Z plane. */}
+      {([+1, -1] as const).map((sign) => {
+        const tipY      = sign * LUG_TIP_Y;
+        const baseY     = sign * (caseHalf - 0.12);   // 0.12 inside case body
+        const centerY   = (tipY + baseY) / 2;
+        const lugHeight = Math.abs(tipY - baseY);
+        return (
+          <group key={sign}>
+            {/* Lug arm body — runs from inside-case root to spring-bar tip */}
+            <mesh position={[0, centerY, LUG_ARM_Z]} castShadow receiveShadow>
+              <boxGeometry args={[1.14, lugHeight, 0.26]} />
+              <meshStandardMaterial {...caseMat} envMapIntensity={1.5} />
             </mesh>
-          ))}
-        </group>
-      ))}
+            {/* Chamfer strip — polished front face of the lug arm */}
+            <mesh position={[0, centerY, LUG_ARM_Z + 0.07]} castShadow>
+              <boxGeometry args={[1.10, lugHeight, 0.04]} />
+              <meshStandardMaterial
+                color={caseMat.color}
+                metalness={Math.min(1, caseMat.metalness + 0.08)}
+                roughness={Math.max(0.03, caseMat.roughness - 0.08)}
+                envMapIntensity={2.0}
+              />
+            </mesh>
+            {/* Spring bar pin — at the TIP of the lug arm, same Y as strap pivot */}
+            <mesh position={[0, tipY, LUG_ARM_Z + 0.03]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <cylinderGeometry args={[0.036, 0.036, 1.22, 14]} />
+              <meshStandardMaterial color={caseMat.color} metalness={0.97} roughness={0.02} envMapIntensity={2.2} />
+            </mesh>
+            {/* Keeper rings at bar ends */}
+            {[-0.56, 0.56].map((x) => (
+              <mesh key={x} position={[x, tipY, LUG_ARM_Z + 0.03]} rotation={[0, 0, Math.PI / 2]}>
+                <torusGeometry args={[0.036, 0.016, 8, 12]} />
+                <meshStandardMaterial color={caseMat.color} metalness={0.98} roughness={0.02} />
+              </mesh>
+            ))}
+          </group>
+        );
+      })}
 
-      {/* ── Upper strap — pivot anchored at lug tip ── */}
-      {/* The animated group's origin sits exactly at the lug tip (y=LUG_TIP_Y).
-          Any rotation-x bends the strap forward/back while the attachment point
-          (y=0 in this group = LUG_TIP_Y in world) stays glued to the spring bar. */}
-      <group position={[0, LUG_TIP_Y, 0]}>
+      {/* ── Upper strap — pivot at spring-bar tip ── */}
+      {/* Base Z = LUG_ARM_Z so the strap sits in the same plane as the spring bar.
+          rotation-x wraps the strap around the wrist; position-z adds spread offset. */}
+      <group position={[0, LUG_TIP_Y, LUG_ARM_Z]}>
         <animated.group position-z={spread} rotation-x={wrapUpper}>
           {isSegmented
             ? <SegmentedStrap posY={STRAP_HALF} color={config.braceletColor} />
@@ -791,8 +802,8 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         </animated.group>
       </group>
 
-      {/* ── Lower strap — pivot anchored at lower lug tip ── */}
-      <group position={[0, -LUG_TIP_Y, 0]}>
+      {/* ── Lower strap — pivot at spring-bar tip ── */}
+      <group position={[0, -LUG_TIP_Y, LUG_ARM_Z]}>
         <animated.group position-z={spread} rotation-x={wrapLower}>
           {isSegmented
             ? <SegmentedStrap posY={-STRAP_HALF} color={config.braceletColor} />
