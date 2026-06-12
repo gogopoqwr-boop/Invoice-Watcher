@@ -94,6 +94,7 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
 
   const renderWatchfaceText = () => {
     if (!watchfaceText || textLines.length === 0) return null;
+    if (watchfaceText.startsWith('EYE:')) return null;
 
     if (watchfaceTextMode === 'circular') {
       // Render first line of text circularly around the face

@@ -4,7 +4,12 @@ import { useLocation, Link } from 'wouter';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import { useCart } from '@/hooks/use-cart';
 import WatchSVG from '@/components/WatchSVG';
+import LivingEyeSVG, { parseEyeType } from '@/components/LivingEyeSVG';
 import { cn } from '@/lib/utils';
+
+function isAlive(preset: any): boolean {
+  return preset?.collectionName === 'ЖИВНОСТЬ';
+}
 
 const MAT_LABELS: Record<string, string> = {
   metal: 'Нержавейка',
@@ -17,21 +22,24 @@ const MAT_LABELS: Record<string, string> = {
   resin: 'Смола',
 };
 
-const COLLECTION_META: Record<string, { emoji: string; subtitle: string; accentColor: string }> = {
+const COLLECTION_META: Record<string, { emoji: string; subtitle: string; concept: string; accentColor: string }> = {
   'РОФЛ': {
     emoji: '😂',
-    subtitle: 'Смешно, ярко, слишком громко — на запястье',
+    subtitle: 'Абсурдный юмор, мем-культура, анти-дизайн',
+    concept: 'Вместо цифр — хаотичный круговой текст, описывающий полную панику от потери счёта времени. Брутальные квадратные компоновки для людей, чьи дедлайны горят синим пламенем.',
     accentColor: '#dc2626',
   },
   'ГИПЕРСЕРЬЕЗНОСТЬ': {
-    emoji: '🖤',
-    subtitle: 'Минимализм как религия. Никаких лишних движений.',
+    emoji: '📋',
+    subtitle: 'Корпоративный ужас. Дедлайны вместо делений.',
+    concept: 'Полная противоположность РОФЛ. Жёсткие корпоративные структуры, Excel-лицо, бюрократический брутализм. KPI, Q1, ASAP, DEADLINE вместо часовых меток.',
     accentColor: '#18181b',
   },
   'ЖИВНОСТЬ': {
-    emoji: '🌿',
-    subtitle: '5 живых часов. Природа на запястье.',
-    accentColor: '#14532d',
+    emoji: '👁️',
+    subtitle: '5 живых часов. Существа на запястье.',
+    concept: 'Вместо стрелок — реалистичные анимированные глаза. Они моргают, следят за курсором и подозрительно сужают зрачок, когда ты наводишь мышь на КУПИТЬ.',
+    accentColor: '#166534',
   },
 };
 
@@ -148,8 +156,8 @@ function PresetComments({ presetId }: { presetId: number }) {
 const FILTER_OPTIONS = [
   { key: 'all', label: 'Все', emoji: '🌐' },
   { key: 'РОФЛ', label: 'РОФЛ', emoji: '😂' },
-  { key: 'ГИПЕРСЕРЬЕЗНОСТЬ', label: 'ГИПЕРСЕРЬЕЗНОСТЬ', emoji: '🖤' },
-  { key: 'ЖИВНОСТЬ', label: 'ЖИВНОСТЬ', emoji: '🌿' },
+  { key: 'ГИПЕРСЕРЬЕЗНОСТЬ', label: 'ГИПЕРСЕРЬЕЗНОСТЬ', emoji: '📋' },
+  { key: 'ЖИВНОСТЬ', label: 'ЖИВНОСТЬ', emoji: '👁️' },
   { key: 'classics', label: 'Классика', emoji: '⌚' },
 ];
 
@@ -304,6 +312,8 @@ export default function Collections() {
     const inv = inventory[collectionKey];
     const soldOut = inv ? inv.sold >= inv.max : false;
     const inCart = cartItems.some(i => i.presetId === preset.id);
+    const alive = isAlive(preset);
+    const [buyHover, setBuyHover] = useState(false);
 
     return (
       <div
@@ -328,29 +338,47 @@ export default function Collections() {
           {/* Watch preview */}
           <div
             className="h-44 flex items-center justify-center overflow-hidden p-4 relative"
-            style={{ background: `linear-gradient(135deg, ${preset.watchfaceColor}22, ${preset.braceletColor}18)` }}
+            style={{ background: alive
+              ? `radial-gradient(ellipse at center, ${preset.watchfaceColor}55 0%, ${preset.braceletColor}33 100%)`
+              : `linear-gradient(135deg, ${preset.watchfaceColor}22, ${preset.braceletColor}18)` }}
           >
-            <div className="w-20 h-36">
-              <WatchSVG
-                mini
-                config={{
-                  watchfaceGeometry: preset.watchfaceGeometry as any,
-                  watchfaceColor: preset.watchfaceColor,
-                  braceletColor: preset.braceletColor,
-                  braceletMaterial: preset.braceletMaterial as any,
-                  braceletType: preset.braceletType as any,
-                  handsEnabled: preset.handsEnabled,
-                  handsColor: preset.handsColor ?? '#cbd5e1',
-                  handsCount: 3,
-                  watchfaceText: preset.watchfaceText ?? '',
-                  watchfaceTextMode: preset.watchfaceTextMode ?? 'center',
-                  watchfaceBackgroundType: 'solid',
-                }}
-              />
+            <div className="w-20 h-36 flex items-center justify-center">
+              {alive ? (
+                <LivingEyeSVG
+                  eyeType={parseEyeType(preset.watchfaceText)}
+                  watchfaceColor={preset.watchfaceColor}
+                  braceletColor={preset.braceletColor}
+                  watchfaceGeometry={preset.watchfaceGeometry}
+                  mini
+                  pupilNarrow={buyHover}
+                />
+              ) : (
+                <WatchSVG
+                  mini
+                  config={{
+                    watchfaceGeometry: preset.watchfaceGeometry as any,
+                    watchfaceColor: preset.watchfaceColor,
+                    braceletColor: preset.braceletColor,
+                    braceletMaterial: preset.braceletMaterial as any,
+                    braceletType: preset.braceletType as any,
+                    handsEnabled: preset.handsEnabled,
+                    handsColor: preset.handsColor ?? '#cbd5e1',
+                    handsCount: 3,
+                    watchfaceText: preset.watchfaceText ?? '',
+                    watchfaceTextMode: preset.watchfaceTextMode ?? 'center',
+                    watchfaceBackgroundType: 'solid',
+                  }}
+                />
+              )}
             </div>
             <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs font-black text-yellow-300">
               {preset.priceStars} ⭐
             </div>
+            {alive && (
+              <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+                <span className="text-[9px] uppercase tracking-[0.2em] text-white/30 font-semibold">живые часы</span>
+              </div>
+            )}
             {inCart && (
               <div className="absolute top-2 left-2 bg-primary/80 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs font-black text-white">
                 В корзине
@@ -389,10 +417,12 @@ export default function Collections() {
                   <span className="text-muted-foreground">Форма</span>
                   <span className="font-semibold capitalize">{preset.watchfaceGeometry}</span>
                 </div>
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-muted-foreground">Стрелки</span>
-                  <span className="font-semibold">{preset.handsEnabled ? '✓' : '✗'}</span>
-                </div>
+                {alive && (
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-muted-foreground">Тип глаза</span>
+                    <span className="font-semibold capitalize">{parseEyeType(preset.watchfaceText)}</span>
+                  </div>
+                )}
               </div>
               <div
                 role="button"
@@ -418,17 +448,21 @@ export default function Collections() {
           </div>
         </button>
 
-        {/* КУПИТЬ button */}
+        {/* КУПИТЬ button — hovering it narrows pupils on ЖИВНОСТЬ */}
         <div
           role="button"
           tabIndex={0}
+          onMouseEnter={() => alive && setBuyHover(true)}
+          onMouseLeave={() => setBuyHover(false)}
           onClick={(e) => handleBuyOpen(e, preset)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleBuyOpen(e as any, preset); }}
           className={cn(
             'mt-2 w-full py-2.5 rounded-2xl text-xs font-black tracking-widest uppercase text-center cursor-pointer transition-all',
             soldOut
               ? 'opacity-30 cursor-not-allowed bg-muted text-muted-foreground border border-border pointer-events-none'
-              : 'bg-primary text-white hover:bg-primary/90 active:scale-[0.98] shadow-md shadow-primary/20'
+              : alive
+                ? 'bg-emerald-900/80 text-emerald-300 hover:bg-emerald-800/80 border border-emerald-700/50 active:scale-[0.98] shadow-md shadow-emerald-900/30'
+                : 'bg-primary text-white hover:bg-primary/90 active:scale-[0.98] shadow-md shadow-primary/20'
           )}
           aria-disabled={soldOut}
         >
@@ -532,33 +566,40 @@ export default function Collections() {
               return (
                 <section key={group.name ?? '__classics'} className="animate-fade-up" style={{ animationDelay: `${gi * 0.1}s` }}>
                   {group.name ? (
-                    <div className="flex items-center gap-3 mb-5">
-                      <div
-                        className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0"
-                        style={{ background: `${meta?.accentColor}22`, border: `1.5px solid ${meta?.accentColor}44` }}
-                      >
-                        {meta?.emoji}
-                      </div>
-                      <div>
-                        <h2 className="text-2xl font-black tracking-tight leading-none">{group.name}</h2>
-                        {meta?.subtitle && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{meta.subtitle}</p>
-                        )}
-                      </div>
-                      <div className="ml-auto text-right">
-                        {remaining !== null ? (
-                          <>
-                            <p className={cn('text-xs font-black tabular-nums', soldOut ? 'text-red-500' : remaining < 50 ? 'text-orange-500' : 'text-muted-foreground')}>
-                              {soldOut ? '— распродано' : `${remaining} / 1000`}
+                    <div className="mb-5">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0"
+                          style={{ background: `${meta?.accentColor}22`, border: `1.5px solid ${meta?.accentColor}44` }}
+                        >
+                          {meta?.emoji}
+                        </div>
+                        <div>
+                          <h2 className="text-2xl font-black tracking-tight leading-none">{group.name}</h2>
+                          {meta?.subtitle && (
+                            <p className="text-xs text-muted-foreground mt-0.5">{meta.subtitle}</p>
+                          )}
+                        </div>
+                        <div className="ml-auto text-right">
+                          {remaining !== null ? (
+                            <>
+                              <p className={cn('text-xs font-black tabular-nums', soldOut ? 'text-red-500' : remaining < 50 ? 'text-orange-500' : 'text-muted-foreground')}>
+                                {soldOut ? '— распродано' : `${remaining} / 1000`}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground/50 uppercase tracking-widest">осталось</p>
+                            </>
+                          ) : (
+                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-semibold">
+                              {group.items.length} моделей · 1000 экз
                             </p>
-                            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-widest">осталось</p>
-                          </>
-                        ) : (
-                          <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-semibold">
-                            {group.items.length} моделей · 1000 экз
-                          </p>
-                        )}
+                          )}
+                        </div>
                       </div>
+                      {meta?.concept && (
+                        <p className="text-xs text-muted-foreground/60 mt-2 pl-[52px] leading-relaxed max-w-2xl">
+                          {meta.concept}
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <div className="flex items-center gap-3 mb-5">
@@ -648,24 +689,35 @@ export default function Collections() {
           >
             <div
               className="h-64 flex items-center justify-center relative shrink-0"
-              style={{ background: `linear-gradient(135deg, ${expandedPreset.watchfaceColor}33, ${expandedPreset.braceletColor}22)` }}
+              style={{ background: isAlive(expandedPreset)
+                ? `radial-gradient(ellipse at center, ${expandedPreset.watchfaceColor}55 0%, ${expandedPreset.braceletColor}33 100%)`
+                : `linear-gradient(135deg, ${expandedPreset.watchfaceColor}33, ${expandedPreset.braceletColor}22)` }}
             >
-              <div className="w-32 h-52">
-                <WatchSVG
-                  config={{
-                    watchfaceGeometry: expandedPreset.watchfaceGeometry as any,
-                    watchfaceColor: expandedPreset.watchfaceColor,
-                    braceletColor: expandedPreset.braceletColor,
-                    braceletMaterial: expandedPreset.braceletMaterial as any,
-                    braceletType: expandedPreset.braceletType as any,
-                    handsEnabled: expandedPreset.handsEnabled,
-                    handsColor: expandedPreset.handsColor ?? '#cbd5e1',
-                    handsCount: 3,
-                    watchfaceText: expandedPreset.watchfaceText ?? '',
-                    watchfaceTextMode: expandedPreset.watchfaceTextMode ?? 'center',
-                    watchfaceBackgroundType: 'solid',
-                  }}
-                />
+              <div className="w-32 h-52 flex items-center justify-center">
+                {isAlive(expandedPreset) ? (
+                  <LivingEyeSVG
+                    eyeType={parseEyeType(expandedPreset.watchfaceText)}
+                    watchfaceColor={expandedPreset.watchfaceColor}
+                    braceletColor={expandedPreset.braceletColor}
+                    watchfaceGeometry={expandedPreset.watchfaceGeometry}
+                  />
+                ) : (
+                  <WatchSVG
+                    config={{
+                      watchfaceGeometry: expandedPreset.watchfaceGeometry as any,
+                      watchfaceColor: expandedPreset.watchfaceColor,
+                      braceletColor: expandedPreset.braceletColor,
+                      braceletMaterial: expandedPreset.braceletMaterial as any,
+                      braceletType: expandedPreset.braceletType as any,
+                      handsEnabled: expandedPreset.handsEnabled,
+                      handsColor: expandedPreset.handsColor ?? '#cbd5e1',
+                      handsCount: 3,
+                      watchfaceText: expandedPreset.watchfaceText ?? '',
+                      watchfaceTextMode: expandedPreset.watchfaceTextMode ?? 'center',
+                      watchfaceBackgroundType: 'solid',
+                    }}
+                  />
+                )}
               </div>
               {expandedPreset.collectionName && COLLECTION_META[expandedPreset.collectionName] && (
                 <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-full px-3 py-1">
@@ -770,24 +822,36 @@ export default function Collections() {
           >
             <div
               className="h-52 flex items-center justify-center relative"
-              style={{ background: `linear-gradient(135deg, ${buyModal.watchfaceColor}33, ${buyStrapColor}22)` }}
+              style={{ background: isAlive(buyModal)
+                ? `radial-gradient(ellipse at center, ${buyModal.watchfaceColor}55 0%, ${buyStrapColor}33 100%)`
+                : `linear-gradient(135deg, ${buyModal.watchfaceColor}33, ${buyStrapColor}22)` }}
             >
-              <div className="w-28 h-44">
-                <WatchSVG
-                  config={{
-                    watchfaceGeometry: buyModal.watchfaceGeometry as any,
-                    watchfaceColor: buyModal.watchfaceColor,
-                    braceletColor: buyStrapColor,
-                    braceletMaterial: buyModal.braceletMaterial as any,
-                    braceletType: buyModal.braceletType as any,
-                    handsEnabled: buyModal.handsEnabled,
-                    handsColor: buyModal.handsColor ?? '#FFFFFF',
-                    handsCount: 3,
-                    watchfaceText: buyModal.watchfaceText ?? '',
-                    watchfaceTextMode: buyModal.watchfaceTextMode ?? 'center',
-                    watchfaceBackgroundType: 'solid',
-                  }}
-                />
+              <div className="w-28 h-44 flex items-center justify-center">
+                {isAlive(buyModal) ? (
+                  <LivingEyeSVG
+                    eyeType={parseEyeType(buyModal.watchfaceText)}
+                    watchfaceColor={buyModal.watchfaceColor}
+                    braceletColor={buyStrapColor}
+                    watchfaceGeometry={buyModal.watchfaceGeometry}
+                    mini
+                  />
+                ) : (
+                  <WatchSVG
+                    config={{
+                      watchfaceGeometry: buyModal.watchfaceGeometry as any,
+                      watchfaceColor: buyModal.watchfaceColor,
+                      braceletColor: buyStrapColor,
+                      braceletMaterial: buyModal.braceletMaterial as any,
+                      braceletType: buyModal.braceletType as any,
+                      handsEnabled: buyModal.handsEnabled,
+                      handsColor: buyModal.handsColor ?? '#FFFFFF',
+                      handsCount: 3,
+                      watchfaceText: buyModal.watchfaceText ?? '',
+                      watchfaceTextMode: buyModal.watchfaceTextMode ?? 'center',
+                      watchfaceBackgroundType: 'solid',
+                    }}
+                  />
+                )}
               </div>
               <button
                 onClick={() => setBuyModal(null)}
