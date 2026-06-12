@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "TqAQ-ZToeTHPh9fvHy1RW"
+uri = "file://GETTING_STARTED.md"
+type = "text"
+title = "GETTING_STARTED.md"
