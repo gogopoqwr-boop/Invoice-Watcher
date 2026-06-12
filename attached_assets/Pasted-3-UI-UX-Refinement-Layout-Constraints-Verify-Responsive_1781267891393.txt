@@ -1,0 +1,17 @@
+3. UI/UX Refinement & Layout Constraints
+[ ] Verify Responsive Layout Split:
+On Viewports ≥ 768px (Desktop), the product information details panel must lock cleanly to the right side of the fullscreen 3D canvas.
+On Viewports < 768px (Mobile/Phones), the options and actions panel must dock seamlessly across the bottom half of the display.
+[ ] Verify Preset Bracelet Selection Structure: Ensure the bracelet alteration UI renders as a simplified grid selection of already preset colored and chosen materials (e.g., "Черная кожа", "Красный нейлон NATO"). It must completely bypass explicit standalone color-picker palettes.
+[ ] Verify Conditional "My Orders" Suppression: Audit the global context initialization state. Run a strict logic check: if (orders.length === 0) -> ensure the "My Orders" / "Мои заказы" button elements are strictly prevented from injecting into both the main menu layout and the lower toolbar regions.
+[ ] Verify Theme Switcher Node Polish: Check the theme switcher sun icon boundaries. Apply high-fidelity glassmorphism layers, link mouse movement coordinates to dynamic glass reflections via CSS/JS variables, and correct positional rules/z-index matrices to eliminate overlapping or bleeding text layers.
+[ ] Verify Button Rename Strategy: Ensure instances of legacy text nodes reading "Новый" are fully refactored to read "Заказать" or "Order".
+[ ] Verify Whitespace Layout Balancing: Confirm margin and flex paddings optimize dead space zones across ultra-wide screen metrics while retaining a strict, hyper-minimalist design voice.
+[ ] Verify Replit Branding Purge: Ensure an explicit DOM hook actively screens and wipes out the external Replit indicator element (#replit-pill).
+[ ] Verify Universal Branding Override: Confirm a global text audit replaces all stale name values from НА_УТРАХ_4 to the official enterprise title ЧЕБЛЯЧАС.
+[ ] Verify Footer Assembly Code Cleanliness: Search and confirm the complete removal of Git collision residues (<<<<<<< HEAD, =======, >>>>>>> main). Confirm the legal text rows output exactly as follows:
+HTML
+<footer>
+  <p>Чеблячас все у права мои у меня пон?</p>
+  <p>Чеблячас © 2026. Сборка приостановлена из-за полного дзена.</p>
+</footer>
