@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
@@ -37,6 +37,7 @@ interface Props {
   onClose: () => void;
   onBuy: (preset: any, braceletColor: string, braceletMaterial: string) => void;
   onConfigure: (preset: any) => void;
+  originRect?: DOMRect | null;
 }
 
 function WatchScene() {
@@ -46,13 +47,16 @@ function WatchScene() {
       <ambientLight intensity={0.55} />
       <directionalLight position={[5, 8, 6]} intensity={1.3} castShadow />
       <directionalLight position={[-3, -2, -4]} intensity={0.28} />
+      <pointLight position={[-4, 2, 3]} intensity={0.7} color="#6366f1" />
       <hemisphereLight intensity={0.25} />
       <Environment preset="city" />
       <ContactShadows position={[0, -5.9, 0]} opacity={0.55} scale={14} blur={2.0} far={6} />
       <WatchModel step={2} lastInteractionRef={lastInteraction} />
       <OrbitControls
         enablePan={false}
-        enableZoom={false}
+        enableZoom={true}
+        minDistance={4}
+        maxDistance={13}
         rotateSpeed={0.55}
         onStart={() => { lastInteraction.current = Date.now(); }}
       />
@@ -60,15 +64,26 @@ function WatchScene() {
   );
 }
 
-export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfigure }: Props) {
+export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfigure, originRect }: Props) {
   const { updateConfig } = useWatchConfig();
   const [selectedCombo, setSelectedCombo] = useState<string | null>(null);
   const [localColor, setLocalColor] = useState(preset.braceletColor ?? '#1c1917');
   const [localMat, setLocalMat] = useState(preset.braceletMaterial ?? 'leather');
   const [entering, setEntering] = useState(true);
 
+  // Compute the starting clip-path from the origin card rect
+  const clipStart = useMemo(() => {
+    if (!originRect) return 'inset(0% 0% 0% 0% round 0px)';
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const t = ((originRect.top / vh) * 100).toFixed(2);
+    const l = ((originRect.left / vw) * 100).toFixed(2);
+    const r = (((vw - originRect.right) / vw) * 100).toFixed(2);
+    const b = (((vh - originRect.bottom) / vh) * 100).toFixed(2);
+    return `inset(${t}% ${r}% ${b}% ${l}% round 24px)`;
+  }, [originRect]);
+
   useEffect(() => {
-    // Two-frame delay for a smooth scale-up interpolation from card size
     const t = requestAnimationFrame(() =>
       requestAnimationFrame(() => setEntering(false))
     );
@@ -114,32 +129,34 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
 
   const content = (
     <div
-      className="fixed inset-0 z-[80] flex flex-col md:flex-row"
+      className="fixed inset-0 z-[80] flex flex-col md:flex-row overflow-hidden"
       style={{
-        opacity: entering ? 0 : 1,
-        transform: entering ? 'scale(0.97)' : 'scale(1)',
-        transition: 'opacity 0.22s ease, transform 0.22s cubic-bezier(0.34,1.2,0.64,1)',
+        clipPath: entering ? clipStart : 'inset(0% 0% 0% 0% round 0px)',
+        opacity: entering ? 0.6 : 1,
+        transition: entering
+          ? 'none'
+          : 'clip-path 0.44s cubic-bezier(0.32,0.08,0.08,1), opacity 0.18s ease',
       }}
     >
       {/* Backdrop */}
       <div
         className="absolute inset-0"
-        style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(24px)' }}
+        style={{ background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(28px)' }}
         onClick={onClose}
       />
 
-      {/* ── 3D Canvas ── fills left/top depending on breakpoint */}
-      <div className="relative z-10 flex-1 md:w-[58%] min-h-[46vh] md:min-h-0">
-        {/* Gradient backdrop for the canvas so it's not pitch black */}
+      {/* ── 3D Canvas ── top half on mobile, left side on desktop */}
+      <div className="relative z-10 flex-none h-[50dvh] md:h-auto md:flex-1 md:w-[58%]">
+        {/* Colour gradient backdrop */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: `radial-gradient(ellipse at 50% 40%, ${preset.watchfaceColor}22 0%, ${preset.braceletColor}14 55%, transparent 90%)`,
+            background: `radial-gradient(ellipse at 50% 35%, ${preset.watchfaceColor}28 0%, ${preset.braceletColor}16 55%, transparent 88%)`,
           }}
         />
 
         <Canvas
-          camera={{ position: [0, -3.0, 7.0], fov: 42 }}
+          camera={{ position: [0, -2.8, 7.2], fov: 42 }}
           gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
           style={{ width: '100%', height: '100%', background: 'transparent' }}
           dpr={[1, 2]}
@@ -173,29 +190,31 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
 
         {/* Drag hint */}
         <div className="absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none">
-          <span className="text-[10px] uppercase tracking-[0.25em] text-white/20 font-semibold">Потяни для вращения</span>
+          <span className="text-[10px] uppercase tracking-[0.25em] text-white/22 font-semibold">
+            Потяни · Прокрути
+          </span>
         </div>
       </div>
 
-      {/* ── Details panel ── right on desktop, bottom on mobile */}
+      {/* ── Details panel ── bottom half on mobile, right side on desktop */}
       <div
-        className="relative z-10 md:w-[42%] flex flex-col overflow-y-auto"
+        className="relative z-10 flex-none h-[50dvh] md:h-auto md:w-[42%] flex flex-col overflow-y-auto"
         style={{
-          background: 'rgba(12,12,16,0.92)',
+          background: 'rgba(10,10,14,0.94)',
           backdropFilter: 'blur(32px)',
           borderTop: '1px solid rgba(255,255,255,0.07)',
         }}
       >
         {/* ─ Header ─ */}
-        <div className="px-6 pt-6 pb-4 border-b border-white/[0.06]">
+        <div className="px-5 pt-5 pb-3.5 border-b border-white/[0.06] shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[10px] uppercase tracking-[0.3em] text-white/30 mb-1">
                 {preset.collectionName ?? 'Классика'}
               </p>
-              <h2 className="text-2xl font-black tracking-tight text-white leading-tight">{preset.name}</h2>
+              <h2 className="text-xl font-black tracking-tight text-white leading-tight">{preset.name}</h2>
               {preset.description && (
-                <p className="text-xs text-white/40 mt-1.5 leading-relaxed line-clamp-2">{preset.description}</p>
+                <p className="text-xs text-white/38 mt-1 leading-relaxed line-clamp-2">{preset.description}</p>
               )}
             </div>
             <div className="text-right shrink-0">
@@ -206,7 +225,7 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
         </div>
 
         {/* ─ Specs ─ */}
-        <div className="px-6 py-4 border-b border-white/[0.06]">
+        <div className="px-5 py-3 border-b border-white/[0.06] shrink-0">
           <div className="grid grid-cols-2 gap-2">
             {[
               ['Корпус', MAT_LABELS[preset.watchfaceMaterial] ?? preset.watchfaceMaterial],
@@ -215,19 +234,19 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
               ['Стрелки', preset.handsEnabled ? '3 стрелки' : 'без стрелок'],
             ].map(([k, v]) => (
               <div key={k} className="rounded-xl px-3 py-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                <p className="text-[10px] uppercase tracking-widest text-white/30 mb-0.5">{k}</p>
+                <p className="text-[10px] uppercase tracking-widest text-white/28 mb-0.5">{k}</p>
                 <p className="text-xs font-bold text-white capitalize">{v}</p>
               </div>
             ))}
           </div>
         </div>
 
-        {/* ─ Bracelet selection grid ─ */}
-        <div className="px-6 py-4 border-b border-white/[0.06] flex-1">
-          <p className="text-[10px] uppercase tracking-[0.3em] text-white/30 mb-3 font-semibold">
+        {/* ─ Bracelet selection ─ */}
+        <div className="px-5 py-3 border-b border-white/[0.06] flex-1 min-h-0 overflow-y-auto">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-white/30 mb-2.5 font-semibold">
             Ремешок
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {BRACELET_COMBOS.map(combo => {
               const active = selectedCombo === combo.id || (!selectedCombo && combo.color === localColor && combo.material === localMat);
               return (
@@ -235,7 +254,7 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
                   key={combo.id}
                   onClick={() => handleSelectCombo(combo)}
                   className={cn(
-                    'flex flex-col items-center gap-1.5 p-2.5 rounded-2xl transition-all duration-150 text-center',
+                    'flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all duration-120 text-center',
                     active
                       ? 'ring-2 ring-blue-400 bg-blue-400/10'
                       : 'hover:bg-white/5'
@@ -243,14 +262,14 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
                   style={{ border: active ? undefined : '1px solid rgba(255,255,255,0.06)' }}
                 >
                   <div
-                    className="w-8 h-8 rounded-full border-2 shrink-0"
+                    className="w-7 h-7 rounded-full border-2 shrink-0"
                     style={{
                       backgroundColor: combo.color,
                       borderColor: active ? 'rgba(96,165,250,0.8)' : 'rgba(255,255,255,0.15)',
                       boxShadow: active ? '0 0 10px rgba(96,165,250,0.3)' : 'none',
                     }}
                   />
-                  <span className="text-[10px] font-semibold text-white/60 leading-tight">
+                  <span className="text-[9px] font-semibold text-white/55 leading-tight">
                     {combo.label}
                   </span>
                 </button>
@@ -260,10 +279,10 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
         </div>
 
         {/* ─ Actions ─ */}
-        <div className="px-6 py-5 space-y-2.5">
+        <div className="px-5 py-4 space-y-2 shrink-0">
           <button
             onClick={handleBuy}
-            className="w-full py-3.5 rounded-2xl font-black text-sm tracking-widest uppercase transition-all active:scale-[0.98]"
+            className="w-full py-3 rounded-2xl font-black text-sm tracking-widest uppercase transition-all active:scale-[0.98]"
             style={{
               background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
               color: '#fff',
@@ -274,7 +293,7 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
           </button>
           <button
             onClick={() => onConfigure(preset)}
-            className="w-full py-3 rounded-2xl text-sm font-bold tracking-wide text-white/60 hover:text-white/90 transition-colors"
+            className="w-full py-2.5 rounded-2xl text-sm font-bold tracking-wide text-white/55 hover:text-white/85 transition-colors"
             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
           >
             Настроить →

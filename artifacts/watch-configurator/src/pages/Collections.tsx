@@ -162,7 +162,7 @@ export default function Collections() {
   const [, setLocation] = useLocation();
   const { updateConfig, sessionId } = useWatchConfig();
   const { items: cartItems, addItem: addToCart, removeItem: removeFromCart } = useCart();
-  const [fullscreenPreset, setFullscreenPreset] = useState<any | null>(null);
+  const [fullscreenPreset, setFullscreenPreset] = useState<{ preset: any; rect: DOMRect } | null>(null);
   const { data: myOrders } = useGetMyOrders({ sessionId }, { query: { enabled: !!sessionId } } as any);
   const hasOrders = Array.isArray(myOrders) && (myOrders as any[]).length > 0;
 
@@ -306,11 +306,20 @@ export default function Collections() {
     const inCart = cartItems.some(i => i.presetId === preset.id);
     const alive = isAlive(preset);
     const [buyHover, setBuyHover] = useState(false);
+    const [cardHovered, setCardHovered] = useState(false);
+
+    const handleCardClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+      const rect = e.currentTarget.closest('[data-card-root]')?.getBoundingClientRect()
+        ?? e.currentTarget.getBoundingClientRect();
+      setFullscreenPreset({ preset, rect: rect as DOMRect });
+    };
 
     return (
       <div
+        data-card-root
         onMouseMove={onMove}
-        onMouseLeave={onLeave}
+        onMouseLeave={() => { onLeave(); setCardHovered(false); }}
+        onMouseEnter={() => setCardHovered(true)}
         className="relative"
         style={{
           transform: tilt
@@ -320,13 +329,13 @@ export default function Collections() {
         }}
       >
         <button
-          onClick={() => setFullscreenPreset(preset)}
+          onClick={handleCardClick}
           className="liquid-glass rounded-3xl overflow-hidden text-left group focus:outline-none focus:ring-2 focus:ring-primary/40 animate-fade-up transition-all duration-300 w-full"
           style={{ animationDelay: `${idx * 0.06}s` }}
         >
           {/* Watch preview — 3D canvas or living eye for ЖИВНОСТЬ */}
           <div
-            className="h-44 overflow-hidden relative"
+            className="h-56 overflow-hidden relative"
             style={{ background: alive
               ? `radial-gradient(ellipse at center, ${preset.watchfaceColor}55 0%, ${preset.braceletColor}33 100%)`
               : `linear-gradient(135deg, ${preset.watchfaceColor}22, ${preset.braceletColor}18)` }}
@@ -345,7 +354,7 @@ export default function Collections() {
                 </div>
               </div>
             ) : (
-              <WatchMiniCanvas preset={preset} />
+              <WatchMiniCanvas preset={preset} paused={cardHovered} />
             )}
             <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs font-black text-yellow-300">
               {preset.priceStars} ⭐
@@ -552,7 +561,7 @@ export default function Collections() {
                       style={{ background: `linear-gradient(to right, ${meta.accentColor}80, transparent)` }}
                     />
                   )}
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {group.items.map((preset: any, idx: number) => (
                       <PresetCard key={preset.id} preset={preset} idx={idx} />
                     ))}
@@ -570,7 +579,7 @@ export default function Collections() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {paginatedItems.map((preset: any, idx: number) => (
                     <PresetCard key={preset.id} preset={preset} idx={idx} />
                   ))}
@@ -615,7 +624,8 @@ export default function Collections() {
       {/* Fullscreen 3D Viewer */}
       {fullscreenPreset && (
         <WatchFullscreenViewer
-          preset={fullscreenPreset}
+          preset={fullscreenPreset.preset}
+          originRect={fullscreenPreset.rect}
           onClose={() => setFullscreenPreset(null)}
           onBuy={(p, color, mat) => {
             setFullscreenPreset(null);
