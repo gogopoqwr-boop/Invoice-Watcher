@@ -1,10 +1,18 @@
-import React, { useRef, useMemo, useEffect } from 'react';
+import React, { useRef, useMemo, useEffect, Suspense } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
+import { Text3D, Center } from '@react-three/drei';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
 
-// ─── Shape builders ───────────────────────────────────────────────────────────
+// ─── Shape helpers ─────────────────────────────────────────────────────────
+
+function shapeHalfWidth(geom: string): number {
+  if (geom === 'circle') return 1.5;
+  if (geom === 'square') return 1.28;
+  if (geom === 'star') return 1.52;
+  return 1.1; // rounded default
+}
 
 function buildFaceShape(geom: string): THREE.Shape {
   const s = new THREE.Shape();
@@ -36,120 +44,42 @@ function buildFaceShape(geom: string): THREE.Shape {
   return s;
 }
 
-// ─── Face texture (canvas) ────────────────────────────────────────────────────
+// ─── Face texture (canvas) — background + markers only, NO text ───────────
 
-function buildFaceTexture(faceColor: string, handsColor: string, text: string, textMode = 'center'): THREE.CanvasTexture {
+function buildFaceTexture(
+  faceColor: string,
+  handsColor: string,
+  geom: string,
+  isCircular: boolean,
+): THREE.CanvasTexture {
   const S = 512;
   const cv = document.createElement('canvas');
   cv.width = S; cv.height = S;
   const ctx = cv.getContext('2d')!;
 
-  // Background
   ctx.fillStyle = faceColor;
   ctx.fillRect(0, 0, S, S);
 
-  // Subtle gradient gloss
   const grad = ctx.createRadialGradient(S * 0.35, S * 0.3, 0, S / 2, S / 2, S * 0.55);
   grad.addColorStop(0, 'rgba(255,255,255,0.10)');
   grad.addColorStop(1, 'rgba(0,0,0,0.15)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, S, S);
 
-  const trimmedText = (text ?? '').trim().toUpperCase();
-  const isCircular = textMode === 'circular' && trimmedText.length > 0;
-
-  // Hour markers — drawn inside the safe area so they stay within UV bounds
-  // rr=0.33*S keeps markers well within the 512px canvas and the circular UV face
+  // Hour markers
   const markerR = S * 0.33;
-  if (!isCircular) {
-    // Standard hour dots
-    for (let i = 0; i < 12; i++) {
-      const a = (i * Math.PI * 2) / 12 - Math.PI / 2;
-      const x = S / 2 + markerR * Math.cos(a);
-      const y = S / 2 + markerR * Math.sin(a);
-      ctx.beginPath();
-      const r = i % 3 === 0 ? 8 : 4;
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fillStyle = handsColor;
-      ctx.globalAlpha = 0.8;
-      ctx.fill();
-    }
-  } else {
-    // Smaller tick marks when text goes around the dial
-    for (let i = 0; i < 12; i++) {
-      const a = (i * Math.PI * 2) / 12 - Math.PI / 2;
-      const x = S / 2 + markerR * Math.cos(a);
-      const y = S / 2 + markerR * Math.sin(a);
-      ctx.beginPath();
-      ctx.arc(x, y, i % 3 === 0 ? 5 : 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = handsColor;
-      ctx.globalAlpha = 0.5;
-      ctx.fill();
-    }
+  for (let i = 0; i < 12; i++) {
+    const a = (i * Math.PI * 2) / 12 - Math.PI / 2;
+    const x = S / 2 + markerR * Math.cos(a);
+    const y = S / 2 + markerR * Math.sin(a);
+    ctx.beginPath();
+    const dotR = isCircular ? (i % 3 === 0 ? 5 : 2.5) : (i % 3 === 0 ? 8 : 4);
+    ctx.arc(x, y, dotR, 0, Math.PI * 2);
+    ctx.fillStyle = handsColor;
+    ctx.globalAlpha = isCircular ? 0.5 : 0.8;
+    ctx.fill();
   }
   ctx.globalAlpha = 1;
-
-  if (isCircular) {
-    // Circular text around the dial
-    const circR = S * 0.39;
-    const chars = Array.from(trimmedText);
-    const arcSpan = Math.min(Math.PI * 1.7, (chars.length * 0.32));
-    const startAngle = -Math.PI / 2 - arcSpan / 2;
-    const fz = Math.max(16, Math.min(32, Math.floor(S * 0.22 / Math.max(chars.length, 4))));
-    ctx.font = `bold ${fz}px monospace`;
-    ctx.fillStyle = handsColor;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    chars.forEach((ch, i) => {
-      const angle = startAngle + (i + 0.5) * (arcSpan / chars.length);
-      ctx.save();
-      ctx.translate(S / 2 + circR * Math.cos(angle), S / 2 + circR * Math.sin(angle));
-      ctx.rotate(angle + Math.PI / 2);
-      ctx.shadowColor = 'rgba(0,0,0,0.6)';
-      ctx.shadowBlur = 4;
-      ctx.fillText(ch, 0, 0);
-      ctx.restore();
-    });
-    ctx.shadowBlur = 0;
-
-    // Brand label in center small
-    ctx.font = `bold 20px monospace`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = handsColor;
-    ctx.globalAlpha = 0.3;
-    ctx.fillText('ЧЕБЛЯЧАС', S / 2, S / 2 + 28);
-    ctx.globalAlpha = 1;
-  } else {
-    // Centered text lines
-    const lines = trimmedText.split('\n').filter(Boolean).slice(0, 4);
-    if (lines.length > 0) {
-      const maxLen = Math.max(...lines.map(l => l.length), 1);
-      const fz = Math.min(52, Math.max(16, Math.floor(S * 0.34 / maxLen)));
-      ctx.font = `bold ${fz}px monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = handsColor;
-      const lineH = fz * 1.35;
-      const startY = S / 2 - ((lines.length - 1) * lineH) / 2;
-      lines.forEach((line, i) => {
-        ctx.shadowColor = 'rgba(0,0,0,0.5)';
-        ctx.shadowBlur = 4;
-        ctx.fillText(line, S / 2, startY + i * lineH);
-      });
-      ctx.shadowBlur = 0;
-    }
-
-    // Brand label
-    ctx.font = 'bold 18px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = handsColor;
-    ctx.globalAlpha = 0.25;
-    ctx.fillText('ЧЕБЛЯЧАС', S / 2, S / 2 + (lines.length > 0 ? 36 : 8));
-    ctx.globalAlpha = 1;
-  }
 
   // Center pip
   ctx.beginPath();
@@ -157,10 +87,150 @@ function buildFaceTexture(faceColor: string, handsColor: string, text: string, t
   ctx.fillStyle = handsColor;
   ctx.fill();
 
-  return new THREE.CanvasTexture(cv);
+  const tex = new THREE.CanvasTexture(cv);
+
+  // Fix UV mapping: ShapeGeometry uses raw vertex coords as UVs (not normalized).
+  // We must map the shape's [-half, +half] range to texture [0, 1].
+  // formula: sample = offset + rawUV * repeat
+  // offset=0.5, repeat=0.5/halfWidth maps rawUV=0→0.5 (center) and rawUV=±half→0 or 1 (edges)
+  const half = shapeHalfWidth(geom);
+  const rep = 0.5 / half;
+  tex.offset.set(0.5, 0.5);
+  tex.repeat.set(rep, rep);
+  tex.needsUpdate = true;
+
+  return tex;
 }
 
-// ─── Strap renderers ──────────────────────────────────────────────────────────
+// ─── 3D text on the watchface ─────────────────────────────────────────────
+
+const FONT_URL = '/dejavu_bold.typeface.json';
+const TEXT_DEPTH = 0.06;
+
+function WatchFaceText3D({
+  text,
+  mode,
+  handsColor,
+}: {
+  text: string;
+  mode: 'center' | 'circular';
+  handsColor: string;
+}) {
+  const trimmed = text.trim().toUpperCase();
+  if (!trimmed) return null;
+
+  const mat = (
+    <meshStandardMaterial
+      color={handsColor}
+      metalness={0.55}
+      roughness={0.2}
+    />
+  );
+
+  if (mode === 'circular') {
+    const chars = Array.from(trimmed);
+    const arcSpan = Math.min(Math.PI * 1.7, chars.length * 0.32);
+    const startAngle = -Math.PI / 2 - arcSpan / 2;
+    const circR = 0.72;
+    const fontSize = Math.max(0.055, Math.min(0.13, 0.55 / Math.max(chars.length, 4)));
+
+    return (
+      <group position={[0, 0, 0.61]}>
+        {chars.map((ch, i) => {
+          const angle = startAngle + (i + 0.5) * (arcSpan / chars.length);
+          const x = circR * Math.cos(angle);
+          const y = circR * Math.sin(angle);
+          const rot = angle + Math.PI / 2;
+          return (
+            <group key={i} position={[x, y, 0]} rotation={[0, 0, rot]}>
+              <Center>
+                <Text3D
+                  font={FONT_URL}
+                  size={fontSize}
+                  height={TEXT_DEPTH}
+                  bevelEnabled
+                  bevelSize={0.008}
+                  bevelThickness={0.008}
+                  bevelSegments={3}
+                  curveSegments={6}
+                >
+                  {ch}
+                  {mat}
+                </Text3D>
+              </Center>
+            </group>
+          );
+        })}
+        {/* Brand label */}
+        <group position={[0, -0.14, 0]}>
+          <Center>
+            <Text3D
+              font={FONT_URL}
+              size={0.055}
+              height={0.02}
+              bevelEnabled={false}
+              curveSegments={4}
+            >
+              {'ЧЕБЛЯЧАС'}
+              <meshStandardMaterial color={handsColor} metalness={0.4} roughness={0.4} opacity={0.4} transparent />
+            </Text3D>
+          </Center>
+        </group>
+      </group>
+    );
+  }
+
+  // Center mode: multi-line text
+  const lines = trimmed.split('\n').filter(Boolean).slice(0, 4);
+  const maxLen = Math.max(...lines.map(l => l.length), 1);
+  const fontSize = Math.min(0.28, Math.max(0.08, 0.7 / maxLen));
+  const lineH = fontSize * 1.4;
+  const totalH = (lines.length - 1) * lineH;
+
+  return (
+    <group position={[0, 0, 0.61]}>
+      {lines.map((line, i) => {
+        const yOff = totalH / 2 - i * lineH;
+        return (
+          <group key={i} position={[0, yOff, 0]}>
+            <Center>
+              <Text3D
+                font={FONT_URL}
+                size={fontSize}
+                height={TEXT_DEPTH}
+                bevelEnabled
+                bevelSize={0.012}
+                bevelThickness={0.012}
+                bevelSegments={3}
+                curveSegments={8}
+              >
+                {line}
+                {mat}
+              </Text3D>
+            </Center>
+          </group>
+        );
+      })}
+      {/* Brand label */}
+      <group position={[0, -totalH / 2 - fontSize * 0.85, 0]}>
+        <Center>
+          <Text3D
+            font={FONT_URL}
+            size={0.06}
+            height={0.02}
+            bevelEnabled={false}
+            curveSegments={4}
+          >
+            {'ЧЕБЛЯЧАС'}
+            <meshStandardMaterial color={handsColor} metalness={0.4} roughness={0.4} opacity={0.3} transparent />
+          </Text3D>
+        </Center>
+      </group>
+    </group>
+  );
+}
+
+// ─── Strap renderers ──────────────────────────────────────────────────────
 
 function SegmentedStrap({ posY, color }: { posY: number; color: string }) {
   const count = 9;
@@ -217,7 +287,7 @@ function SolidStrap({ posY, color, mat }: { posY: number; color: string; mat: st
   );
 }
 
-// ─── Camera controller ────────────────────────────────────────────────────────
+// ─── Camera controller ────────────────────────────────────────────────────
 
 const INTERACTION_PAUSE_MS = 10_000;
 
@@ -237,19 +307,17 @@ export function CameraRig({ step, lastInteractionRef }: {
   const vec = useMemo(() => new THREE.Vector3(...pos), [step]);
 
   useFrame(() => {
-    // During user interaction: hands off — let OrbitControls own the camera fully
     const userActive = lastInteractionRef?.current
       ? Date.now() - lastInteractionRef.current < INTERACTION_PAUSE_MS
       : false;
     if (userActive) return;
-
     camera.position.lerp(vec, 0.05);
     camera.lookAt(0, 0, 0);
   });
   return null;
 }
 
-// ─── Main watch model ─────────────────────────────────────────────────────────
+// ─── Main watch model ─────────────────────────────────────────────────────
 
 export interface WatchModelProps {
   step?: number;
@@ -262,7 +330,6 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
   const prevStepRef = useRef(step);
   const faceSnapTargetRef = useRef<number | null>(null);
 
-  // When entering the color step (3), snap front face toward camera
   useEffect(() => {
     if (step === 3 && prevStepRef.current !== 3 && groupRef.current) {
       const curY = groupRef.current.rotation.y;
@@ -285,15 +352,12 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
 
   useFrame(() => {
     if (!groupRef.current) return;
-
-    // During user interaction: do nothing — user owns the model rotation too
     const userActive = lastInteractionRef?.current
       ? Date.now() - lastInteractionRef.current < INTERACTION_PAUSE_MS
       : false;
     if (userActive) return;
 
     if (faceSnapTargetRef.current !== null) {
-      // Smoothly snap to face-forward
       const target = faceSnapTargetRef.current;
       groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, target, 0.06);
       if (Math.abs(groupRef.current.rotation.y - target) < 0.001) {
@@ -301,7 +365,6 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
         faceSnapTargetRef.current = null;
       }
     } else {
-      // Normal idle auto-rotation
       groupRef.current.rotation.y += 0.004;
     }
   });
@@ -327,9 +390,16 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
     return new THREE.ShapeGeometry(shape, 72);
   }, [config.watchfaceGeometry]);
 
+  const isCircular = (config.watchfaceTextMode ?? 'center') === 'circular';
+
   const faceTexture = useMemo(
-    () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceText ?? '', config.watchfaceTextMode ?? 'center'),
-    [config.watchfaceColor, config.handsColor, config.watchfaceText, config.watchfaceTextMode]
+    () => buildFaceTexture(
+      config.watchfaceColor,
+      config.handsColor,
+      config.watchfaceGeometry,
+      isCircular,
+    ),
+    [config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular]
   );
 
   const isMetal = config.watchfaceMaterial === 'metal';
@@ -340,6 +410,7 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
   }), [config.watchfaceColor, config.watchfaceMaterial]);
 
   const isSegmented = config.braceletMaterial === 'metal_segmented';
+  const hasText = (config.watchfaceText ?? '').trim().length > 0;
 
   return (
     <animated.group ref={groupRef} rotation-x={tiltX}>
@@ -349,11 +420,24 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
         <meshStandardMaterial {...caseMat} />
       </mesh>
 
+      {/* Face disc with corrected UV texture */}
       <mesh position={[0, 0, 0.48]}>
         <primitive object={discGeo} />
         <meshStandardMaterial map={faceTexture} roughness={0.25} metalness={0.05} />
       </mesh>
 
+      {/* 3D extruded text — Suspense so font load doesn't block render */}
+      {hasText && (
+        <Suspense fallback={null}>
+          <WatchFaceText3D
+            text={config.watchfaceText ?? ''}
+            mode={config.watchfaceTextMode ?? 'center'}
+            handsColor={config.handsColor}
+          />
+        </Suspense>
+      )}
+
+      {/* Crystal glass layer */}
       <mesh position={[0, 0, 0.52]}>
         <primitive object={crystalGeo} />
         <meshStandardMaterial transparent opacity={0.16} metalness={0.0} roughness={0.0} color="#e0f0ff" />
