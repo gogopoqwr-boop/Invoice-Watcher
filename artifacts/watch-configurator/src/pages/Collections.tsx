@@ -3,8 +3,9 @@ import { useListPresets, useGetMyOrders } from '@workspace/api-client-react';
 import { useLocation, Link } from 'wouter';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import { useCart } from '@/hooks/use-cart';
-import WatchSVG from '@/components/WatchSVG';
 import LivingEyeSVG, { parseEyeType } from '@/components/LivingEyeSVG';
+import WatchMiniCanvas from '@/components/WatchMiniCanvas';
+import WatchFullscreenViewer, { BRACELET_COMBOS } from '@/components/WatchFullscreenViewer';
 import { cn } from '@/lib/utils';
 
 function isAlive(preset: any): boolean {
@@ -42,12 +43,6 @@ const COLLECTION_META: Record<string, { emoji: string; subtitle: string; concept
     accentColor: '#166534',
   },
 };
-
-const STRAP_COLORS = [
-  '#0f172a', '#1e293b', '#78350f', '#1c1917',
-  '#064e3b', '#1e1b4b', '#c0c0c0', '#374151',
-  '#7f1d1d', '#3b0764', '#0c4a6e', '#f8fafc',
-];
 
 const PAGE_SIZE = 10;
 
@@ -167,12 +162,13 @@ export default function Collections() {
   const [, setLocation] = useLocation();
   const { updateConfig, sessionId } = useWatchConfig();
   const { items: cartItems, addItem: addToCart, removeItem: removeFromCart } = useCart();
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [fullscreenPreset, setFullscreenPreset] = useState<any | null>(null);
   const { data: myOrders } = useGetMyOrders({ sessionId }, { query: { enabled: !!sessionId } } as any);
   const hasOrders = Array.isArray(myOrders) && (myOrders as any[]).length > 0;
 
   const [buyModal, setBuyModal] = useState<any | null>(null);
   const [buyStrapColor, setBuyStrapColor] = useState('');
+  const [buyStrapMat, setBuyStrapMat] = useState('leather');
   const [buying, setBuying] = useState(false);
   const [buyError, setBuyError] = useState('');
 
@@ -190,10 +186,6 @@ export default function Collections() {
 
   // Reset page on filter change
   useEffect(() => { setCurrentPage(1); }, [activeFilter]);
-
-  const expandedPreset = expandedId !== null
-    ? (presets as any[] | undefined)?.find((p: any) => p.id === expandedId) ?? null
-    : null;
 
   const handleSelectPreset = (preset: any) => {
     updateConfig({
@@ -217,6 +209,7 @@ export default function Collections() {
     e.stopPropagation();
     setBuyModal(preset);
     setBuyStrapColor(preset.braceletColor);
+    setBuyStrapMat(preset.braceletMaterial ?? 'leather');
     setBuyError('');
   };
 
@@ -234,7 +227,7 @@ export default function Collections() {
           watchfaceGeometry: buyModal.watchfaceGeometry,
           watchfaceMaterial: buyModal.watchfaceMaterial,
           watchfaceColor: buyModal.watchfaceColor,
-          braceletMaterial: buyModal.braceletMaterial,
+          braceletMaterial: buyStrapMat || buyModal.braceletMaterial,
           braceletType: buyModal.braceletType,
           braceletColor: buyStrapColor,
           handsEnabled: buyModal.handsEnabled,
@@ -306,7 +299,6 @@ export default function Collections() {
 
   // ── Preset Card ─────────────────────────────────────────────────────────────
   const PresetCard = ({ preset, idx }: { preset: any; idx: number }) => {
-    const isExpanded = expandedId === preset.id;
     const { tilt, onMove, onLeave } = useTilt();
     const collectionKey = preset.collectionName ?? 'classics';
     const inv = inventory[collectionKey];
@@ -328,60 +320,33 @@ export default function Collections() {
         }}
       >
         <button
-          onClick={() => setExpandedId(isExpanded ? null : preset.id)}
-          className={cn(
-            'liquid-glass rounded-3xl overflow-hidden text-left group focus:outline-none focus:ring-2 focus:ring-primary/40 animate-fade-up transition-all duration-300 w-full',
-            isExpanded && 'ring-2 ring-primary/40',
-          )}
+          onClick={() => setFullscreenPreset(preset)}
+          className="liquid-glass rounded-3xl overflow-hidden text-left group focus:outline-none focus:ring-2 focus:ring-primary/40 animate-fade-up transition-all duration-300 w-full"
           style={{ animationDelay: `${idx * 0.06}s` }}
         >
-          {/* Watch preview */}
+          {/* Watch preview — 3D canvas or living eye for ЖИВНОСТЬ */}
           <div
-            className="h-44 flex items-center justify-center overflow-hidden p-4 relative"
+            className="h-44 overflow-hidden relative"
             style={{ background: alive
               ? `radial-gradient(ellipse at center, ${preset.watchfaceColor}55 0%, ${preset.braceletColor}33 100%)`
               : `linear-gradient(135deg, ${preset.watchfaceColor}22, ${preset.braceletColor}18)` }}
           >
-            <div className="w-20 h-36 flex items-center justify-center relative">
-              {alive ? (
-                <LivingEyeSVG
-                  eyeType={parseEyeType(preset.watchfaceText)}
-                  watchfaceColor={preset.watchfaceColor}
-                  braceletColor={preset.braceletColor}
-                  watchfaceGeometry={preset.watchfaceGeometry}
-                  mini
-                  pupilNarrow={buyHover}
-                />
-              ) : (
-                <WatchSVG
-                  mini
-                  config={{
-                    watchfaceGeometry: preset.watchfaceGeometry as any,
-                    watchfaceColor: preset.watchfaceColor,
-                    braceletColor: preset.braceletColor,
-                    braceletMaterial: preset.braceletMaterial as any,
-                    braceletType: preset.braceletType as any,
-                    handsEnabled: preset.handsEnabled,
-                    handsColor: preset.handsColor ?? '#cbd5e1',
-                    handsCount: 3,
-                    watchfaceText: preset.watchfaceText ?? '',
-                    watchfaceTextMode: preset.watchfaceTextMode ?? 'center',
-                    watchfaceBackgroundType: 'solid',
-                  }}
-                />
-              )}
-              {/* Dynamic drop shadow beneath watch */}
-              <div
-                className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-none"
-                style={{
-                  width: '60px',
-                  height: '14px',
-                  background: `radial-gradient(ellipse at center, ${preset.watchfaceColor}88 0%, transparent 70%)`,
-                  filter: 'blur(4px)',
-                  transform: 'translateX(-50%) scaleY(0.5)',
-                }}
-              />
-            </div>
+            {alive ? (
+              <div className="w-full h-full flex items-center justify-center p-4">
+                <div className="w-20 h-36 flex items-center justify-center">
+                  <LivingEyeSVG
+                    eyeType={parseEyeType(preset.watchfaceText)}
+                    watchfaceColor={preset.watchfaceColor}
+                    braceletColor={preset.braceletColor}
+                    watchfaceGeometry={preset.watchfaceGeometry}
+                    mini
+                    pupilNarrow={buyHover}
+                  />
+                </div>
+              </div>
+            ) : (
+              <WatchMiniCanvas preset={preset} />
+            )}
             <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs font-black text-yellow-300">
               {preset.priceStars} ⭐
             </div>
@@ -411,51 +376,14 @@ export default function Collections() {
               <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{preset.description}</p>
             )}
 
-            <div
-              className="overflow-hidden transition-all duration-300"
-              style={{ maxHeight: isExpanded ? '200px' : '0px', opacity: isExpanded ? 1 : 0 }}
-            >
-              <div className="border-t border-border/30 pt-2 mb-3 space-y-1">
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-muted-foreground">Корпус</span>
-                  <span className="font-semibold">{MAT_LABELS[preset.watchfaceMaterial] ?? preset.watchfaceMaterial}</span>
-                </div>
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-muted-foreground">Ремешок</span>
-                  <span className="font-semibold">{MAT_LABELS[preset.braceletMaterial] ?? preset.braceletMaterial}</span>
-                </div>
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-muted-foreground">Форма</span>
-                  <span className="font-semibold capitalize">{preset.watchfaceGeometry}</span>
-                </div>
-                {alive && (
-                  <div className="flex justify-between text-[11px]">
-                    <span className="text-muted-foreground">Тип глаза</span>
-                    <span className="font-semibold capitalize">{parseEyeType(preset.watchfaceText)}</span>
-                  </div>
-                )}
-              </div>
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={(e) => { e.stopPropagation(); handleSelectPreset(preset); }}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); handleSelectPreset(preset); } }}
-                className="w-full py-2 rounded-xl bg-primary/20 text-primary text-xs font-bold tracking-widest uppercase text-center cursor-pointer hover:bg-primary/30 transition-colors active:scale-[0.98] border border-primary/30"
-              >
-                Настроить →
-              </div>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                {MAT_LABELS[preset.braceletMaterial] ?? preset.braceletMaterial}
+              </span>
+              <span className="text-xs text-primary font-bold group-hover:text-primary/80 transition-colors">
+                Смотреть →
+              </span>
             </div>
-
-            {!isExpanded && (
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                  {MAT_LABELS[preset.braceletMaterial] ?? preset.braceletMaterial}
-                </span>
-                <span className="text-xs text-primary font-bold group-hover:text-primary/80 transition-colors">
-                  Смотреть →
-                </span>
-              </div>
-            )}
           </div>
         </button>
 
@@ -674,146 +602,35 @@ export default function Collections() {
           </div>
         )}
 
-        <div className="mt-20 text-center">
-          <p className="text-[11px] uppercase tracking-[0.4em] text-muted-foreground/30 font-semibold">
-            Чеблячас © 2026
+        <footer className="mt-20 text-center space-y-1">
+          <p className="text-[11px] text-muted-foreground/25">
+            Чеблячас все у права мои у меня пон?
           </p>
-        </div>
+          <p className="text-[11px] text-muted-foreground/25">
+            Чеблячас © 2026. Сборка приостановлена из-за полного дзена.
+          </p>
+        </footer>
       </div>
 
-      {/* Expanded preset overlay */}
-      {expandedPreset && (
-        <div
-          className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4 md:p-8"
-          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(16px)' }}
-          onClick={() => setExpandedId(null)}
-        >
-          <div
-            className="liquid-glass rounded-3xl w-full max-w-sm md:max-w-md overflow-hidden animate-fade-up"
-            style={{ maxHeight: '90dvh', overflowY: 'auto' }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div
-              className="h-64 flex items-center justify-center relative shrink-0"
-              style={{ background: isAlive(expandedPreset)
-                ? `radial-gradient(ellipse at center, ${expandedPreset.watchfaceColor}55 0%, ${expandedPreset.braceletColor}33 100%)`
-                : `linear-gradient(135deg, ${expandedPreset.watchfaceColor}33, ${expandedPreset.braceletColor}22)` }}
-            >
-              <div className="w-32 h-52 flex items-center justify-center">
-                {isAlive(expandedPreset) ? (
-                  <LivingEyeSVG
-                    eyeType={parseEyeType(expandedPreset.watchfaceText)}
-                    watchfaceColor={expandedPreset.watchfaceColor}
-                    braceletColor={expandedPreset.braceletColor}
-                    watchfaceGeometry={expandedPreset.watchfaceGeometry}
-                  />
-                ) : (
-                  <WatchSVG
-                    config={{
-                      watchfaceGeometry: expandedPreset.watchfaceGeometry as any,
-                      watchfaceColor: expandedPreset.watchfaceColor,
-                      braceletColor: expandedPreset.braceletColor,
-                      braceletMaterial: expandedPreset.braceletMaterial as any,
-                      braceletType: expandedPreset.braceletType as any,
-                      handsEnabled: expandedPreset.handsEnabled,
-                      handsColor: expandedPreset.handsColor ?? '#cbd5e1',
-                      handsCount: 3,
-                      watchfaceText: expandedPreset.watchfaceText ?? '',
-                      watchfaceTextMode: expandedPreset.watchfaceTextMode ?? 'center',
-                      watchfaceBackgroundType: 'solid',
-                    }}
-                  />
-                )}
-              </div>
-              {expandedPreset.collectionName && COLLECTION_META[expandedPreset.collectionName] && (
-                <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-full px-3 py-1">
-                  <span>{COLLECTION_META[expandedPreset.collectionName].emoji}</span>
-                  <span className="text-white text-[10px] font-bold uppercase tracking-widest">{expandedPreset.collectionName}</span>
-                </div>
-              )}
-              <button
-                onClick={() => setExpandedId(null)}
-                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 text-white text-sm flex items-center justify-center hover:bg-black/60 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h2 className="text-2xl font-black tracking-tight">{expandedPreset.name}</h2>
-                  {expandedPreset.description && (
-                    <p className="text-sm text-muted-foreground mt-1">{expandedPreset.description}</p>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-black text-yellow-400">{expandedPreset.priceStars}</p>
-                  <p className="text-xs text-muted-foreground">⭐ звёзд</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 mb-5">
-                {[
-                  ['Корпус', MAT_LABELS[expandedPreset.watchfaceMaterial] ?? expandedPreset.watchfaceMaterial],
-                  ['Ремешок', MAT_LABELS[expandedPreset.braceletMaterial] ?? expandedPreset.braceletMaterial],
-                  ['Форма', expandedPreset.watchfaceGeometry],
-                  ['Стрелки', expandedPreset.handsEnabled ? '3 стрелки' : 'без стрелок'],
-                ].map(([k, v]) => (
-                  <div key={k} className="bg-white/5 rounded-xl px-3 py-2">
-                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-0.5">{k}</p>
-                    <p className="text-sm font-bold capitalize">{v}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex gap-3 mb-2">
-                <button
-                  onClick={() => { setExpandedId(null); handleBuyOpen({ stopPropagation: () => {} } as any, expandedPreset); }}
-                  className="flex-1 py-3.5 rounded-2xl bg-primary text-white font-black text-sm tracking-widest uppercase shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all"
-                >
-                  Купить
-                </button>
-                <button
-                  onClick={() => handleSelectPreset(expandedPreset)}
-                  className="flex-1 py-3.5 rounded-2xl liquid-glass font-black text-sm tracking-widest uppercase active:scale-[0.98] transition-all"
-                >
-                  Настроить
-                </button>
-              </div>
-
-              {/* Cart add button */}
-              {cartItems.some(i => i.presetId === expandedPreset.id) ? (
-                <button
-                  onClick={() => {
-                    const item = cartItems.find(i => i.presetId === expandedPreset.id);
-                    if (item) removeFromCart(item.key);
-                  }}
-                  className="w-full py-2 rounded-2xl border border-destructive/30 text-destructive text-xs font-bold hover:bg-destructive/10 transition-colors"
-                >
-                  ✕ Убрать из корзины
-                </button>
-              ) : (
-                <button
-                  onClick={() => addToCart({
-                    presetId: expandedPreset.id,
-                    presetName: expandedPreset.name,
-                    priceStars: expandedPreset.priceStars,
-                    braceletColor: expandedPreset.braceletColor,
-                    watchfaceColor: expandedPreset.watchfaceColor,
-                  })}
-                  className="w-full py-2 rounded-2xl border border-border text-muted-foreground text-xs font-bold hover:bg-muted/30 transition-colors"
-                >
-                  + В корзину
-                </button>
-              )}
-
-              {/* Comments */}
-              <PresetComments presetId={expandedPreset.id} />
-            </div>
-          </div>
-        </div>
+      {/* Fullscreen 3D Viewer */}
+      {fullscreenPreset && (
+        <WatchFullscreenViewer
+          preset={fullscreenPreset}
+          onClose={() => setFullscreenPreset(null)}
+          onBuy={(p, color, mat) => {
+            setFullscreenPreset(null);
+            setBuyModal(p);
+            setBuyStrapColor(color);
+            setBuyStrapMat(mat);
+            setBuyError('');
+          }}
+          onConfigure={(p) => {
+            setFullscreenPreset(null);
+            handleSelectPreset(p);
+          }}
+        />
       )}
+
 
       {/* КУПИТЬ modal — strap color picker */}
       {buyModal && (
@@ -872,32 +689,30 @@ export default function Collections() {
 
             <div className="p-5">
               <h3 className="text-lg font-black mb-0.5">{buyModal.name}</h3>
-              <p className="text-xs text-muted-foreground mb-4">Выберите цвет ремешка</p>
+              <p className="text-xs text-muted-foreground mb-3">Выберите ремешок</p>
 
-              <div className="flex flex-wrap gap-2 mb-5">
-                {STRAP_COLORS.map(c => (
-                  <button
-                    key={c}
-                    onClick={() => setBuyStrapColor(c)}
-                    className={cn(
-                      'w-8 h-8 rounded-full transition-all border-2',
-                      buyStrapColor === c ? 'border-primary scale-110 shadow-md shadow-primary/30' : 'border-transparent hover:scale-105'
-                    )}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
-                <label className="relative w-8 h-8 rounded-full overflow-hidden cursor-pointer border-2 border-transparent hover:scale-105 transition-all">
-                  <input
-                    type="color"
-                    value={buyStrapColor}
-                    onChange={e => setBuyStrapColor(e.target.value)}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                  />
-                  <div
-                    className="w-full h-full rounded-full border border-white/20"
-                    style={{ backgroundColor: buyStrapColor }}
-                  />
-                </label>
+              <div className="grid grid-cols-4 gap-1.5 mb-4">
+                {BRACELET_COMBOS.map(combo => {
+                  const active = buyStrapColor === combo.color && buyStrapMat === combo.material;
+                  return (
+                    <button
+                      key={combo.id}
+                      onClick={() => { setBuyStrapColor(combo.color); setBuyStrapMat(combo.material); }}
+                      className={cn(
+                        'flex flex-col items-center gap-1 p-1.5 rounded-xl transition-all',
+                        active ? 'ring-2 ring-primary bg-primary/10' : 'hover:bg-white/5'
+                      )}
+                    >
+                      <div
+                        className="w-6 h-6 rounded-full border-2"
+                        style={{ backgroundColor: combo.color, borderColor: active ? 'var(--primary)' : 'rgba(255,255,255,0.2)' }}
+                      />
+                      <span className="text-[9px] text-muted-foreground leading-tight text-center line-clamp-2">
+                        {combo.label}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               {buyError && (

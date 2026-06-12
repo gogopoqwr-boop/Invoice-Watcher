@@ -143,7 +143,7 @@ function WatchFaceText3D({
           const angle = startAngle + (i + 0.5) * (arcSpan / chars.length);
           const x = circR * Math.cos(angle);
           const y = circR * Math.sin(angle);
-          const rot = angle + Math.PI / 2;
+          const rot = angle - Math.PI / 2;
           return (
             <group key={i} position={[x, y, 0]} rotation={[0, 0, rot]}>
               <Center>
@@ -596,10 +596,19 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
         </Suspense>
       )}
 
-      {/* Crystal glass layer */}
-      <mesh position={[0, 0, 0.52]}>
+      {/* Crystal glass layer — physical domed glass */}
+      <mesh position={[0, 0, 0.54]}>
         <primitive object={crystalGeo} />
-        <meshStandardMaterial transparent opacity={0.16} metalness={0.0} roughness={0.0} color="#e0f0ff" />
+        <meshPhysicalMaterial
+          color="#c4dff5"
+          metalness={0}
+          roughness={0.02}
+          transmission={0.92}
+          ior={1.52}
+          thickness={0.12}
+          transparent
+          opacity={0.88}
+        />
       </mesh>
 
       {config.handsEnabled && (
@@ -685,12 +694,19 @@ export default function WatchModel({ step = 0, lastInteractionRef }: WatchModelP
         <meshStandardMaterial color={caseMat.color} metalness={caseMat.metalness} roughness={Math.min(1, caseMat.roughness + 0.15)} />
       </mesh>
 
-      {/* Lugs — top and bottom, seamlessly bridge case to strap */}
+      {/* Lugs — height 0.50 so lug top = 1.85, exactly where strap bottom starts */}
       {[1.60, -1.60].map((y) => (
-        <mesh key={y} position={[0, y, 0.01]} castShadow>
-          <boxGeometry args={[1.12, 0.38, 0.20]} />
-          <meshStandardMaterial {...caseMat} />
-        </mesh>
+        <group key={y}>
+          <mesh position={[0, y, 0.01]} castShadow>
+            <boxGeometry args={[1.14, 0.50, 0.24]} />
+            <meshStandardMaterial {...caseMat} />
+          </mesh>
+          {/* Spring bar pin through lug */}
+          <mesh position={[0, y, 0.12]} rotation={[0, 0, Math.PI / 2]} castShadow>
+            <cylinderGeometry args={[0.034, 0.034, 1.20, 12]} />
+            <meshStandardMaterial color={caseMat.color} metalness={0.96} roughness={0.03} />
+          </mesh>
+        </group>
       ))}
 
       {/* Upper strap — positioned so its bottom edge meets the lug top */}
