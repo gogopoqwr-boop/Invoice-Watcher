@@ -292,10 +292,10 @@ function SolidStrap({ posY, color, mat }: { posY: number; color: string; mat: st
 
 // ─── Camera controller ────────────────────────────────────────────────────
 
-// How long after the last drag event before auto-camera and auto-rotation resume
-const INTERACTION_PAUSE_MS = 2_000;
-// How long (ms) to ramp rotation speed from 0 back to full after interaction ends
-const RESUME_RAMP_MS = 800;
+// How long after the last drag event before auto-rotation resumes (10 s)
+const INTERACTION_PAUSE_MS = 10_000;
+// How long (ms) to ease rotation speed from 0 → full after the pause expires
+const RESUME_RAMP_MS = 2_500;
 
 export function CameraRig({ step, lastInteractionRef }: {
   step: number;
