@@ -396,10 +396,9 @@ export default function CollectionPage() {
         </AnimatePresence>
       )}
 
-      {/* Prev/Next collection nav — always fixed at bottom */}
+      {/* Collection dots — scroll hint only */}
       {!isLoading && collections.length > 1 && (
-        <div className="fixed bottom-6 left-0 right-0 z-30 flex flex-col items-center gap-3">
-          {/* Collection dots */}
+        <div className="fixed bottom-6 left-0 right-0 z-30 flex justify-center">
           <div className="flex items-center gap-2">
             {collections.map((_, i) => (
               <button
@@ -414,30 +413,6 @@ export default function CollectionPage() {
               />
             ))}
           </div>
-
-          {/* Down arrow → next collection */}
-          {hasNext && (
-            <button
-              onClick={() => goTo(safeIndex + 1, 1)}
-              className="text-muted-foreground/40 hover:text-muted-foreground/80 transition-colors"
-              style={{ animation: 'bounce 1.8s infinite' }}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-          )}
-          {/* Up arrow → prev collection */}
-          {hasPrev && !hasNext && (
-            <button
-              onClick={() => goTo(safeIndex - 1, -1)}
-              className="text-muted-foreground/40 hover:text-muted-foreground/80 transition-colors rotate-180"
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-          )}
         </div>
       )}
 
