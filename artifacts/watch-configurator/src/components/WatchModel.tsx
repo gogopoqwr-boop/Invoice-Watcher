@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useEffect } from 'react';
+import React, { useRef, useMemo, useEffect, Suspense } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Text } from '@react-three/drei';
 import { useWatchConfig } from '@/hooks/use-watch-config';
@@ -7,6 +7,27 @@ import { useSpring, animated } from '@react-spring/three';
 
 // Roboto Bold — Google Fonts CDN, full Cyrillic+Latin support
 const FONT_URL = 'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlfCxc4EsA.woff2';
+
+// Eagerly preload the font so it's ready before Text components mount
+try { Text.preload(FONT_URL); } catch { /* ignore if preload not available */ }
+
+// Error boundary that renders null on error — keeps the rest of the Canvas alive
+// when the font CDN is unreachable or a text render fails.
+class TextErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch() { /* swallow — intentional, don't let it bubble */ }
+  render() {
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
+}
 
 // ─── Shape helpers ─────────────────────────────────────────────────────────
 
@@ -697,15 +718,22 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         <meshStandardMaterial map={faceTexture} roughness={0.25} metalness={0.05} />
       </mesh>
 
-      {/* 3D face text — rendered between dial and crystal */}
+      {/* 3D face text — rendered between dial and crystal.
+          Isolated in its own Suspense + ErrorBoundary so a font-load failure
+          (CDN unreachable, worker blocked, etc.) only hides the text and never
+          crashes the entire WebGL canvas. */}
       {config.watchfaceText && (
-        <WatchFaceText
-          text={config.watchfaceText}
-          mode={(config.watchfaceTextMode ?? 'center') as 'center' | 'circular'}
-          handsColor={config.handsColor ?? '#ffffff'}
-          faceZ={faceZ}
-          handsEnabled={config.handsEnabled ?? true}
-        />
+        <TextErrorBoundary>
+          <Suspense fallback={null}>
+            <WatchFaceText
+              text={config.watchfaceText}
+              mode={(config.watchfaceTextMode ?? 'center') as 'center' | 'circular'}
+              handsColor={config.handsColor ?? '#ffffff'}
+              faceZ={faceZ}
+              handsEnabled={config.handsEnabled ?? true}
+            />
+          </Suspense>
+        </TextErrorBoundary>
       )}
 
       {/* Crystal — high-fidelity sapphire glass */}
