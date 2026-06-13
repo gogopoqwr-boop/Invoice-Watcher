@@ -429,25 +429,7 @@ function GiftRibbon({ visible }: { visible: boolean }) {
 
 // ─── Scene ─────────────────────────────────────────────────────────────────
 
-function Scene({ config, boxType, autoOpen, giftWrap }: { config: WatchConfig; boxType: string; autoOpen: boolean; giftWrap: boolean }) {
-  const [open, setOpen] = useState(false);
-
-  // When gift-wrapped, keep the box closed for 1.5 s so the ribbon is visible
-  const openDelay = giftWrap ? 1500 : 380;
-
-  useEffect(() => {
-    if (!autoOpen) return;
-    const t = setTimeout(() => setOpen(true), openDelay);
-    return () => clearTimeout(t);
-  }, [autoOpen]);
-
-  useEffect(() => {
-    setOpen(false);
-    if (!autoOpen) return;
-    const t = setTimeout(() => setOpen(true), giftWrap ? 1500 : 320);
-    return () => clearTimeout(t);
-  }, [boxType, giftWrap]);
-
+function Scene({ config, boxType, giftWrap, open }: { config: WatchConfig; boxType: string; giftWrap: boolean; open: boolean }) {
   return (
     <>
       <ambientLight intensity={0.55} />
@@ -456,11 +438,9 @@ function Scene({ config, boxType, autoOpen, giftWrap }: { config: WatchConfig; b
       <pointLight position={[0, 6, -2]} intensity={0.5} color="#f0eaff" />
       <pointLight position={[4, 0, 5]} intensity={0.4} color="#ffffff" />
       <Environment preset="city" />
-      {/* Y-rotation shows front + right face; negative tilts left edge toward camera */}
       <group rotation={[0, -0.46, 0]}>
         <Box3D boxType={boxType} open={open} />
         <WatchInBox config={config} visible={open} />
-        {/* Only mount the ribbon when giftWrap is on — avoids scale=0 degenerate matrix */}
         {giftWrap && <GiftRibbon visible={!open} />}
       </group>
     </>
@@ -472,13 +452,14 @@ function Scene({ config, boxType, autoOpen, giftWrap }: { config: WatchConfig; b
 export interface WatchBoxSceneProps {
   config: WatchConfig;
   boxType?: string;
-  autoOpen?: boolean;
+  /** Controlled open/close state — no autoOpen; caller owns the toggle */
+  open?: boolean;
   giftWrap?: boolean;
   /** height class e.g. "h-72" */
   className?: string;
 }
 
-export default function WatchBoxScene({ config, boxType = 'standard', autoOpen = true, giftWrap = false, className }: WatchBoxSceneProps) {
+export default function WatchBoxScene({ config, boxType = 'standard', open = false, giftWrap = false, className }: WatchBoxSceneProps) {
   if (!WEB_GL_OK) {
     const s = BOX_STYLES[boxType as keyof typeof BOX_STYLES] ?? BOX_STYLES.standard;
     const faceCol   = config.watchfaceColor  ?? '#C0C0C0';
@@ -564,7 +545,15 @@ export default function WatchBoxScene({ config, boxType = 'standard', autoOpen =
         style={{ background: 'transparent' }}
         shadows
       >
-        <Scene config={config} boxType={boxType} autoOpen={autoOpen} giftWrap={giftWrap} />
+        <Scene config={config} boxType={boxType} giftWrap={giftWrap} open={open} />
+        <OrbitControls
+          enablePan={false}
+          minDistance={4}
+          maxDistance={18}
+          minPolarAngle={0.1}
+          maxPolarAngle={Math.PI * 0.85}
+          target={[0, 0, 0]}
+        />
       </Canvas>
     </div>
   );

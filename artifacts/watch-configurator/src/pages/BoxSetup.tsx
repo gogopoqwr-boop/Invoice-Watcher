@@ -61,6 +61,7 @@ export default function BoxSetup() {
   const [selectedBox, setSelectedBox] = useState<BoxType>(config.boxType ?? 'standard');
   const [message, setMessage] = useState(config.boxMessage ?? '');
   const [giftWrap, setGiftWrap] = useState(config.giftWrap ?? false);
+  const [boxOpen, setBoxOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [basePrice, setBasePrice] = useState<number | null>(null);
@@ -147,11 +148,18 @@ export default function BoxSetup() {
           <WatchBoxScene
             config={config}
             boxType={selectedBox}
-            autoOpen
+            open={boxOpen}
             giftWrap={giftWrap}
             className="h-64 md:h-80"
           />
         </div>
+
+        <button
+          onClick={() => setBoxOpen(v => !v)}
+          className="liquid-button px-5 py-2.5 text-sm font-semibold"
+        >
+          {boxOpen ? '📦 Закрыть' : '🎁 Открыть'}
+        </button>
 
         <div className="text-center space-y-0.5">
           <p
@@ -172,9 +180,7 @@ export default function BoxSetup() {
 
         {/* Header */}
         <div className="px-6 pt-6 pb-4">
-          <p className="text-xs font-black text-primary uppercase tracking-widest mb-0.5">Шаг 3 из 3</p>
           <h1 className="text-2xl font-black tracking-tight">Выбор упаковки</h1>
-          <p className="text-sm text-muted-foreground mt-1">Каждые часы заслуживают идеальной коробки</p>
         </div>
 
         {/* Scrollable options */}
