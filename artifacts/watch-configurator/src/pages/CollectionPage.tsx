@@ -94,6 +94,7 @@ export default function CollectionPage() {
   // direction: 1 = going to next (slide up), -1 = going to prev (slide down)
   const [direction, setDirection] = useState(1);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const outerRef = useRef<HTMLDivElement>(null);
   const lastScrollTime = useRef(0);
   const isTransitioning = useRef(false);
   const touchStartY = useRef<number | null>(null);
@@ -130,6 +131,22 @@ export default function CollectionPage() {
     setLocation(`/collections/${nextIndex}`);
     setTimeout(() => { isTransitioning.current = false; }, SCROLL_COOLDOWN);
   }, [setLocation]);
+
+  // Prevent browser pull-to-refresh when at top of inner scroll and swiping down
+  useEffect(() => {
+    const outer = outerRef.current;
+    if (!outer) return;
+    const preventPullToRefresh = (e: TouchEvent) => {
+      const inner = scrollRef.current;
+      const atTop = !inner || inner.scrollTop <= 0;
+      if (atTop && touchStartY.current !== null) {
+        const dy = touchStartY.current - e.touches[0].clientY;
+        if (dy < 0) e.preventDefault();
+      }
+    };
+    outer.addEventListener('touchmove', preventPullToRefresh, { passive: false });
+    return () => outer.removeEventListener('touchmove', preventPullToRefresh);
+  }, []);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
@@ -346,7 +363,7 @@ export default function CollectionPage() {
   };
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-background" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+    <div ref={outerRef} className="fixed inset-0 overflow-hidden bg-background" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       {/* Particles */}
       <canvas ref={particlesRef} className="fixed inset-0 pointer-events-none z-0" style={{ opacity: 0.8 }} />
 
@@ -419,7 +436,7 @@ export default function CollectionPage() {
               </div>
 
               {/* Cards */}
-              <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 pb-28 min-h-0">
+              <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-none px-5 pb-28 min-h-0">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-3xl mx-auto">
                   {group.items.map((preset: any, idx: number) => (
                     <PresetCard key={preset.id} preset={preset} idx={idx} />

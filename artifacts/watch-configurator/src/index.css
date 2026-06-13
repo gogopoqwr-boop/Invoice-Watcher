@@ -220,10 +220,12 @@ iframe[src*="replit.com/badge"] {
 
   html {
     transition: background-color 0.35s ease, color 0.35s ease;
+    overscroll-behavior: none;
   }
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    overscroll-behavior: none;
   }
 }
 
