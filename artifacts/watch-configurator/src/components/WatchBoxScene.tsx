@@ -1,6 +1,6 @@
 import React, { useRef, useMemo, useEffect, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Environment } from '@react-three/drei';
+import { Environment, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
 
@@ -290,9 +290,9 @@ function WatchInBox({ config, visible }: { config: WatchConfig; visible: boolean
 
   return (
     <animated.group
-      position={[0, -H/2 + T + 0.42, 0]}
-      scale={[0.52, 0.52, 0.52]}
-      rotation={[-0.18, 0, 0]}
+      position={[0, -0.12, 0]}
+      scale={[0.50, 0.50, 0.50]}
+      rotation={[-Math.PI / 2, 0, 0]}
     >
       {/* Watch case */}
       <mesh>
@@ -316,9 +316,9 @@ function WatchInBox({ config, visible }: { config: WatchConfig; visible: boolean
           </mesh>
         </group>
       ))}
-      {/* Straps */}
+      {/* Straps — flat, no wrist-wrap angle */}
       {([1, -1] as number[]).map(sign => (
-        <group key={sign} position={[0, sign * 1.85, 0]} rotation={[sign * -0.48, 0, 0]}>
+        <group key={sign} position={[0, sign * 1.85, 0]}>
           <mesh position={[0, sign * 1.20, 0]}>
             <boxGeometry args={[1.05, 2.40, 0.14]} />
             <meshStandardMaterial color={strapCol} metalness={isMetal ? 0.85 : 0} roughness={isMetal ? 0.10 : 0.80} transparent={isResin} opacity={isResin ? 0.72 : 1} />
