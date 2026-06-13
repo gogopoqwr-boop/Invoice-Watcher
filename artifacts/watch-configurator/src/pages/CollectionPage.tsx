@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useLocation, Link } from 'wouter';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useListPresets, useGetMyOrders } from '@workspace/api-client-react';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import WatchMiniCanvas from '@/components/WatchMiniCanvas';
@@ -15,6 +16,9 @@ const MAT_LABELS: Record<string, string> = {
 const COLLECTION_ORDER = ['РОФЛ', 'ГИПЕРСЕРЬЕЗНОСТЬ', 'ЖИВНОСТЬ'];
 const MAX_PER = 6;
 type InventoryData = Record<string, { sold: number; max: number }>;
+
+const TRANSITION_DURATION = 0.42;
+const SCROLL_COOLDOWN = 700;
 
 function useParticles() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -87,6 +91,12 @@ export default function CollectionPage() {
   const [buyError, setBuyError] = useState('');
   const [inventory, setInventory] = useState<InventoryData>({});
 
+  // direction: 1 = going to next (slide up), -1 = going to prev (slide down)
+  const [direction, setDirection] = useState(1);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const lastScrollTime = useRef(0);
+  const isTransitioning = useRef(false);
+
   useEffect(() => {
     fetch('/api/presets/inventory')
       .then(r => r.json())
@@ -108,6 +118,44 @@ export default function CollectionPage() {
   const group = collections[safeIndex];
   const hasNext = safeIndex < collections.length - 1;
   const hasPrev = safeIndex > 0;
+
+  const goTo = useCallback((nextIndex: number, dir: number) => {
+    const now = Date.now();
+    if (isTransitioning.current || now - lastScrollTime.current < SCROLL_COOLDOWN) return;
+    lastScrollTime.current = now;
+    isTransitioning.current = true;
+    setDirection(dir);
+    setLocation(`/collections/${nextIndex}`);
+    setTimeout(() => { isTransitioning.current = false; }, SCROLL_COOLDOWN);
+  }, [setLocation]);
+
+  // Scroll wheel navigation
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (buyModal) return;
+      const inner = scrollRef.current;
+      if (!inner) return;
+
+      const atBottom = inner.scrollTop + inner.clientHeight >= inner.scrollHeight - 4;
+      const atTop = inner.scrollTop <= 4;
+
+      if (e.deltaY > 0 && hasNext && atBottom) {
+        e.preventDefault();
+        goTo(safeIndex + 1, 1);
+      } else if (e.deltaY < 0 && hasPrev && atTop) {
+        e.preventDefault();
+        goTo(safeIndex - 1, -1);
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, [safeIndex, hasNext, hasPrev, buyModal, goTo]);
+
+  // Reset inner scroll to top on collection change
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, [safeIndex]);
 
   const handleBuyOpen = (e: React.MouseEvent, preset: any) => {
     e.stopPropagation();
@@ -243,6 +291,25 @@ export default function CollectionPage() {
     );
   };
 
+  // Animation variants: direction 1 = next (slide up), -1 = prev (slide down)
+  const variants = {
+    enter: (dir: number) => ({
+      y: dir > 0 ? '6%' : '-6%',
+      opacity: 0,
+      filter: 'blur(8px)',
+    }),
+    center: {
+      y: '0%',
+      opacity: 1,
+      filter: 'blur(0px)',
+    },
+    exit: (dir: number) => ({
+      y: dir > 0 ? '-6%' : '6%',
+      opacity: 0,
+      filter: 'blur(8px)',
+    }),
+  };
+
   return (
     <div className="fixed inset-0 overflow-hidden bg-background">
       {/* Particles */}
@@ -264,7 +331,6 @@ export default function CollectionPage() {
           </button>
         </Link>
         <div className="flex items-center gap-2">
-          {/* Pre-order badge */}
           <span className="text-[9px] font-black uppercase tracking-[0.3em] px-2.5 py-1 rounded-full border border-primary/40 text-primary/70 bg-primary/5">
             ПРЕДЗАКАЗ
           </span>
@@ -285,36 +351,52 @@ export default function CollectionPage() {
             ))}
           </div>
         </div>
-      ) : group ? (
-        <div className="flex flex-col h-full pt-16">
-          {/* Centered collection title */}
-          <div className="flex-none flex flex-col items-center justify-center px-5 pt-6 pb-4 text-center">
-            <p className="text-[9px] uppercase tracking-[0.45em] text-muted-foreground/40 mb-2">
-              Коллекция {safeIndex + 1} / {collections.length}
-            </p>
-            <h2
-              className="font-black tracking-tight leading-none text-foreground"
-              style={{ fontSize: 'clamp(2.2rem, 10vw, 4.5rem)' }}
+      ) : (
+        <AnimatePresence mode="wait" custom={direction}>
+          {group && (
+            <motion.div
+              key={safeIndex}
+              custom={direction}
+              variants={variants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{
+                duration: TRANSITION_DURATION,
+                ease: [0.32, 0.72, 0, 1],
+              }}
+              className="flex flex-col h-full pt-16"
             >
-              {group.displayName}
-            </h2>
-            <p className="text-[10px] text-muted-foreground/40 uppercase tracking-widest mt-2">
-              {group.items.length} моделей · только предзаказ
-            </p>
-          </div>
+              {/* Centered collection title */}
+              <div className="flex-none flex flex-col items-center justify-center px-5 pt-6 pb-4 text-center">
+                <p className="text-[9px] uppercase tracking-[0.45em] text-muted-foreground/40 mb-2">
+                  Коллекция {safeIndex + 1} / {collections.length}
+                </p>
+                <h2
+                  className="font-black tracking-tight leading-none text-foreground"
+                  style={{ fontSize: 'clamp(2.2rem, 10vw, 4.5rem)' }}
+                >
+                  {group.displayName}
+                </h2>
+                <p className="text-[10px] text-muted-foreground/40 uppercase tracking-widest mt-2">
+                  {group.items.length} моделей · только предзаказ
+                </p>
+              </div>
 
-          {/* Cards */}
-          <div className="flex-1 overflow-y-auto px-5 pb-28 min-h-0">
-            <div className="grid grid-cols-3 gap-3 max-w-2xl mx-auto">
-              {group.items.map((preset: any, idx: number) => (
-                <PresetCard key={preset.id} preset={preset} idx={idx} />
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
+              {/* Cards */}
+              <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 pb-28 min-h-0">
+                <div className="grid grid-cols-3 gap-3 max-w-2xl mx-auto">
+                  {group.items.map((preset: any, idx: number) => (
+                    <PresetCard key={preset.id} preset={preset} idx={idx} />
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
 
-      {/* Prev/Next collection arrows — always fixed at bottom */}
+      {/* Prev/Next collection nav — always fixed at bottom */}
       {!isLoading && collections.length > 1 && (
         <div className="fixed bottom-6 left-0 right-0 z-30 flex flex-col items-center gap-3">
           {/* Collection dots */}
@@ -322,7 +404,7 @@ export default function CollectionPage() {
             {collections.map((_, i) => (
               <button
                 key={i}
-                onClick={() => setLocation(`/collections/${i}`)}
+                onClick={() => goTo(i, i > safeIndex ? 1 : -1)}
                 className="transition-all rounded-full"
                 style={{
                   width: i === safeIndex ? 20 : 6,
@@ -336,7 +418,7 @@ export default function CollectionPage() {
           {/* Down arrow → next collection */}
           {hasNext && (
             <button
-              onClick={() => setLocation(`/collections/${safeIndex + 1}`)}
+              onClick={() => goTo(safeIndex + 1, 1)}
               className="text-muted-foreground/40 hover:text-muted-foreground/80 transition-colors"
               style={{ animation: 'bounce 1.8s infinite' }}
             >
@@ -348,7 +430,7 @@ export default function CollectionPage() {
           {/* Up arrow → prev collection */}
           {hasPrev && !hasNext && (
             <button
-              onClick={() => setLocation(`/collections/${safeIndex - 1}`)}
+              onClick={() => goTo(safeIndex - 1, -1)}
               className="text-muted-foreground/40 hover:text-muted-foreground/80 transition-colors rotate-180"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
