@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useListPresets, useGetMyOrders } from '@workspace/api-client-react';
 import { useLocation, Link } from 'wouter';
 import { useWatchConfig } from '@/hooks/use-watch-config';
@@ -49,8 +49,6 @@ export default function Collections() {
   const [buyError, setBuyError] = useState('');
 
   const [inventory, setInventory] = useState<InventoryData>({});
-  const [activeSection, setActiveSection] = useState(0);
-  const sectionRefs = useRef<(HTMLElement | null)[]>([]);
 
   useEffect(() => {
     fetch('/api/presets/inventory')
@@ -70,30 +68,6 @@ export default function Collections() {
     })).filter(g => g.items.length > 0),
     ...(classics.length > 0 ? [{ name: null, displayName: 'КЛАССИКА', items: classics.slice(0, MAX_PER_COLLECTION) }] : []),
   ];
-
-  // Track which section is in view to highlight the nav tab
-  useEffect(() => {
-    if (sectionRefs.current.length === 0) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const idx = sectionRefs.current.findIndex(el => el === entry.target);
-            if (idx !== -1) setActiveSection(idx);
-          }
-        }
-      },
-      { rootMargin: '-30% 0px -60% 0px', threshold: 0 }
-    );
-    sectionRefs.current.forEach(el => { if (el) obs.observe(el); });
-    return () => obs.disconnect();
-  }, [collections.length]);
-
-  const scrollToSection = useCallback((idx: number) => {
-    const el = sectionRefs.current[idx];
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
 
   const handleSelectPreset = (preset: any) => {
     updateConfig({
@@ -251,8 +225,8 @@ export default function Collections() {
               <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
                 {MAT_LABELS[preset.braceletMaterial] ?? preset.braceletMaterial}
               </span>
-              <span className="text-xs text-primary font-bold group-hover:text-primary/80 transition-colors">
-                Смотреть →
+              <span className="text-xs text-primary/60 font-semibold">
+                Смотреть
               </span>
             </div>
           </div>
@@ -285,59 +259,47 @@ export default function Collections() {
       <div className="fixed bottom-[-5%] left-[-5%] w-[400px] h-[400px] rounded-full pointer-events-none"
         style={{ background: 'var(--orb-2)', filter: 'blur(90px)', opacity: 0.28 }} />
 
-      {/* Sticky header + nav */}
+      {/* Sticky header */}
       <div
         className="sticky top-0 z-30"
         style={{ background: 'rgba(var(--background-rgb, 10,10,14), 0.88)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
       >
-        <div className="px-5 pt-5 pb-0 md:px-10 max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <Link href="/">
-                <button className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 liquid-button px-3 py-1.5">
-                  ← Назад
-                </button>
-              </Link>
-              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground/60">
-                ЧЕБЛЯЧАС · КОЛЛЕКЦИИ
-              </p>
-            </div>
-            {hasOrders && (
-              <Link href="/orders">
-                <button className="liquid-button px-4 py-2 text-xs font-semibold">
-                  Мои заказы
-                </button>
-              </Link>
-            )}
+        <div className="px-5 py-4 md:px-10 max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/">
+              <button className="text-xs text-muted-foreground hover:text-foreground transition-colors liquid-button px-3 py-1.5">
+                Назад
+              </button>
+            </Link>
+            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground/60">
+              ЧЕБЛЯЧАС · КОЛЛЕКЦИИ
+            </p>
           </div>
-
-          {/* Collection nav tabs */}
-          {!isLoading && collections.length > 0 && (
-            <div className="flex items-end gap-0">
-              {collections.map((c, i) => (
-                <button
-                  key={i}
-                  onClick={() => scrollToSection(i)}
-                  className={cn(
-                    'text-xs font-black tracking-widest uppercase transition-all px-4 py-2 border-b-2',
-                    activeSection === i
-                      ? 'text-foreground border-primary'
-                      : 'text-muted-foreground/40 hover:text-muted-foreground border-transparent'
-                  )}
-                >
-                  {c.displayName}
-                </button>
-              ))}
-            </div>
+          {hasOrders && (
+            <Link href="/orders">
+              <button className="liquid-button px-4 py-2 text-xs font-semibold">
+                Мои заказы
+              </button>
+            </Link>
           )}
         </div>
       </div>
 
-      {/* Page title */}
-      <div className="px-5 pt-8 pb-4 md:px-10 max-w-6xl mx-auto">
+      {/* Page title + scroll hint */}
+      <div className="px-5 pt-8 pb-6 md:px-10 max-w-6xl mx-auto">
         <h1 className="text-4xl md:text-5xl font-black tracking-tight animate-fade-up">
           Готовые коллекции
         </h1>
+        <div className="mt-6 flex justify-center">
+          <div
+            className="flex flex-col items-center gap-1 text-muted-foreground/30 animate-bounce"
+            style={{ animationDuration: '1.8s' }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
+        </div>
       </div>
 
       {/* Content */}
@@ -354,8 +316,7 @@ export default function Collections() {
           collections.map((group, gi) => (
             <section
               key={group.name ?? '__classics'}
-              ref={el => { sectionRefs.current[gi] = el; }}
-              className="px-5 md:px-10 pb-16 scroll-mt-24"
+              className="px-5 md:px-10 pb-16"
             >
               <div className="max-w-6xl mx-auto">
                 {/* Section header */}
