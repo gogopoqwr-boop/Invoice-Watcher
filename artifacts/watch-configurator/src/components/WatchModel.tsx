@@ -146,29 +146,40 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled }: {
   // Center + hands: canvas texture already draws it — nothing to add here
   if (mode === 'center' && handsEnabled) return null;
 
-  // Z sits just above the face disc surface and below the crystal
+  // Sits just above the face disc and below the crystal
   const textZ = faceZ + 0.022;
 
   if (mode === 'circular') {
-    // Spread chars evenly across an arc spanning the top hemisphere.
-    // Each letter is rotated so its baseline faces the dial centre (like clock numerals).
-    const chars = Array.from(trimmed).filter(c => c !== ' ');
+    // Replace spaces with · so the ring always reads cleanly.
+    // Full 360° ring for ≥5 chars; shorter text arcs across the top half only.
+    const chars = Array.from(trimmed.replace(/ /g, '·'));
     const count = chars.length;
-    const arcSpan = Math.min(Math.PI * 1.72, count * 0.30);
-    const startAngle = Math.PI / 2 + arcSpan / 2;
-    const step = count > 1 ? arcSpan / count : 0;
-    const circR = 1.22;
-    const fontSize = Math.max(0.10, Math.min(0.19, 0.92 / Math.max(count, 4)));
+    if (count === 0) return null;
+
+    const fullRing  = count >= 5;
+    const arcSpan   = fullRing ? Math.PI * 2 : Math.min(Math.PI * 1.55, count * 0.44);
+    const circR     = 1.21;
+    const fontSize  = Math.max(0.082, Math.min(0.185, 1.05 / Math.max(count, 5)));
+
+    // Clockwise from 12 o'clock: angle decreases in math convention.
+    // For a full ring the step is evenly divided; for a partial arc we
+    // centre on 12 o'clock (π/2) and spread symmetrically.
+    const startAngle = fullRing
+      ? Math.PI / 2                                // start at 12 for full ring
+      : Math.PI / 2 + arcSpan / 2 - arcSpan / count / 2; // centre arc at 12
+
+    const angleStep = fullRing
+      ? Math.PI * 2 / count
+      : arcSpan / Math.max(count - 1, 1);
 
     return (
       <group position={[0, 0, textZ]}>
         {chars.map((ch, i) => {
-          const angle = startAngle - (i + 0.5) * step;
+          const angle = startAngle - i * angleStep;
           const x = circR * Math.cos(angle);
           const y = circR * Math.sin(angle);
-          // rotZ: rotate the letter so its "up" points outward from center,
-          // making it read like a clock numeral facing the viewer.
-          // angle - π/2 maps 12 o'clock (π/2) to 0 rotation (upright).
+          // rotZ: angle − π/2 makes each letter's bottom point toward the
+          // dial centre, exactly like clock numerals facing the viewer.
           const rotZ = angle - Math.PI / 2;
           return (
             <group key={i} position={[x, y, 0]} rotation={[0, 0, rotZ]}>
@@ -178,23 +189,23 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled }: {
                 anchorX="center"
                 anchorY="middle"
                 color={handsColor}
-                material-metalness={0.55}
-                material-roughness={0.20}
+                material-metalness={0.72}
+                material-roughness={0.12}
               >
                 {ch}
               </Text>
             </group>
           );
         })}
-        {/* Subtle brand subtitle inside the ring */}
+        {/* Brand mark at centre */}
         <Text
           font={FONT_URL}
-          fontSize={0.058}
+          fontSize={0.055}
           anchorX="center"
           anchorY="middle"
-          position={[0, -0.16, 0]}
+          position={[0, -0.18, 0]}
           color={handsColor}
-          material-opacity={0.35}
+          material-opacity={0.30}
           material-transparent
         >
           ЧЕБЛЯЧАС
@@ -203,11 +214,12 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled }: {
     );
   }
 
-  // mode === 'center', no hands — bold centred text, large enough to fill the dial
+  // ── mode === 'center', no hands ─────────────────────────────────────────────
+  // Bold centred 3D text sized to fill the dial.
   const lines = trimmed.split('\n').filter(Boolean).slice(0, 4);
   const maxLen = Math.max(...lines.map(l => l.length), 1);
-  const fSize = Math.min(0.30, Math.max(0.09, 0.80 / maxLen));
-  const lineH = fSize * 1.35;
+  const fSize  = Math.min(0.32, Math.max(0.09, 0.82 / maxLen));
+  const lineH  = fSize * 1.35;
   const totalH = (lines.length - 1) * lineH;
 
   return (
@@ -221,8 +233,8 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled }: {
           anchorY="middle"
           position={[0, totalH / 2 - i * lineH, 0]}
           color={handsColor}
-          material-metalness={0.60}
-          material-roughness={0.15}
+          material-metalness={0.68}
+          material-roughness={0.14}
         >
           {line}
         </Text>
@@ -230,12 +242,12 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled }: {
       {/* Subtle brand */}
       <Text
         font={FONT_URL}
-        fontSize={0.058}
+        fontSize={0.055}
         anchorX="center"
         anchorY="middle"
-        position={[0, -totalH / 2 - fSize * 0.82, 0]}
+        position={[0, -totalH / 2 - fSize * 0.85, 0]}
         color={handsColor}
-        material-opacity={0.30}
+        material-opacity={0.28}
         material-transparent
       >
         ЧЕБЛЯЧАС
