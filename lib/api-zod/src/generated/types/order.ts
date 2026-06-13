@@ -10,6 +10,8 @@ import type { WatchConfig } from './watchConfig';
 
 export interface Order {
   id: number;
+  /** @nullable */
+  paymentToken?: string | null;
   configId: number;
   config?: WatchConfig;
   /** @nullable */

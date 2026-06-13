@@ -246,6 +246,7 @@ export const ListOrdersQueryParams = zod.object({
 export const ListOrdersResponse = zod.object({
   "orders": zod.array(zod.object({
   "id": zod.number(),
+  "paymentToken": zod.string().nullish(),
   "configId": zod.number(),
   "config": zod.object({
   "id": zod.number(),
@@ -314,6 +315,7 @@ export const GetMyOrdersQueryParams = zod.object({
 
 export const GetMyOrdersResponseItem = zod.object({
   "id": zod.number(),
+  "paymentToken": zod.string().nullish(),
   "configId": zod.number(),
   "config": zod.object({
   "id": zod.number(),
@@ -366,6 +368,7 @@ export const GetOrderParams = zod.object({
 
 export const GetOrderResponse = zod.object({
   "id": zod.number(),
+  "paymentToken": zod.string().nullish(),
   "configId": zod.number(),
   "config": zod.object({
   "id": zod.number(),
@@ -422,6 +425,7 @@ export const UpdateOrderStatusBody = zod.object({
 
 export const UpdateOrderStatusResponse = zod.object({
   "id": zod.number(),
+  "paymentToken": zod.string().nullish(),
   "configId": zod.number(),
   "config": zod.object({
   "id": zod.number(),
@@ -477,6 +481,7 @@ export const RequestOrderCancelBody = zod.object({
 
 export const RequestOrderCancelResponse = zod.object({
   "id": zod.number(),
+  "paymentToken": zod.string().nullish(),
   "configId": zod.number(),
   "config": zod.object({
   "id": zod.number(),
@@ -532,6 +537,7 @@ export const RefundOrderBody = zod.object({
 
 export const RefundOrderResponse = zod.object({
   "id": zod.number(),
+  "paymentToken": zod.string().nullish(),
   "configId": zod.number(),
   "config": zod.object({
   "id": zod.number(),

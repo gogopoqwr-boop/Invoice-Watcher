@@ -78,8 +78,9 @@ export default function Payment() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'bebebeabot';
-  const deepLink = `tg://resolve?domain=${botUsername}&start=pay_${orderId}`;
-  const webLink = `https://t.me/${botUsername}?start=pay_${orderId}`;
+  const payParam = (order as any)?.paymentToken ? `pay_${(order as any).paymentToken}` : `pay_${orderId}`;
+  const deepLink = `tg://resolve?domain=${botUsername}&start=${payParam}`;
+  const webLink = `https://t.me/${botUsername}?start=${payParam}`;
 
   useEffect(() => {
     if (order?.status && order.status !== 'payment_pending' && order.status !== 'cancelled') {

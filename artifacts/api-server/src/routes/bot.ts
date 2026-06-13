@@ -229,8 +229,20 @@ router.post("/bot/webhook", async (req, res) => {
         const param = parts[1]?.trim();
 
         if (param?.startsWith("pay_")) {
-          const orderId = parseInt(param.replace("pay_", ""), 10);
-          if (!isNaN(orderId)) {
+          const token = param.slice(4); // strip "pay_"
+          // Support both new hex-token format and legacy numeric ID
+          let orderId: number | null = null;
+          if (/^\d+$/.test(token)) {
+            orderId = parseInt(token, 10);
+          } else {
+            const [found] = await db
+              .select({ id: ordersTable.id })
+              .from(ordersTable)
+              .where(eq(ordersTable.paymentToken, token))
+              .limit(1);
+            orderId = found?.id ?? null;
+          }
+          if (orderId !== null) {
             try {
               await sendWatchInvoice(chatId, orderId);
             } catch (err) {

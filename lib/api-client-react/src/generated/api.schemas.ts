@@ -352,6 +352,8 @@ export const OrderStatus = {
 
 export interface Order {
   id: number;
+  /** @nullable */
+  paymentToken?: string | null;
   configId: number;
   config?: WatchConfig;
   /** @nullable */

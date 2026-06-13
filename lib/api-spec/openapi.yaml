@@ -704,6 +704,8 @@ components:
       properties:
         id:
           type: integer
+        paymentToken:
+          type: ["string", "null"]
         configId:
           type: integer
         config:

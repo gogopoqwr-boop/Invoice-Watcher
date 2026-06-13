@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, ordersTable, watchConfigsTable } from "@workspace/db";
 import { eq, desc, and, count, sql } from "drizzle-orm";
+import { randomBytes } from "crypto";
 import { sendStatusNotification } from "./bot.js";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
@@ -89,7 +90,9 @@ router.get("/orders/:id", async (req, res) => {
 router.post("/orders", async (req, res) => {
   try {
     const body = req.body;
+    const paymentToken = randomBytes(16).toString("hex");
     const [order] = await db.insert(ordersTable).values({
+      paymentToken,
       configId: body.configId,
       userEmail: body.userEmail ?? null,
       telegramId: body.telegramId ?? null,
