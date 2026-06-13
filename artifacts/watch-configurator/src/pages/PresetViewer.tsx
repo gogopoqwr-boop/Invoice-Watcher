@@ -160,7 +160,7 @@ export default function PresetViewer() {
 
       const orderRes = await fetch('/api/orders', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ configId: cfg.id, sessionId, totalStars: price.totalStars ?? preset.priceStars }),
+        body: JSON.stringify({ configId: cfg.id, sessionId, totalStars: preset.priceStars }),
       });
       if (!orderRes.ok) return;
       const order = await orderRes.json();

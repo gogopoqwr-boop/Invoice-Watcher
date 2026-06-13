@@ -194,7 +194,7 @@ export default function CollectionPage() {
       const price = await priceRes.json();
       const orderRes = await fetch('/api/orders', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ configId: cfg.id, sessionId, totalStars: price.totalStars ?? buyModal.priceStars }),
+        body: JSON.stringify({ configId: cfg.id, sessionId, totalStars: buyModal.priceStars }),
       });
       if (!orderRes.ok) throw new Error('order');
       const order = await orderRes.json();
