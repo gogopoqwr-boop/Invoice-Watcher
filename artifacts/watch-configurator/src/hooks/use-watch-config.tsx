@@ -10,14 +10,20 @@ import {
 
 type ApiConfigState = Omit<WatchConfigInput, "sessionId">;
 
+export type BoxType = 'standard' | 'premium' | 'collector';
+
 export type ExtendedConfigState = ApiConfigState & {
   presetId?: number;
-  collectionName?: string;   // drives box theme on the BoxReveal page
+  collectionName?: string;
   watchfaceText?: string;
   watchfaceTextMode?: "center" | "circular";
   handsCount?: number; // 0 | 2 | 3
   watchfaceBackgroundType?: "solid" | "gradient";
   watchfaceGradientEnd?: string;
+  // Box setup (filled on /box step, before order creation)
+  boxType?: BoxType;
+  boxMessage?: string;
+  giftWrap?: boolean;
 };
 
 const defaultState: ExtendedConfigState = {

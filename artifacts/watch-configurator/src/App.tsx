@@ -9,6 +9,7 @@ import Collections from "@/pages/Collections";
 import CollectionPage from "@/pages/CollectionPage";
 import PresetViewer from "@/pages/PresetViewer";
 import Configure from "@/pages/Configure";
+import BoxSetup from "@/pages/BoxSetup";
 import Payment from "@/pages/Payment";
 import Orders from "@/pages/Orders";
 import Login from "@/pages/Login";
@@ -56,6 +57,7 @@ function Router() {
       <Route path="/collections/:index" component={CollectionPage} />
       <Route path="/preset/:id" component={PresetViewer} />
       <Route path="/configure" component={Configure} />
+      <Route path="/box" component={BoxSetup} />
       <Route path="/payment/:orderId" component={Payment} />
       <Route path="/orders" component={Orders} />
       <Route path="/login" component={Login} />

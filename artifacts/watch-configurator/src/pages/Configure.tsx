@@ -8,8 +8,6 @@ import { WebGLErrorBoundary } from '@/components/WebGLErrorBoundary';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import { BRACELET_COMBOS } from '@/components/WatchFullscreenViewer';
 import {
-  useCreateConfiguration,
-  useCreateOrder,
   useCalculatePrice,
   WatchConfigInputBraceletType,
 } from '@workspace/api-client-react';
@@ -140,16 +138,12 @@ export default function Configure() {
     if (!hasPreset) setLocation('/collections');
   }, [hasPreset]);
 
-  const [submitting, setSubmitting] = useState(false);
-  const [orderError, setOrderError] = useState<string | null>(null);
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
   const [showWrist, setShowWrist] = useState(false);
   const lastInteractionRef = useRef<number>(0);
   const webglAvailable = useMemo(() => isWebGLAvailable(), []);
 
-  const createConfig = useCreateConfiguration();
-  const createOrder = useCreateOrder();
   const calcPrice = useCalculatePrice();
 
   // Derive which combo is currently selected (fallback to first)
@@ -188,43 +182,7 @@ export default function Configure() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.braceletMaterial, config.watchfaceMaterial, config.handsEnabled]);
 
-  const handleOrder = async () => {
-    setSubmitting(true);
-    setOrderError(null);
-    try {
-      const cfg = await createConfig.mutateAsync({
-        data: {
-          watchfaceGeometry: config.watchfaceGeometry,
-          watchfaceMaterial: config.watchfaceMaterial,
-          watchfaceColor: config.watchfaceColor,
-          braceletMaterial: config.braceletMaterial,
-          braceletType: config.braceletType,
-          braceletColor: config.braceletColor,
-          handsEnabled: config.handsEnabled,
-          handsColor: config.handsColor,
-          handsStyle: config.watchfaceText || undefined,
-          serialNumber: undefined,
-          sessionId,
-        },
-      });
-      const priceResult = await calcPrice.mutateAsync({
-        data: {
-          watchfaceMaterial: config.watchfaceMaterial,
-          braceletMaterial: config.braceletMaterial,
-          handsEnabled: config.handsEnabled,
-        },
-      });
-      const order = await createOrder.mutateAsync({
-        data: { configId: cfg.id, sessionId, totalStars: priceResult.totalStars },
-      });
-      setLocation(`/payment/${order.id}`);
-    } catch (e) {
-      console.error(e);
-      setOrderError('Не удалось создать заказ. Проверьте соединение и попробуйте снова.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const handleProceedToBox = () => setLocation('/box');
 
   if (!hasPreset) return null;
 
@@ -405,15 +363,10 @@ export default function Configure() {
               <button className="liquid-button h-full px-5 py-3 text-sm font-semibold">← Назад</button>
             </Link>
             <button
-              onClick={handleOrder}
-              disabled={submitting}
-              className="flex-1 py-3 rounded-full text-sm font-bold tracking-widest uppercase bg-primary text-white shadow-lg hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60 transition-all"
+              onClick={handleProceedToBox}
+              className="flex-1 py-3 rounded-full text-sm font-bold tracking-widest uppercase bg-primary text-white shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all"
             >
-              {submitting
-                ? 'Оформление...'
-                : livePrice !== null
-                ? `Оформить — ${livePrice} ⭐`
-                : 'Оформить заказ →'}
+              {livePrice !== null ? `Упаковка — ${livePrice} ⭐ →` : 'Выбрать упаковку →'}
             </button>
           </div>
         </div>
