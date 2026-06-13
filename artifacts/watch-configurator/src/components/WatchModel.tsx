@@ -319,9 +319,9 @@ function StrapClasp({ sign, claspColor, isDeployant, width }: {
 // sign   +1 = upper arm (strap grows +Y), −1 = lower arm (−Y).
 // θ      a @react-spring SpringValue<number> — React Spring writes the GPU
 //        matrix every animation frame without triggering React re-renders.
-function StrapJoint({ k, sign, θ, color, mat, isSegmented, claspColor, width }: {
+function StrapJoint({ k, sign, θ, color, mat, isSegmented, isDeployant, claspColor, width }: {
   k: number; sign: number; θ: any;
-  color: string; mat: string; isSegmented: boolean; claspColor: string; width: number;
+  color: string; mat: string; isSegmented: boolean; isDeployant: boolean; claspColor: string; width: number;
 }) {
   const segH    = SEG_LEN * 0.86;
   const isResin = mat === 'resin';
@@ -333,7 +333,7 @@ function StrapJoint({ k, sign, θ, color, mat, isSegmented, claspColor, width }:
 
   // Terminus: render clasp instead of another joint
   if (k >= WRAP_SEGS) {
-    return <StrapClasp sign={sign} claspColor={claspColor} isDeployant={isSegmented} width={width} />;
+    return <StrapClasp sign={sign} claspColor={claspColor} isDeployant={isDeployant} width={width} />;
   }
 
   return (
@@ -367,7 +367,7 @@ function StrapJoint({ k, sign, θ, color, mat, isSegmented, claspColor, width }:
       {/* Next joint pivot at the far tip of this segment */}
       <group position={[0, sign * SEG_LEN, 0]}>
         <StrapJoint k={k + 1} sign={sign} θ={θ} color={color} mat={mat}
-          isSegmented={isSegmented} claspColor={claspColor} width={width} />
+          isSegmented={isSegmented} isDeployant={isDeployant} claspColor={claspColor} width={width} />
       </group>
     </animated.group>
   );
@@ -805,6 +805,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   }), [config.watchfaceColor, config.watchfaceMaterial]);
 
   const isSegmented = config.braceletMaterial === 'metal_segmented';
+  const isDeployant = config.braceletType === 'segmented';
   const caseHalf = shapeHalfWidth(config.watchfaceGeometry);
   const faceZ = 0.48;
   const crystalZ = 0.56;
@@ -1000,7 +1001,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         <animated.group position-z={spread}>
           <StrapJoint k={0} sign={1} θ={θUpper}
             color={config.braceletColor} mat={config.braceletMaterial}
-            isSegmented={isSegmented} claspColor={caseMat.color}
+            isSegmented={isSegmented} isDeployant={isDeployant} claspColor={caseMat.color}
             width={config.strapWidth ?? 1} />
         </animated.group>
       </group>
@@ -1010,7 +1011,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         <animated.group position-z={spread}>
           <StrapJoint k={0} sign={-1} θ={θLower}
             color={config.braceletColor} mat={config.braceletMaterial}
-            isSegmented={isSegmented} claspColor={caseMat.color}
+            isSegmented={isSegmented} isDeployant={isDeployant} claspColor={caseMat.color}
             width={config.strapWidth ?? 1} />
         </animated.group>
       </group>
