@@ -10,7 +10,12 @@ pnpm --filter @workspace/scripts run seed
 ```
 
 ## Why
-The DB starts empty. The seed script inserts 6 presets (Midnight Steel, Arctic Frost, Crimson Core, Carbon Ghost, Gold Rush, Ocean Drive) and 2 admin users (admin/FutureAfterWatch3s, courier1/courier123). Without the seed the collections page shows empty.
+The DB starts empty. The seed script inserts 23 presets across 4 collections:
+- КЛАССИКА (6): Midnight Steel, Arctic Frost, Crimson Core, Carbon Ghost, Gold Rush, Ocean Drive
+- РОФЛ (7): ДОХУИЩА, МНОГО, АЛЕ, TOO MUCH, БЕЗ ПЯТИ ШЕСТЬ УТРОВ, ЧЕТЫРЕ ЧАСОВ ЧАСА, A LOT
+- ГИПЕРСЕРЬЕЗНОСТЬ (5): KPI, DEADLINE, Q1, ASAP, EXEC
+- ЖИВНОСТЬ (5): ПАУК, КРАКЕН, ДРАКОН, ЧУДИК, КИБЕР
+And 2 admin users (admin/FutureAfterWatch3s, courier1/courier123). Without the seed the collections page shows empty.
 
 ## How to apply
 - After a DB wipe or fresh provision, run the seed command above.
