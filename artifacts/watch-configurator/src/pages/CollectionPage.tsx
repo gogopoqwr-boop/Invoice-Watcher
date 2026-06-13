@@ -275,7 +275,7 @@ export default function CollectionPage() {
           style={{ animationDelay: `${idx * 0.05}s` }}
         >
           <div
-            className="h-32 overflow-hidden relative"
+            className="h-44 overflow-hidden relative"
             style={{ background: `linear-gradient(135deg, ${preset.watchfaceColor}22, ${preset.braceletColor}18)` }}
           >
             <WatchMiniCanvas preset={preset} paused={false} forceMount />
@@ -380,7 +380,7 @@ export default function CollectionPage() {
       {/* Content */}
       {isLoading ? (
         <div className="flex items-center justify-center h-full">
-          <div className="grid grid-cols-3 gap-3 px-5 w-full max-w-md">
+          <div className="grid grid-cols-2 gap-3 px-5 w-full max-w-md">
             {[1,2,3,4,5,6].map(i => (
               <div key={i} className="liquid-glass rounded-2xl h-44 animate-pulse" />
             ))}
@@ -420,7 +420,7 @@ export default function CollectionPage() {
 
               {/* Cards */}
               <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 pb-28 min-h-0">
-                <div className="grid grid-cols-3 gap-3 max-w-2xl mx-auto">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-3xl mx-auto">
                   {group.items.map((preset: any, idx: number) => (
                     <PresetCard key={preset.id} preset={preset} idx={idx} />
                   ))}
