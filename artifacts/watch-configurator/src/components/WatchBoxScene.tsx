@@ -68,8 +68,8 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
   const s = BOX_STYLES[boxType as keyof typeof BOX_STYLES] ?? BOX_STYLES.standard;
 
   const { lidAngle } = useSpring({
-    lidAngle: open ? -Math.PI * 0.93 : 0.02,
-    config: { mass: 1.2, tension: 52, friction: 17 },
+    lidAngle: open ? -Math.PI * 0.54 : 0.02,
+    config: { mass: 1.4, tension: 48, friction: 20 },
   });
 
   const bodyMat  = { color: s.bodyColor,  metalness: s.metalness,    roughness: s.roughness    };
@@ -383,14 +383,17 @@ function Scene({ config, boxType, autoOpen }: { config: WatchConfig; boxType: st
 
   return (
     <>
-      <ambientLight intensity={0.40} />
-      <spotLight position={[4, 7, 5]} angle={0.26} penumbra={0.7} intensity={2.4} castShadow shadow-mapSize={[1024, 1024]} />
-      <directionalLight position={[-4, 4, 3]} intensity={0.55} color="#c4d4f0" />
-      <pointLight position={[0, 5, -3]} intensity={0.6} color="#f0eaff" />
-      <pointLight position={[3, -1, 4]} intensity={0.35} color="#ffffff" />
+      <ambientLight intensity={0.55} />
+      <spotLight position={[6, 8, 5]} angle={0.24} penumbra={0.6} intensity={2.8} castShadow shadow-mapSize={[1024, 1024]} />
+      <directionalLight position={[-3, 5, 4]} intensity={0.7} color="#c4d4f0" />
+      <pointLight position={[0, 6, -2]} intensity={0.5} color="#f0eaff" />
+      <pointLight position={[4, 0, 5]} intensity={0.4} color="#ffffff" />
       <Environment preset="city" />
-      <Box3D boxType={boxType} open={open} />
-      <WatchInBox config={config} visible={open} />
+      {/* Y-rotation shows front + right face; negative tilts left edge toward camera */}
+      <group rotation={[0, -0.46, 0]}>
+        <Box3D boxType={boxType} open={open} />
+        <WatchInBox config={config} visible={open} />
+      </group>
     </>
   );
 }
@@ -408,30 +411,76 @@ export interface WatchBoxSceneProps {
 export default function WatchBoxScene({ config, boxType = 'standard', autoOpen = true, className }: WatchBoxSceneProps) {
   if (!WEB_GL_OK) {
     const s = BOX_STYLES[boxType as keyof typeof BOX_STYLES] ?? BOX_STYLES.standard;
+    const faceCol   = config.watchfaceColor  ?? '#C0C0C0';
+    const strapCol  = config.braceletColor   ?? '#888888';
+    // Isometric projection: iso(x,y,z) with cx=54,cy=50,s=7,cos30=0.866,sin30=0.5
+    // Visible corners of box (W=4.3, H=1.35, D=2.9):
+    //  E(0,H,0)=(54,37.6)  F(W,H,0)=(80.1,52.7)  H(W,H,D)=(62.5,62.9)  G(0,H,D)=(36.4,47.8)
+    //  A(0,0,0)=(54,47)    B(W,0,0)=(80.1,62.1)   D(W,0,D)=(62.5,72.3)
+    // Open lid top edge (lid pivots at G-H, stands ~90° up):
+    //  G'=(36.4,29.8)  H'=(62.5,44.9)
     return (
-      <div className={`flex items-center justify-center rounded-2xl overflow-hidden ${className ?? 'h-64'}`}
-        style={{ background: `radial-gradient(ellipse at 50% 40%, ${s.bodyColor}cc 0%, ${s.bodyColor}55 60%, transparent 100%)` }}>
-        <svg viewBox="0 0 120 80" className="w-44 opacity-70" xmlns="http://www.w3.org/2000/svg">
+      <div
+        className={`flex items-center justify-center rounded-2xl overflow-hidden ${className ?? 'h-64'}`}
+        style={{ background: `radial-gradient(ellipse at 50% 55%, ${s.bodyColor}ee 0%, ${s.bodyColor}66 55%, transparent 100%)` }}
+      >
+        <svg viewBox="28 24 58 54" className="w-full max-w-xs" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <linearGradient id="fb-lid" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id="iso-lid" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={s.lidColor} />
               <stop offset="100%" stopColor={s.bodyColor} />
             </linearGradient>
-            <linearGradient id="fb-body" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id="iso-front" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={s.rimColor} stopOpacity="0.9" />
+              <stop offset="100%" stopColor={s.bodyColor} />
+            </linearGradient>
+            <linearGradient id="iso-right" x1="1" y1="0" x2="0" y2="0">
               <stop offset="0%" stopColor={s.bodyColor} />
-              <stop offset="100%" stopColor={s.interiorColor} />
+              <stop offset="100%" stopColor={s.rimColor} stopOpacity="0.7" />
             </linearGradient>
           </defs>
-          {/* Isometric box base */}
-          <polygon points="60,28 100,42 100,68 60,54" fill={s.bodyColor} />
-          <polygon points="20,42 60,28 60,54 20,68" fill={s.rimColor} />
-          <polygon points="20,42 60,28 100,42 60,56" fill="url(#fb-lid)" />
-          {/* Open lid floated above */}
-          <polygon points="20,22 60,8 100,22 60,36" fill="url(#fb-lid)" stroke={s.accentColor} strokeWidth="0.5" />
-          {/* Brand plate on lid */}
-          <polygon points="45,14 60,8.5 75,14 60,19.5" fill={s.accentColor} opacity="0.75" />
-          {/* Interior glow */}
-          <ellipse cx="60" cy="50" rx="15" ry="5" fill={s.cushionColor} opacity="0.7" />
+
+          {/* ── Open lid — standing upright behind the box ── */}
+          <polygon points="36.4,47.8 62.5,62.9 62.5,44.9 36.4,29.8" fill="url(#iso-lid)" />
+          {/* Lid rim strip (hinge edge) */}
+          <line x1="36.4" y1="47.8" x2="62.5" y2="62.9" stroke={s.rimColor} strokeWidth="1.2" opacity="0.8" />
+          {/* Brand accent plate on lid */}
+          {(boxType === 'premium' || boxType === 'collector') && (
+            <polygon points="42.5,44.8 56.5,39.4 56.5,35.4 42.5,40.8" fill={s.accentColor} opacity="0.9" />
+          )}
+          {/* Lid highlight */}
+          <polygon points="36.4,47.8 62.5,62.9 62.5,44.9 36.4,29.8" fill="rgba(255,255,255,0.06)" />
+          {/* Lid top edge */}
+          <line x1="36.4" y1="29.8" x2="62.5" y2="44.9" stroke={s.rimColor} strokeWidth="0.6" opacity="0.5" />
+
+          {/* ── Box front face  A→B→F→E ── */}
+          <polygon points="54,47 80.1,62.1 80.1,52.7 54,37.6" fill="url(#iso-front)" />
+
+          {/* ── Box right face  B→D→H→F ── */}
+          <polygon points="80.1,62.1 62.5,72.3 62.5,62.9 80.1,52.7" fill="url(#iso-right)" />
+
+          {/* ── Box top / interior face  E→F→H→G ── */}
+          <polygon points="54,37.6 80.1,52.7 62.5,62.9 36.4,47.8" fill={s.interiorColor} />
+
+          {/* Interior cushion */}
+          <polygon points="57.5,40.4 77.2,51.5 61.8,60.1 42.2,49.1" fill={s.cushionColor} opacity="0.75" />
+
+          {/* ── Watch silhouette inside the box ── */}
+          {/* Strap bottom (toward back/+z in iso: left-down direction) */}
+          <line x1="54.2" y1="52.4" x2="50.2" y2="55.0" stroke={strapCol} strokeWidth="3.5" strokeLinecap="round" opacity="0.72" />
+          {/* Strap top (toward front/-z in iso: right-up direction) */}
+          <line x1="65.2" y1="48.8" x2="69.2" y2="46.2" stroke={strapCol} strokeWidth="3.5" strokeLinecap="round" opacity="0.72" />
+          {/* Watch face oval */}
+          <ellipse cx="59.7" cy="50.5" rx="10" ry="5.8" fill={faceCol} opacity="0.90" />
+          {/* Watch face shine */}
+          <ellipse cx="57.8" cy="49.0" rx="3.5" ry="2.0" fill="rgba(255,255,255,0.22)" />
+
+          {/* ── Edge highlights ── */}
+          <line x1="54" y1="37.6" x2="80.1" y2="52.7" stroke={s.rimColor} strokeWidth="0.9" opacity="0.7" />
+          <line x1="54" y1="37.6" x2="36.4" y2="47.8" stroke={s.rimColor} strokeWidth="0.7" opacity="0.5" />
+          <line x1="80.1" y1="62.1" x2="80.1" y2="52.7" stroke={s.rimColor} strokeWidth="0.5" opacity="0.4" />
+          <line x1="54" y1="47" x2="54" y2="37.6" stroke={s.rimColor} strokeWidth="0.5" opacity="0.35" />
+          <line x1="80.1" y1="62.1" x2="62.5" y2="72.3" stroke={s.rimColor} strokeWidth="0.4" opacity="0.3" />
         </svg>
       </div>
     );
@@ -440,7 +489,7 @@ export default function WatchBoxScene({ config, boxType = 'standard', autoOpen =
   return (
     <div className={`w-full ${className ?? 'h-64'} rounded-2xl overflow-hidden`}>
       <Canvas
-        camera={{ position: [0, 2.8, 6.5], fov: 38 }}
+        camera={{ position: [1.6, 2.4, 8.2], fov: 36 }}
         gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
         style={{ background: 'transparent' }}
         shadows
