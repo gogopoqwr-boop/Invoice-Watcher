@@ -7,6 +7,7 @@ import WatchModel from '@/components/WatchModel';
 import WatchSVG from '@/components/WatchSVG';
 import { WebGLErrorBoundary } from '@/components/WebGLErrorBoundary';
 import { useWatchConfig } from '@/hooks/use-watch-config';
+import { TgStar } from '@/components/TgStar';
 
 function ShareButton({ presetId }: { presetId: string | number }) {
   const [copied, setCopied] = useState(false);
@@ -346,14 +347,14 @@ export default function PresetViewer() {
 
       {/* ── Info panel ── */}
       <div
-        className="relative z-10 flex-none h-[42dvh] md:h-auto md:w-[38%] flex flex-col justify-between"
+        className="relative z-10 flex-none h-[42dvh] md:h-auto md:w-[38%] flex flex-col"
         style={{
           background: 'rgba(10,10,14,0.97)',
           backdropFilter: 'blur(32px)',
           borderTop: '1px solid rgba(255,255,255,0.07)',
         }}
       >
-        <div className="px-6 pt-6 pb-4 flex-1 flex flex-col justify-center gap-4">
+        <div className="px-6 pt-6 pb-4 flex-1 overflow-y-auto flex flex-col justify-center gap-4">
           {preset ? (
             <>
               <div>
@@ -410,7 +411,11 @@ export default function PresetViewer() {
               boxShadow: '0 4px 24px rgba(99,102,241,0.35)',
             }}
           >
-            {preset ? `Заказать — ${preset.priceStars} зв.` : '…'}
+            {preset ? (
+            <span className="flex items-center justify-center gap-2">
+              Заказать — {preset.priceStars} <TgStar size={16} />
+            </span>
+          ) : '…'}
           </button>
           <button
             onClick={handleConfigure}
