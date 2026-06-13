@@ -3,7 +3,7 @@ import { useListPresets, useGetMyOrders } from '@workspace/api-client-react';
 import { useLocation, Link } from 'wouter';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import WatchMiniCanvas from '@/components/WatchMiniCanvas';
-import WatchFullscreenViewer, { BRACELET_COMBOS } from '@/components/WatchFullscreenViewer';
+import { BRACELET_COMBOS } from '@/components/WatchFullscreenViewer';
 import { cn } from '@/lib/utils';
 
 const MAT_LABELS: Record<string, string> = {
@@ -32,7 +32,6 @@ export default function Collections() {
   const { data: presets, isLoading } = useListPresets();
   const [, setLocation] = useLocation();
   const { updateConfig, sessionId } = useWatchConfig();
-  const [fullscreenPreset, setFullscreenPreset] = useState<{ preset: any; rect: DOMRect } | null>(null);
   const { data: myOrders } = useGetMyOrders({ sessionId }, { query: { enabled: !!sessionId } } as any);
   const hasOrders = Array.isArray(myOrders) && (myOrders as any[]).length > 0;
 
@@ -80,7 +79,7 @@ export default function Collections() {
   // Wheel scroll
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
-      if (fullscreenPreset || buyModal) return;
+      if (buyModal) return;
       const now = Date.now();
       if (now - lastWheelTs.current < 900) return;
       if (Math.abs(e.deltaY) < 30) return;
@@ -89,13 +88,13 @@ export default function Collections() {
     };
     window.addEventListener('wheel', onWheel, { passive: true });
     return () => window.removeEventListener('wheel', onWheel);
-  }, [navigate, fullscreenPreset, buyModal]);
+  }, [navigate, buyModal]);
 
   // Touch swipe
   useEffect(() => {
     const onStart = (e: TouchEvent) => { touchStartY.current = e.touches[0].clientY; };
     const onEnd = (e: TouchEvent) => {
-      if (touchStartY.current === null || fullscreenPreset || buyModal) return;
+      if (touchStartY.current === null || buyModal) return;
       const dy = touchStartY.current - e.changedTouches[0].clientY;
       touchStartY.current = null;
       if (Math.abs(dy) < 40) return;
@@ -107,7 +106,7 @@ export default function Collections() {
       window.removeEventListener('touchstart', onStart);
       window.removeEventListener('touchend', onEnd);
     };
-  }, [navigate, fullscreenPreset, buyModal]);
+  }, [navigate, buyModal]);
 
   // Keyboard
   useEffect(() => {
@@ -118,19 +117,6 @@ export default function Collections() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [navigate]);
-
-  const handleSelectPreset = (preset: any) => {
-    updateConfig({
-      presetId: preset.id, collectionName: preset.collectionName ?? undefined,
-      watchfaceGeometry: preset.watchfaceGeometry, watchfaceMaterial: preset.watchfaceMaterial,
-      watchfaceColor: preset.watchfaceColor, braceletMaterial: preset.braceletMaterial,
-      braceletType: preset.braceletType, braceletColor: preset.braceletColor,
-      handsEnabled: preset.handsEnabled, handsColor: preset.handsColor ?? '#cbd5e1',
-      watchfaceText: preset.watchfaceText ?? '', watchfaceTextMode: preset.watchfaceTextMode ?? 'center',
-      handsCount: 3,
-    });
-    setLocation('/configure');
-  };
 
   const handleBuyOpen = (e: React.MouseEvent, preset: any) => {
     e.stopPropagation();
@@ -195,9 +181,16 @@ export default function Collections() {
       if (!root) return;
       setExpanding(true);
       const rect = root.getBoundingClientRect();
+      // Store origin rect so PresetViewer can animate from this card
+      try {
+        sessionStorage.setItem('presetOriginRect', JSON.stringify({
+          top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom,
+          width: rect.width, height: rect.height, x: rect.x, y: rect.y,
+        }));
+      } catch { /* ignore */ }
       setTimeout(() => {
         setExpanding(false);
-        setFullscreenPreset({ preset, rect: rect as DOMRect });
+        setLocation(`/preset/${preset.id}`);
       }, 160);
     };
 
@@ -329,7 +322,7 @@ export default function Collections() {
                 <div className="flex-1 overflow-y-auto px-5 pb-20">
                   <div className="grid grid-cols-3 gap-3 max-w-2xl mx-auto">
                     {group.items.map((preset: any, idx: number) => (
-                      <PresetCard key={preset.id} preset={preset} idx={idx} bgPaused={!!fullscreenPreset} forceMount={gi === active} />
+                      <PresetCard key={preset.id} preset={preset} idx={idx} bgPaused={false} forceMount={gi === active} />
                     ))}
                   </div>
                 </div>
@@ -371,20 +364,6 @@ export default function Collections() {
             </button>
           )}
         </div>
-      )}
-
-      {/* Fullscreen viewer */}
-      {fullscreenPreset && (
-        <WatchFullscreenViewer
-          preset={fullscreenPreset.preset}
-          originRect={fullscreenPreset.rect}
-          onClose={() => setFullscreenPreset(null)}
-          onBuy={(p, color, mat) => {
-            setFullscreenPreset(null);
-            setBuyModal(p); setBuyStrapColor(color); setBuyStrapMat(mat); setBuyError('');
-          }}
-          onConfigure={(p) => { setFullscreenPreset(null); handleSelectPreset(p); }}
-        />
       )}
 
       {/* Buy modal */}

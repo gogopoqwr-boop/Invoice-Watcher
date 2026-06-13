@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 import Home from "@/pages/Home";
 import Collections from "@/pages/Collections";
+import PresetViewer from "@/pages/PresetViewer";
 import Configure from "@/pages/Configure";
 import Payment from "@/pages/Payment";
 import Orders from "@/pages/Orders";
@@ -51,6 +52,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/collections" component={Collections} />
+      <Route path="/preset/:id" component={PresetViewer} />
       <Route path="/configure" component={Configure} />
       <Route path="/payment/:orderId" component={Payment} />
       <Route path="/orders" component={Orders} />
