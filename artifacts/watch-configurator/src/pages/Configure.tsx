@@ -111,7 +111,6 @@ function Watch3DView({ lastInteractionRef, showWrist }: { lastInteractionRef: Re
       <Suspense fallback={null}>
         <WatchModel step={BRACELET_STEP} lastInteractionRef={lastInteractionRef} showWrist={showWrist} />
         <CameraRig step={BRACELET_STEP} lastInteractionRef={lastInteractionRef} />
-        <PresentationBox />
         <Environment preset="city" />
         <ContactShadows position={[0, -5.9, 0]} opacity={0.55} scale={14} blur={2.0} far={6} />
       </Suspense>
@@ -216,7 +215,7 @@ export default function Configure() {
         {webglAvailable && (
           <button
             onClick={() => setShowWrist(v => !v)}
-            className="absolute bottom-3 right-3 z-10 liquid-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"
+            className="absolute top-3 right-3 z-10 liquid-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"
           >
             <span>{showWrist ? '🙈' : '🖐️'}</span>
             <span>{showWrist ? 'Без запястья' : 'На запястье'}</span>
