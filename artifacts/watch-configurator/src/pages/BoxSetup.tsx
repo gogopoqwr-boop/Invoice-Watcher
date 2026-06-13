@@ -8,6 +8,8 @@ import {
 } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
 import WatchBoxScene from '@/components/WatchBoxScene';
+import { Ribbon } from 'lucide-react';
+import { TgStar } from '@/components/TgStar';
 
 
 // ─── Box options data ────────────────────────────────────────────────────────
@@ -243,14 +245,14 @@ export default function BoxSetup() {
               )}
             >
               <div className="flex items-center gap-3">
-                <span className="text-2xl">🎀</span>
+                <Ribbon size={22} className="text-rose-400 shrink-0" />
                 <div>
                   <p className="text-sm font-semibold text-left">Атласная лента с бантом</p>
                   <p className="text-xs text-muted-foreground text-left">Двойной узел, фирменная карточка</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-muted-foreground">+2 ⭐</span>
+                <span className="text-xs text-muted-foreground flex items-center gap-0.5">+2 <TgStar size={11} /></span>
                 <div className={cn(
                   'w-11 h-6 rounded-full transition-all duration-200 relative',
                   giftWrap ? 'bg-rose-500' : 'bg-muted'
@@ -281,20 +283,20 @@ export default function BoxSetup() {
 
           {/* ── Summary ── */}
           <div className="liquid-glass rounded-2xl p-4 space-y-2 text-sm">
-            {[
-              ['Базовая стоимость', basePrice !== null ? `${basePrice} ⭐` : '…'],
-              ['Упаковка', boxOption.surcharge > 0 ? `+${boxOption.surcharge} ⭐` : 'бесплатно'],
-              ['Лента', giftWrap ? '+2 ⭐' : '—'],
-            ].map(([k, v]) => (
-              <div key={k} className="flex justify-between">
+            {([
+              ['Базовая стоимость', basePrice !== null ? <span className="flex items-center gap-0.5 font-medium">{basePrice} <TgStar size={11} /></span> : <span className="font-medium">…</span>],
+              ['Упаковка',         boxOption.surcharge > 0 ? <span className="flex items-center gap-0.5 font-medium">+{boxOption.surcharge} <TgStar size={11} /></span> : <span className="font-medium">бесплатно</span>],
+              ['Лента',            giftWrap ? <span className="flex items-center gap-0.5 font-medium">+2 <TgStar size={11} /></span> : <span className="font-medium">—</span>],
+            ] as [string, React.ReactNode][]).map(([k, v]) => (
+              <div key={k} className="flex justify-between items-center">
                 <span className="text-muted-foreground">{k}</span>
-                <span className="font-medium">{v}</span>
+                {v}
               </div>
             ))}
-            <div className="flex justify-between border-t border-border/40 pt-2 mt-1">
+            <div className="flex justify-between items-center border-t border-border/40 pt-2 mt-1">
               <span className="font-bold">Итого</span>
-              <span className="font-black text-primary">
-                {basePrice !== null ? `${totalStars} ⭐` : '…'}
+              <span className="font-black text-primary flex items-center gap-0.5">
+                {basePrice !== null ? <>{totalStars} <TgStar size={12} /></> : '…'}
               </span>
             </div>
           </div>
@@ -314,7 +316,7 @@ export default function BoxSetup() {
             {submitting
               ? 'Оформление...'
               : basePrice !== null
-              ? `Оплатить — ${totalStars} ⭐`
+              ? `Оплатить — ${totalStars} ★`
               : 'Оплатить →'}
           </button>
         </div>

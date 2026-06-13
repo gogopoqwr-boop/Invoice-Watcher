@@ -284,7 +284,7 @@ export default function CollectionPage() {
             {preset.priceStars != null && (
               <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-black tabular-nums"
                 style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }}>
-                от {preset.priceStars} ⭐
+                от {preset.priceStars} <svg width="10" height="10" viewBox="0 0 24 24" fill="#f59e0b" stroke="#d97706" strokeWidth="0.8" strokeLinejoin="round" style={{display:'inline',verticalAlign:'middle'}} aria-hidden="true"><path d="M12 2L14.9 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L9.1 8.26L12 2Z"/></svg>
               </div>
             )}
 

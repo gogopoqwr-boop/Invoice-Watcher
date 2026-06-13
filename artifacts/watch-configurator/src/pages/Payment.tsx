@@ -3,6 +3,8 @@ import { useParams, useLocation, Link } from 'wouter';
 import { QRCodeSVG } from 'qrcode.react';
 import { useGetOrder, useGetConfiguration, useCreateOrder } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
+import { Package } from 'lucide-react';
+import { TgStar } from '@/components/TgStar';
 
 const WatchBoxScene = lazy(() => import('@/components/WatchBoxScene'));
 
@@ -124,12 +126,12 @@ export default function Payment() {
   if (!order || isError) {
     return (
       <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center gap-4 p-4">
-        <div className="text-5xl mb-2">🔍</div>
+        <div className="mb-2 text-muted-foreground/30"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
         <p className="text-lg font-bold">Заказ не найден</p>
         <p className="text-sm text-muted-foreground">Проверьте ссылку или создайте новый заказ</p>
         <div className="flex gap-3 mt-2">
           <Link href="/orders">
-            <button className="liquid-button px-6 py-3 text-sm font-semibold">📦 Мои заказы</button>
+            <button className="liquid-button px-6 py-3 text-sm font-semibold flex items-center gap-2"><Package size={14} /> Мои заказы</button>
           </Link>
           <Link href="/configure">
             <button className="bg-primary text-white rounded-full px-6 py-3 text-sm font-bold hover:bg-primary/90 transition-all">
@@ -158,7 +160,7 @@ export default function Payment() {
       </div>
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
         <Link href="/orders">
-          <button className="liquid-button px-3 py-1.5 text-xs font-semibold">📦 Мои заказы</button>
+          <button className="liquid-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"><Package size={12} /> Мои заказы</button>
         </Link>
       </div>
 
@@ -179,7 +181,7 @@ export default function Payment() {
           {/* Config badge */}
           <div className="px-5 pb-5 pt-2 text-center">
             <p className="text-xs text-muted-foreground uppercase tracking-widest">Заказ #{orderId}</p>
-            <p className="text-lg font-black tabular-nums mt-0.5">{order.totalStars} ⭐</p>
+            <p className="text-lg font-black tabular-nums mt-0.5 flex items-center justify-center gap-1">{order.totalStars} <TgStar size={15} /></p>
           </div>
         </div>
 

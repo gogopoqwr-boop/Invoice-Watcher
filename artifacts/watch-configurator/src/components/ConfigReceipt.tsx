@@ -1,6 +1,7 @@
 import React, { useState, lazy, Suspense } from 'react';
 import { useGetConfiguration } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
+import { TgStar } from '@/components/TgStar';
 
 const WatchBoxScene = lazy(() => import('@/components/WatchBoxScene'));
 
@@ -168,17 +169,17 @@ function ReceiptBody({
                 <td className="py-1 px-2.5 text-muted-foreground">{item.label}</td>
                 <td className="py-1 px-2.5 text-right font-mono font-bold tabular-nums whitespace-nowrap">
                   {item.label === 'Базовая цена'
-                    ? <span className="text-foreground">{item.stars} ⭐</span>
+                    ? <span className="text-foreground flex items-center gap-0.5">{item.stars} <TgStar size={11} /></span>
                     : item.stars > 0
-                      ? <span className="text-emerald-600">+{item.stars} ⭐</span>
-                      : <span className="text-blue-500">{item.stars} ⭐</span>}
+                      ? <span className="text-emerald-600 flex items-center gap-0.5">+{item.stars} <TgStar size={11} /></span>
+                      : <span className="text-blue-500 flex items-center gap-0.5">{item.stars} <TgStar size={11} /></span>}
                 </td>
               </tr>
             ))}
             <tr className="bg-muted/20">
               <td className="py-1.5 px-2.5 font-black text-foreground">Итого</td>
               <td className="py-1.5 px-2.5 text-right font-black text-primary tabular-nums">
-                {displayTotal} ⭐
+                <span className="flex items-center justify-end gap-0.5">{displayTotal} <TgStar size={11} /></span>
               </td>
             </tr>
           </tbody>
@@ -195,13 +196,13 @@ function ReceiptBody({
                   : item.stars > 0 ? 'text-emerald-600'
                   : 'text-blue-500'
               )}>
-                {item.label === 'Базовая цена' ? `${item.stars} ⭐` : item.stars > 0 ? `+${item.stars} ⭐` : `${item.stars} ⭐`}
+                <span className="flex items-center gap-0.5">{item.label === 'Базовая цена' ? item.stars : item.stars > 0 ? `+${item.stars}` : item.stars} <TgStar size={11} /></span>
               </span>
             </div>
           ))}
           <div className="border-t border-border/40 mt-2 pt-2 flex items-center justify-between">
             <span className="font-black text-foreground text-sm">Итого</span>
-            <span className="font-black text-primary text-base tabular-nums">{displayTotal} ⭐</span>
+            <span className="font-black text-primary text-base tabular-nums flex items-center gap-0.5">{displayTotal} <TgStar size={13} /></span>
           </div>
         </div>
       )}

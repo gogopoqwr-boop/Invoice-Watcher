@@ -3,6 +3,7 @@ import { useListPresets } from '@workspace/api-client-react';
 import { useLocation, Link } from 'wouter';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import WatchSVG from '@/components/WatchSVG';
+import { TgStar } from '@/components/TgStar';
 
 export default function Presets() {
   const { data: presets, isLoading } = useListPresets();
@@ -79,7 +80,7 @@ export default function Presets() {
                 </div>
                 <div className="p-3">
                   <p className="font-semibold text-sm tracking-tight truncate">{preset.name}</p>
-                  <p className="text-xs text-primary font-medium mt-0.5">{preset.priceStars} ⭐</p>
+                  <p className="text-xs text-primary font-medium mt-0.5 flex items-center gap-0.5">{preset.priceStars} <TgStar size={11} /></p>
                 </div>
               </button>
             ))}

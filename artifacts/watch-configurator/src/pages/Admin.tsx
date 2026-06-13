@@ -8,6 +8,10 @@ import { cn } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import ConfigReceipt from "@/components/ConfigReceipt";
+import {
+  Home, Package, ClipboardList, Settings2, Sparkles, TrendingUp, Check, RefreshCw,
+} from 'lucide-react';
+import { TgStar } from '@/components/TgStar';
 
 const STATUS_LABELS: Record<string, string> = {
   payment_pending: "Ожидает оплаты",
@@ -299,10 +303,10 @@ export default function Admin() {
         </div>
         <div className="flex items-center gap-3">
           <Link href="/">
-            <button className="liquid-button px-3 py-1.5 text-xs font-semibold">🏠 Главная</button>
+            <button className="liquid-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"><Home size={13} /> Главная</button>
           </Link>
           <Link href="/orders">
-            <button className="liquid-button px-3 py-1.5 text-xs font-semibold">📦 Заказы</button>
+            <button className="liquid-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"><Package size={13} /> Заказы</button>
           </Link>
           <button
             onClick={logout}
@@ -373,7 +377,7 @@ export default function Admin() {
                             <span className={cn("text-xs px-2.5 py-0.5 rounded-full font-semibold border", STATUS_COLORS[order.status] ?? "text-muted-foreground bg-muted border-border")}>
                               {STATUS_LABELS[order.status] ?? order.status}
                             </span>
-                            <span className="text-primary font-black text-sm">{order.totalStars} ⭐</span>
+                            <span className="text-primary font-black text-sm flex items-center gap-0.5">{order.totalStars} <TgStar size={12} /></span>
                           </div>
 
                           {/* Telegram info */}
@@ -435,7 +439,7 @@ export default function Admin() {
                               )}
                             >
                               {order.status === "cancel_requested"
-                                ? "✓ Одобрить отмену"
+                                ? <span className="flex items-center gap-1"><Check size={12} /> Одобрить отмену</span>
                                 : `→ ${STATUS_LABELS[NEXT_STATUSES[order.status]]}`}
                             </button>
                           )}
@@ -451,7 +455,7 @@ export default function Admin() {
                               disabled={updateStatus.isPending}
                               className="px-3 py-1.5 bg-red-50 text-red-500 border border-red-100 rounded-full text-xs font-bold hover:bg-red-100 transition-colors disabled:opacity-50 whitespace-nowrap"
                             >
-                              {order.telegramPaymentChargeId ? "Отмена + Возврат ⭐" : "Отменить"}
+                              {order.telegramPaymentChargeId ? <span className="flex items-center gap-1">Отмена + Возврат <TgStar size={12} /></span> : "Отменить"}
                             </button>
                           )}
 
@@ -461,7 +465,7 @@ export default function Admin() {
                               onClick={() => openModal({ type: "refund", orderId: order.id, hasCharge: true })}
                               className="px-3 py-1.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-xs font-bold hover:bg-amber-100 transition-colors whitespace-nowrap"
                             >
-                              Рефанд ⭐
+                              <span className="flex items-center gap-1">Рефанд <TgStar size={12} /></span>
                             </button>
                           )}
 
@@ -499,20 +503,20 @@ export default function Admin() {
             ) : analytics ? (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {[
-                    { label: "Всего заказов", value: (analytics as any).totalOrders ?? 0, emoji: "📋" },
-                    { label: "В обработке", value: (analytics as any).processingOrders ?? 0, emoji: "⚙️" },
-                    { label: "Звёзд получено", value: `${(analytics as any).totalStarsEarned ?? 0} ⭐`, emoji: "💫" },
+                  {(([
+                    { label: "Всего заказов",  value: String((analytics as any).totalOrders ?? 0),          icon: <ClipboardList size={18} className="text-muted-foreground" /> },
+                    { label: "В обработке",    value: String((analytics as any).processingOrders ?? 0),      icon: <Settings2 size={18} className="text-blue-400" /> },
+                    { label: "Звёзд получено", value: `${(analytics as any).totalStarsEarned ?? 0} ★`,       icon: <Sparkles size={18} className="text-yellow-400" /> },
                     {
                       label: "Конверсия",
                       value: (analytics as any).totalOrders > 0
                         ? `${Math.round(((analytics as any).processingOrders / (analytics as any).totalOrders) * 100)}%`
                         : "0%",
-                      emoji: "📈",
+                      icon: <TrendingUp size={18} className="text-emerald-400" />,
                     },
-                  ].map((stat) => (
+                  ] as { label: string; value: string; icon: React.ReactNode }[])).map((stat) => (
                     <div key={stat.label} className="liquid-glass rounded-2xl p-4 animate-fade-up">
-                      <p className="text-2xl mb-2">{stat.emoji}</p>
+                      <p className="mb-2">{stat.icon}</p>
                       <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">{stat.label}</p>
                       <p className="text-2xl font-black">{stat.value}</p>
                     </div>

@@ -25,14 +25,19 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: 'text-red-600 bg-red-50 border-red-200',
 };
 
-const STATUS_ICONS: Record<string, string> = {
-  payment_pending: '💳',
-  paid: '✅',
-  cancel_requested: '⏳',
-  processing: '⚙️',
-  shipping: '🚚',
-  arrived: '📦',
-  cancelled: '❌',
+import {
+  CreditCard, CheckCircle2, Clock, Settings2, Truck, Package, XCircle, ClipboardList,
+} from 'lucide-react';
+import { TgStar } from '@/components/TgStar';
+
+const STATUS_ICON_MAP: Record<string, React.ReactNode> = {
+  payment_pending: <CreditCard size={16} className="text-yellow-500 shrink-0" />,
+  paid:            <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />,
+  cancel_requested:<Clock size={16} className="text-orange-400 shrink-0" />,
+  processing:      <Settings2 size={16} className="text-blue-400 shrink-0" />,
+  shipping:        <Truck size={16} className="text-sky-500 shrink-0" />,
+  arrived:         <Package size={16} className="text-indigo-500 shrink-0" />,
+  cancelled:       <XCircle size={16} className="text-red-500 shrink-0" />,
 };
 
 async function requestCancelWithReason(orderId: number, reason: string): Promise<{ ok: boolean; msg: string }> {
@@ -158,13 +163,13 @@ export default function Orders() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <span className="text-base">{STATUS_ICONS[order.status] ?? '📋'}</span>
+                      <span className="flex items-center">{STATUS_ICON_MAP[order.status] ?? <ClipboardList size={16} className="text-muted-foreground shrink-0" />}</span>
                       <span className="font-black text-sm font-mono text-foreground">#{order.id}</span>
                       <span className={cn('text-xs px-2.5 py-0.5 rounded-full font-semibold border', STATUS_COLORS[order.status] ?? 'text-muted-foreground bg-muted border-border')}>
                         {STATUS_LABELS[order.status] ?? order.status}
                       </span>
                     </div>
-                    <p className="text-2xl font-black text-primary">{order.totalStars} ⭐</p>
+                    <p className="text-2xl font-black text-primary flex items-center gap-1">{order.totalStars} <TgStar size={18} /></p>
                     {order.cancelComment && (
                       <p className="text-xs text-orange-600 mt-1 italic">"{order.cancelComment}"</p>
                     )}

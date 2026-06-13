@@ -678,6 +678,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   const hourHandRef   = useRef<THREE.Group>(null);
   const minuteHandRef = useRef<THREE.Group>(null);
   const secHandRef    = useRef<THREE.Group>(null);
+  const gmtHandRef    = useRef<THREE.Group>(null);
   // Mechanical target angles (where a rigid hand would be)
   const hourAngle   = useRef(Math.PI / 5);
   const minuteAngle = useRef(-Math.PI / 3.5);
@@ -686,6 +687,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   const hourActual  = useRef(Math.PI / 5);
   const minActual   = useRef(-Math.PI / 3.5);
   const secActual   = useRef(Math.PI * 0.75);
+  const gmtActual   = useRef(Math.PI * 0.12);
   const hourVel     = useRef(0);
   const minVel      = useRef(0);
   const secVel      = useRef(0);
@@ -764,12 +766,15 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
       springStep(hourActual, hourVel, hourAngle.current,    3.5, 0.80); // heavy, lazy
       springStep(minActual,  minVel,  minuteAngle.current,  6.0, 0.55); // medium
       springStep(secActual,  secVel,  secAngle.current,    18.0, 0.28); // light, quick, oscillates most
+      // GMT: 24h hand — no spring, rigid (navigators expect precision)
+      gmtActual.current = hourAngle.current * 0.5;
     }
     prevCamAz.current = camAz;
 
     if (hourHandRef.current)   hourHandRef.current.rotation.z   = hourActual.current;
     if (minuteHandRef.current) minuteHandRef.current.rotation.z = minActual.current;
     if (secHandRef.current)    secHandRef.current.rotation.z    = secActual.current;
+    if (gmtHandRef.current)    gmtHandRef.current.rotation.z    = gmtActual.current;
 
     // ── Watch auto-rotation ────────────────────────────────────────────────────
     const userActive = lastInteractionRef?.current
@@ -914,7 +919,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
       </mesh>
 
       {/* Watch hands — болванки: rotation.z driven imperatively in useFrame */}
-      {config.handsEnabled && (
+      {config.handsEnabled && (config.handsCount ?? 3) >= 1 && (
         <group position={[0, 0, handsZ]}>
           <group ref={hourHandRef}>
             <mesh position={[0, 0.26, 0]} castShadow>
@@ -930,6 +935,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
               <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
             </mesh>
           </group>
+          {(config.handsCount ?? 3) >= 2 && (
           <group ref={minuteHandRef}>
             <mesh position={[0, 0.38, 0]} castShadow>
               <boxGeometry args={[0.040, 0.76, 0.016]} />
@@ -944,6 +950,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
               <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
             </mesh>
           </group>
+          )}
           {(config.handsCount ?? 3) >= 3 && (
             <group ref={secHandRef}>
               <mesh position={[0, 0.34, 0.002]} castShadow>
@@ -957,6 +964,26 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
               <mesh position={[0, -0.10, 0.002]} castShadow>
                 <boxGeometry args={[0.024, 0.16, 0.010]} />
                 <meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} />
+              </mesh>
+            </group>
+          )}
+          {/* 4th hand — GMT / 24 h, blue arrow style */}
+          {(config.handsCount ?? 3) >= 4 && (
+            <group ref={gmtHandRef}>
+              {/* Shaft — slightly shorter than hour hand */}
+              <mesh position={[0, 0.24, -0.003]} castShadow>
+                <boxGeometry args={[0.012, 0.48, 0.008]} />
+                <meshStandardMaterial color="#3b82f6" metalness={0.9} roughness={0.1} />
+              </mesh>
+              {/* Arrowhead */}
+              <mesh position={[0, 0.50, -0.003]} castShadow>
+                <coneGeometry args={[0.026, 0.072, 3, 1]} />
+                <meshStandardMaterial color="#3b82f6" metalness={0.9} roughness={0.1} />
+              </mesh>
+              {/* Counter-weight */}
+              <mesh position={[0, -0.06, -0.003]} castShadow>
+                <boxGeometry args={[0.020, 0.08, 0.008]} />
+                <meshStandardMaterial color="#3b82f6" metalness={0.9} roughness={0.1} />
               </mesh>
             </group>
           )}

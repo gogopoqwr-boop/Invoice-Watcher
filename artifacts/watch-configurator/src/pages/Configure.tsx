@@ -13,6 +13,7 @@ import {
 } from '@workspace/api-client-react';
 import { useLocation, Link } from 'wouter';
 import { cn } from '@/lib/utils';
+import { TgStar } from '@/components/TgStar';
 
 function isWebGLAvailable(): boolean {
   try {
@@ -348,6 +349,37 @@ export default function Configure() {
 
           </div>
 
+          {/* ── Hands count ── */}
+          <div>
+            <div className="flex items-baseline justify-between mb-3">
+              <h2 className="text-lg font-bold tracking-tight">Стрелки</h2>
+              <span className="text-sm font-bold text-muted-foreground">
+                {(config.handsCount ?? 3) === 0 ? 'без стрелок' : `${config.handsCount ?? 3} стр.`}
+              </span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {([0, 1, 2, 3, 4] as const).map(n => {
+                const active = (config.handsCount ?? 3) === n;
+                const labels = ['—', 'ч', 'ч·м', 'ч·м·с', 'ч·м·с·GMT'];
+                return (
+                  <button
+                    key={n}
+                    onClick={() => updateConfig({ handsEnabled: n > 0, handsCount: n })}
+                    className={cn(
+                      'flex flex-col items-center gap-1 py-3 px-1 rounded-2xl transition-all duration-100 text-center',
+                      active
+                        ? 'ring-2 ring-primary bg-primary/10 shadow-sm'
+                        : 'border border-border/60 bg-card/60 hover:bg-card/80'
+                    )}
+                  >
+                    <span className={cn('text-sm font-black tabular-nums', active ? 'text-primary' : 'text-foreground')}>{n}</span>
+                    <span className="text-[9px] text-muted-foreground leading-tight">{labels[n]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* ── Closing mechanism ── */}
           <div>
             <h2 className="text-lg font-bold tracking-tight mb-3">Застёжка</h2>
@@ -387,7 +419,7 @@ export default function Configure() {
           <div className="flex items-center justify-between px-1">
             <span className="text-xs text-muted-foreground uppercase tracking-widest">Стоимость</span>
             <span className={cn('text-sm font-bold transition-opacity', priceLoading ? 'opacity-40' : 'opacity-100')}>
-              {livePrice !== null ? `${livePrice} ⭐` : priceLoading ? '…' : '—'}
+              {livePrice !== null ? <span className="flex items-center gap-0.5">{livePrice} <TgStar size={13} /></span> : priceLoading ? '…' : '—'}
             </span>
           </div>
           <div className="flex gap-3">
@@ -398,7 +430,7 @@ export default function Configure() {
               onClick={handleProceedToBox}
               className="flex-1 py-3 rounded-full text-sm font-bold tracking-widest uppercase bg-primary text-white shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all"
             >
-              {livePrice !== null ? `Упаковка — ${livePrice} ⭐ →` : 'Выбрать упаковку →'}
+              {livePrice !== null ? <span className="flex items-center justify-center gap-1">Упаковка — {livePrice} <TgStar size={13} /> →</span> : 'Выбрать упаковку →'}
             </button>
           </div>
         </div>

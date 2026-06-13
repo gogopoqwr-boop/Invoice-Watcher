@@ -257,6 +257,24 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
             </g>
           );
         })()}
+
+        {/* 4th hand — GMT / 24 h, blue arrow */}
+        {handsEnabled && handsCount >= 4 && (() => {
+          const angleDeg = 30; const len = 22; const cw = 5;
+          return (
+            <g transform={`rotate(${angleDeg}, ${cx}, ${cy})`}>
+              <rect x={cx - 0.7} y={cy - len} width="1.4" height={len + cw} rx="0.7"
+                fill="#3b82f6" opacity="0.95" />
+              {/* Arrow tip */}
+              <polygon
+                points={`${cx},${cy - len - 5} ${cx - 3},${cy - len + 3} ${cx + 3},${cy - len + 3}`}
+                fill="#3b82f6" opacity="0.95"
+              />
+              <rect x={cx - 1.6} y={cy + 1} width="3.2" height={cw - 1} rx="1"
+                fill="#3b82f6" opacity="0.7" />
+            </g>
+          );
+        })()}
       </g>
 
       {/* Crown */}

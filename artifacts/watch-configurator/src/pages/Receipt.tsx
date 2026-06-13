@@ -3,16 +3,18 @@ import { useParams, Link } from 'wouter';
 import { useGetOrder } from '@workspace/api-client-react';
 import WatchSVG from '@/components/WatchSVG';
 import { cn } from '@/lib/utils';
+import { CheckCircle2, Settings2, Truck, Package, Check } from 'lucide-react';
+import { TgStar } from '@/components/TgStar';
 
 function receiptCode(orderId: number): string {
   return `ЧАС-${orderId.toString(36).toUpperCase().padStart(5, '0')}`;
 }
 
 const TIMELINE = [
-  { status: 'paid', label: 'Оплачено', icon: '✅' },
-  { status: 'processing', label: 'В производстве', icon: '⚙️' },
-  { status: 'shipping', label: 'Отправлен', icon: '🚚' },
-  { status: 'arrived', label: 'Доставлен', icon: '📦' },
+  { status: 'paid',       label: 'Оплачено',        icon: <CheckCircle2 size={18} /> },
+  { status: 'processing', label: 'В производстве',   icon: <Settings2 size={18} /> },
+  { status: 'shipping',   label: 'Отправлен',        icon: <Truck size={18} /> },
+  { status: 'arrived',    label: 'Доставлен',        icon: <Package size={18} /> },
 ];
 
 const STATUS_ORDER = ['payment_pending', 'paid', 'processing', 'shipping', 'arrived'];
@@ -140,7 +142,7 @@ export default function Receipt() {
                   : 'liquid-button'
               )}
             >
-              {copied ? '✓ Скопировано!' : 'Скопировать код'}
+              {copied ? <span className="flex items-center justify-center gap-1.5"><Check size={14} /> Скопировано!</span> : 'Скопировать код'}
             </button>
           </div>
 
@@ -151,7 +153,7 @@ export default function Receipt() {
           <div className="px-6 pb-2 space-y-2 text-sm">
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Сумма</span>
-              <span className="font-black text-lg text-yellow-500">{order?.totalStars ?? '—'} ⭐</span>
+              <span className="font-black text-lg text-yellow-500 flex items-center gap-1">{order?.totalStars ?? '—'} <TgStar size={16} /></span>
             </div>
             {config?.watchfaceGeometry && (
               <div className="flex justify-between">
@@ -213,7 +215,7 @@ export default function Receipt() {
                             : 'border-border text-muted-foreground'
                         )}
                       >
-                        {isDone ? '✓' : step.icon}
+                        {isDone ? <Check size={13} /> : step.icon}
                       </div>
                       <span className={cn('text-sm font-semibold flex-1', isCurrent ? 'text-primary' : isDone ? 'text-foreground' : 'text-muted-foreground')}>
                         {step.label}
