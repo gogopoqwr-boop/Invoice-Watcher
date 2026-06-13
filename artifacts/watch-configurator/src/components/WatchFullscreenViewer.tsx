@@ -59,7 +59,7 @@ function WatchScene() {
       <hemisphereLight intensity={0.25} />
       <Environment preset="city" />
       <ContactShadows position={[0, -5.9, 0]} opacity={0.55} scale={14} blur={2.0} far={6} />
-      <WatchModel step={2} lastInteractionRef={lastInteraction} />
+      <WatchModel step={0} lastInteractionRef={lastInteraction} />
       <OrbitControls
         enablePan={false}
         enableZoom={true}
@@ -145,7 +145,7 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
       />
 
       {/* ── 3D Canvas ── */}
-      <div className="relative z-10 flex-none h-[58dvh] md:h-auto md:flex-1 md:w-[62%]">
+      <div className="relative z-10 flex-none h-[58dvh] md:h-auto md:flex-1 md:w-[62%] overflow-hidden">
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -153,7 +153,7 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
           }}
         />
         <Canvas
-          camera={{ position: [0, -2.8, 7.2], fov: 42 }}
+          camera={{ position: [0, 0.5, 8.0], fov: 40 }}
           gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
           style={{ width: '100%', height: '100%', background: 'transparent' }}
           dpr={[1, 2]}
