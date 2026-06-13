@@ -148,29 +148,28 @@ export default function Payment() {
   const expired = timeLeft === 0;
 
   return (
-    <div className="min-h-[100dvh] bg-background flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-[100dvh] bg-background relative overflow-x-hidden">
       {/* Ambient orbs */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full pointer-events-none"
+      <div className="fixed top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full pointer-events-none"
         style={{ background: "var(--orb-1)", filter: "blur(110px)", opacity: 0.45 }} />
 
-      {/* Top nav */}
-      <div className="absolute top-4 left-4 z-10">
-        <Link href="/configure">
+      {/* Top nav — fixed so it never scrolls away */}
+      <div className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-3 pointer-events-none">
+        <Link href="/configure" className="pointer-events-auto">
           <button className="liquid-button px-3 py-1.5 text-xs font-semibold">← К настройке</button>
         </Link>
-      </div>
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-        <Link href="/orders">
+        <Link href="/orders" className="pointer-events-auto">
           <button className="liquid-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"><Package size={12} /> Мои заказы</button>
         </Link>
       </div>
 
-      {/* Main content — split on desktop, stacked on mobile */}
-      <div className="relative z-10 w-full max-w-2xl flex flex-col md:flex-row gap-4 animate-shimmer-in">
+      {/* Scrollable content — padded under the fixed nav */}
+      <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-center
+                      min-h-[100dvh] pt-14 px-4 pb-4 gap-4 animate-shimmer-in max-w-2xl mx-auto">
 
-        {/* ── Left: Watch preview ── */}
+        {/* ── Watch preview — compact on mobile, taller on desktop ── */}
         <div className="liquid-glass rounded-3xl overflow-hidden md:w-[44%] flex-none flex flex-col">
-          <div className="flex-1 min-h-[240px] md:min-h-[340px]">
+          <div className="h-[180px] md:h-[300px]">
             {order.configId ? (
               <WatchPreviewPanel configId={order.configId} />
             ) : (
@@ -180,7 +179,7 @@ export default function Payment() {
             )}
           </div>
           {/* Config badge */}
-          <div className="px-5 pb-5 pt-2 text-center">
+          <div className="px-5 pb-4 pt-2 text-center">
             <p className="text-xs text-muted-foreground uppercase tracking-widest">Заказ #{orderId}</p>
             <p className="text-lg font-black tabular-nums mt-0.5 flex items-center justify-center gap-1">{order.totalStars} <TgStar size={15} /></p>
           </div>
