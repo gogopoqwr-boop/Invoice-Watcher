@@ -61,7 +61,7 @@ async function callRefundWithComment(orderId: number, comment: string): Promise<
       if (desc.includes("CHARGE_ALREADY_REFUNDED")) return { ok: true, msg: "Уже возвращено ранее" };
       return { ok: false, msg: desc };
     }
-    return { ok: true, msg: "Звёзды возвращены ✓" };
+    return { ok: true, msg: "Звёзды возвращены" };
   } catch {
     return { ok: false, msg: "Ошибка сети" };
   }
@@ -94,7 +94,7 @@ async function createCourierAccount(username: string, password: string): Promise
       const err = await res.json().catch(() => ({}));
       return { ok: false, msg: err.error ?? "Ошибка" };
     }
-    return { ok: true, msg: "Курьер создан ✓" };
+    return { ok: true, msg: "Курьер создан" };
   } catch {
     return { ok: false, msg: "Ошибка сети" };
   }
@@ -223,7 +223,7 @@ export default function Admin() {
         result = await callRefundWithComment(actionModal.orderId, comment);
       } else if (actionModal.type === "cancel") {
         await updateStatus.mutateAsync({ id: actionModal.orderId, data: { status: "cancelled" as any } });
-        result = { ok: true, msg: "Отменён ✓" };
+        result = { ok: true, msg: "Отменён" };
       } else if (actionModal.type === "cancel_and_refund" || actionModal.type === "approve_cancel") {
         await updateStatus.mutateAsync({ id: actionModal.orderId, data: { status: "cancelled" as any } });
         result = await callRefundWithComment(actionModal.orderId, comment);
@@ -506,7 +506,7 @@ export default function Admin() {
                   {(([
                     { label: "Всего заказов",  value: String((analytics as any).totalOrders ?? 0),          icon: <ClipboardList size={18} className="text-muted-foreground" /> },
                     { label: "В обработке",    value: String((analytics as any).processingOrders ?? 0),      icon: <Settings2 size={18} className="text-blue-400" /> },
-                    { label: "Звёзд получено", value: `${(analytics as any).totalStarsEarned ?? 0} ★`,       icon: <Sparkles size={18} className="text-yellow-400" /> },
+                    { label: "Звёзд получено", value: `${(analytics as any).totalStarsEarned ?? 0}`,         icon: <Sparkles size={18} className="text-yellow-400" /> },
                     {
                       label: "Конверсия",
                       value: (analytics as any).totalOrders > 0
@@ -649,7 +649,7 @@ export default function Admin() {
 
               {webhookRegResult && (
                 <p className={cn("text-xs font-semibold", webhookRegResult.ok ? "text-emerald-600" : "text-red-500")}>
-                  {webhookRegResult.ok ? "✓ Вебхук зарегистрирован" : `Ошибка: ${webhookRegResult.description ?? JSON.stringify(webhookRegResult)}`}
+                  {webhookRegResult.ok ? "Вебхук зарегистрирован" : `Ошибка: ${webhookRegResult.description ?? JSON.stringify(webhookRegResult)}`}
                 </p>
               )}
 

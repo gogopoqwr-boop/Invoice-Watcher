@@ -3,7 +3,7 @@ import { useParams, Link } from 'wouter';
 import { useGetOrder } from '@workspace/api-client-react';
 import WatchSVG from '@/components/WatchSVG';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, Settings2, Truck, Package, Check } from 'lucide-react';
+import { CheckCircle2, Settings2, Truck, Package, Check, XCircle } from 'lucide-react';
 import { TgStar } from '@/components/TgStar';
 
 function receiptCode(orderId: number): string {
@@ -191,7 +191,7 @@ export default function Receipt() {
             </p>
             {isCancelled ? (
               <div className="flex items-center gap-3 text-red-500">
-                <div className="w-7 h-7 rounded-full bg-red-500/15 border-2 border-red-400 flex items-center justify-center text-xs">❌</div>
+                <div className="w-7 h-7 rounded-full bg-red-500/15 border-2 border-red-400 flex items-center justify-center"><XCircle size={14} className="text-red-500" /></div>
                 <span className="text-sm font-semibold">Отменён</span>
               </div>
             ) : (

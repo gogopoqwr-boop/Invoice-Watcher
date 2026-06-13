@@ -224,7 +224,7 @@ export default function BoxSetup() {
                     {opt.surcharge === 0 ? (
                       <span className="text-xs text-muted-foreground">бесплатно</span>
                     ) : (
-                      <span className="text-sm font-bold text-primary">+{opt.surcharge} ⭐</span>
+                      <span className="text-sm font-bold text-primary flex items-center gap-0.5">+{opt.surcharge} <TgStar size={13} /></span>
                     )}
                   </div>
                 </button>
@@ -316,7 +316,7 @@ export default function BoxSetup() {
             {submitting
               ? 'Оформление...'
               : basePrice !== null
-              ? `Оплатить — ${totalStars} ★`
+              ? <span className="flex items-center justify-center gap-1.5">Оплатить — {totalStars} <TgStar size={14} /></span>
               : 'Оплатить →'}
           </button>
         </div>

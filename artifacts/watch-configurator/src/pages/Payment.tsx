@@ -3,7 +3,7 @@ import { useParams, useLocation, Link } from 'wouter';
 import { QRCodeSVG } from 'qrcode.react';
 import { useGetOrder, useGetConfiguration, useCreateOrder } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
-import { Package } from 'lucide-react';
+import { Package, CheckCircle2, RefreshCw, Check } from 'lucide-react';
 import { TgStar } from '@/components/TgStar';
 
 const WatchBoxScene = lazy(() => import('@/components/WatchBoxScene'));
@@ -190,13 +190,13 @@ export default function Payment() {
 
           {isPaid ? (
             <>
-              <div className="text-6xl mt-4">✅</div>
+              <div className="mt-4"><CheckCircle2 size={64} className="text-emerald-500" /></div>
               <h1 className="text-2xl font-black">Оплачено!</h1>
               <p className="text-muted-foreground text-sm">Перенаправляем в мои заказы…</p>
             </>
           ) : expired ? (
             <>
-              <div className="text-6xl mt-4">⏰</div>
+              <div className="mt-4"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/50" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
               <h1 className="text-2xl font-black">Время истекло</h1>
               <p className="text-muted-foreground text-sm">Окно оплаты закрылось. Повторите оплату или настройте заново.</p>
               <div className="flex flex-col gap-3 w-full mt-auto">
@@ -210,7 +210,7 @@ export default function Payment() {
                       <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
                       Создаём заказ…
                     </>
-                  ) : '🔄 Повторить оплату'}
+                  ) : <span className="flex items-center gap-2"><RefreshCw size={15} /> Повторить оплату</span>}
                 </button>
                 <Link href="/configure" className="w-full">
                   <button className="liquid-button w-full py-3 text-sm font-semibold">
@@ -241,7 +241,7 @@ export default function Payment() {
               </a>
 
               <button onClick={handleCopy} className="liquid-button w-full py-3 text-sm font-semibold">
-                {copied ? '✓ Скопировано!' : 'Скопировать ссылку'}
+                {copied ? <span className="flex items-center justify-center gap-1.5"><Check size={14} /> Скопировано!</span> : 'Скопировать ссылку'}
               </button>
 
               {/* Status + countdown */}

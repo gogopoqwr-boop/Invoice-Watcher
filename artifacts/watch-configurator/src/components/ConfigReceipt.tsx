@@ -2,6 +2,7 @@ import React, { useState, lazy, Suspense } from 'react';
 import { useGetConfiguration } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
 import { TgStar } from '@/components/TgStar';
+import { ClipboardList } from 'lucide-react';
 
 const WatchBoxScene = lazy(() => import('@/components/WatchBoxScene'));
 
@@ -103,8 +104,8 @@ export default function ConfigReceipt({ configId, totalStars, alwaysOpen, compac
             : 'liquid-button px-3 py-1.5 mt-2'
         )}
       >
-        <span>{open ? '▾' : '▸'}</span>
-        {compact ? 'Состав' : '📋 Состав заказа'}
+        <ClipboardList size={13} className="shrink-0" />
+        {compact ? 'Состав' : 'Состав заказа'}
       </button>
 
       {open && (
