@@ -1,8 +1,12 @@
 import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
+import { Text } from '@react-three/drei';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
+
+// Roboto Bold — Google Fonts CDN, full Cyrillic+Latin support
+const FONT_URL = 'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlfCxc4EsA.woff2';
 
 // ─── Shape helpers ─────────────────────────────────────────────────────────
 
@@ -42,6 +46,7 @@ function buildFaceTexture(
   geom: string,
   isCircular: boolean,
   text?: string,
+  drawTextOnCanvas = false,
 ): THREE.CanvasTexture {
   const S = 512;
   const cv = document.createElement('canvas');
@@ -76,8 +81,8 @@ function buildFaceTexture(
   ctx.fillStyle = handsColor;
   ctx.fill();
 
-  // Draw watchface text cleanly on the canvas (skip EYE: preset codes)
-  if (text && !text.startsWith('EYE:')) {
+  // Draw watchface text on canvas ONLY for center+hands mode — 3D text handles other cases
+  if (drawTextOnCanvas && text && !text.startsWith('EYE:')) {
     const lines = text.trim().toUpperCase().split('\n').filter(Boolean).slice(0, 3);
     const maxLen = Math.max(...lines.map(l => l.length), 1);
     const fontSize = Math.min(S * 0.13, S * 0.65 / maxLen);
@@ -104,96 +109,116 @@ function buildFaceTexture(
   return tex;
 }
 
-// placeholder — WatchFaceText3D removed; text is now drawn on the canvas face texture
-function _unused_WatchFaceText3D({ text, mode, handsColor, faceZ }: {
-  text: string; mode: 'center' | 'circular'; handsColor: string; faceZ: number;
+// ─── Watch face 3D text ────────────────────────────────────────────────────
+// Renders user text directly in 3D space on the watch dial.
+//
+// mode='center' + handsEnabled  → canvas texture handles it (returns null here)
+// mode='center' + !handsEnabled → bold text centred on face, no crystal obstruction
+// mode='circular'               → each letter placed around the bezel, always 3D,
+//                                  oriented so its base faces centre (like clock numerals)
+function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled }: {
+  text: string; mode: 'center' | 'circular'; handsColor: string; faceZ: number; handsEnabled: boolean;
 }) {
   const trimmed = text.trim().toUpperCase();
-  const chars   = Array.from(trimmed);
+  if (!trimmed || trimmed.startsWith('EYE:')) return null;
 
-  // Arc geometry — computed unconditionally so hooks are never called conditionally.
-  // 0.27 rad/char keeps letters comfortably spaced; cap at 0.88π so they stay in the top hemisphere.
-  const arcSpan = Math.min(Math.PI * 0.88, chars.length * 0.27);
-  const arcLeft = Math.PI / 2 + arcSpan / 2;           // leftmost char angle (10-11 o'clock)
-  const step    = chars.length > 0 ? arcSpan / chars.length : 1;
-  const circR   = 1.26;
+  // Center + hands: canvas texture already draws it — nothing to add here
+  if (mode === 'center' && handsEnabled) return null;
 
-  // Pre-compute per-letter position + quaternion using explicit makeBasis so axes are unambiguous:
-  //   right   = CW-tangent  → (sin a, -cos a, 0)  — letters read left→right
-  //   up      = outward-radial → (cos a,  sin a, 0)  — letter bottom faces center
-  //   forward = +Z                                  — face always toward viewer
-  const letterData = useMemo(() => chars.map((_, i) => {
-    const angle   = arcLeft - (i + 0.5) * step;
-    const x       = circR * Math.cos(angle);
-    const y       = circR * Math.sin(angle);
-    const right   = new THREE.Vector3( Math.sin(angle), -Math.cos(angle), 0);
-    const outward = new THREE.Vector3( Math.cos(angle),  Math.sin(angle), 0);
-    const m       = new THREE.Matrix4().makeBasis(right, outward, new THREE.Vector3(0, 0, 1));
-    const q       = new THREE.Quaternion().setFromRotationMatrix(m);
-    return { x, y, q };
-  }), [trimmed, arcLeft, step]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (!trimmed) return null;
-
-  // textZ: just above the face disc surface, always below the crystal.
-  // faceZ is passed from the parent (starFaceZ) so it adapts to geometry variant.
-  const textZ = faceZ + 0.01;
-  const mat   = <meshStandardMaterial color={handsColor} metalness={0.55} roughness={0.2} />;
+  // Z sits just above the face disc surface and below the crystal
+  const textZ = faceZ + 0.022;
 
   if (mode === 'circular') {
-    const fontSize = Math.max(0.09, Math.min(0.17, 0.78 / Math.max(chars.length, 4)));
+    // Spread chars evenly across an arc spanning the top hemisphere.
+    // Each letter is rotated so its baseline faces the dial centre (like clock numerals).
+    const chars = Array.from(trimmed).filter(c => c !== ' ');
+    const count = chars.length;
+    const arcSpan = Math.min(Math.PI * 1.72, count * 0.30);
+    const startAngle = Math.PI / 2 + arcSpan / 2;
+    const step = count > 1 ? arcSpan / count : 0;
+    const circR = 1.22;
+    const fontSize = Math.max(0.10, Math.min(0.19, 0.92 / Math.max(count, 4)));
+
     return (
       <group position={[0, 0, textZ]}>
         {chars.map((ch, i) => {
-          const { x, y, q } = letterData[i];
+          const angle = startAngle - (i + 0.5) * step;
+          const x = circR * Math.cos(angle);
+          const y = circR * Math.sin(angle);
+          // rotZ: rotate the letter so its "up" points outward from center,
+          // making it read like a clock numeral facing the viewer.
+          // angle - π/2 maps 12 o'clock (π/2) to 0 rotation (upright).
+          const rotZ = angle - Math.PI / 2;
           return (
-            <group key={i} position={[x, y, 0]} quaternion={q}>
-              <Center>
-                <Text3D font={FONT_URL} size={fontSize} height={TEXT_DEPTH}
-                  bevelEnabled bevelSize={0.008} bevelThickness={0.008} bevelSegments={3} curveSegments={6}>
-                  {ch}{mat}
-                </Text3D>
-              </Center>
+            <group key={i} position={[x, y, 0]} rotation={[0, 0, rotZ]}>
+              <Text
+                font={FONT_URL}
+                fontSize={fontSize}
+                anchorX="center"
+                anchorY="middle"
+                color={handsColor}
+                material-metalness={0.55}
+                material-roughness={0.20}
+              >
+                {ch}
+              </Text>
             </group>
           );
         })}
-        <group position={[0, -0.14, 0]}>
-          <Center>
-            <Text3D font={FONT_URL} size={0.055} height={0.02} bevelEnabled={false} curveSegments={4}>
-              {'ЧЕБЛЯЧАС'}
-              <meshStandardMaterial color={handsColor} metalness={0.4} roughness={0.4} opacity={0.4} transparent />
-            </Text3D>
-          </Center>
-        </group>
+        {/* Subtle brand subtitle inside the ring */}
+        <Text
+          font={FONT_URL}
+          fontSize={0.058}
+          anchorX="center"
+          anchorY="middle"
+          position={[0, -0.16, 0]}
+          color={handsColor}
+          material-opacity={0.35}
+          material-transparent
+        >
+          ЧЕБЛЯЧАС
+        </Text>
       </group>
     );
   }
 
-  const lines   = trimmed.split('\n').filter(Boolean).slice(0, 4);
-  const maxLen  = Math.max(...lines.map(l => l.length), 1);
-  const fSize   = Math.min(0.28, Math.max(0.08, 0.7 / maxLen));
-  const lineH   = fSize * 1.4;
-  const totalH  = (lines.length - 1) * lineH;
+  // mode === 'center', no hands — bold centred text, large enough to fill the dial
+  const lines = trimmed.split('\n').filter(Boolean).slice(0, 4);
+  const maxLen = Math.max(...lines.map(l => l.length), 1);
+  const fSize = Math.min(0.30, Math.max(0.09, 0.80 / maxLen));
+  const lineH = fSize * 1.35;
+  const totalH = (lines.length - 1) * lineH;
+
   return (
     <group position={[0, 0, textZ]}>
       {lines.map((line, i) => (
-        <group key={i} position={[0, totalH / 2 - i * lineH, 0]}>
-          <Center>
-            <Text3D font={FONT_URL} size={fSize} height={TEXT_DEPTH}
-              bevelEnabled bevelSize={0.012} bevelThickness={0.012} bevelSegments={3} curveSegments={8}>
-              {line}{mat}
-            </Text3D>
-          </Center>
-        </group>
+        <Text
+          key={i}
+          font={FONT_URL}
+          fontSize={fSize}
+          anchorX="center"
+          anchorY="middle"
+          position={[0, totalH / 2 - i * lineH, 0]}
+          color={handsColor}
+          material-metalness={0.60}
+          material-roughness={0.15}
+        >
+          {line}
+        </Text>
       ))}
-      <group position={[0, -totalH / 2 - fSize * 0.85, 0]}>
-        <Center>
-          <Text3D font={FONT_URL} size={0.06} height={0.02} bevelEnabled={false} curveSegments={4}>
-            {'ЧЕБЛЯЧАС'}
-            <meshStandardMaterial color={handsColor} metalness={0.4} roughness={0.4} opacity={0.3} transparent />
-          </Text3D>
-        </Center>
-      </group>
+      {/* Subtle brand */}
+      <Text
+        font={FONT_URL}
+        fontSize={0.058}
+        anchorX="center"
+        anchorY="middle"
+        position={[0, -totalH / 2 - fSize * 0.82, 0]}
+        color={handsColor}
+        material-opacity={0.30}
+        material-transparent
+      >
+        ЧЕБЛЯЧАС
+      </Text>
     </group>
   );
 }
@@ -629,9 +654,11 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   }, [config.watchfaceGeometry]);
 
   const isCircular = (config.watchfaceTextMode ?? 'center') === 'circular';
+  // Canvas draws text only for center+hands mode; all other cases use 3D WatchFaceText
+  const drawTextOnCanvas = !isCircular && (config.handsEnabled ?? true);
   const faceTexture = useMemo(
-    () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular, config.watchfaceText),
-    [config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular, config.watchfaceText]
+    () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular, config.watchfaceText, drawTextOnCanvas),
+    [config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular, config.watchfaceText, drawTextOnCanvas]
   );
 
   const isMetal = config.watchfaceMaterial === 'metal';
@@ -669,6 +696,17 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         <primitive object={discGeo} />
         <meshStandardMaterial map={faceTexture} roughness={0.25} metalness={0.05} />
       </mesh>
+
+      {/* 3D face text — rendered between dial and crystal */}
+      {config.watchfaceText && (
+        <WatchFaceText
+          text={config.watchfaceText}
+          mode={(config.watchfaceTextMode ?? 'center') as 'center' | 'circular'}
+          handsColor={config.handsColor ?? '#ffffff'}
+          faceZ={faceZ}
+          handsEnabled={config.handsEnabled ?? true}
+        />
+      )}
 
       {/* Crystal — high-fidelity sapphire glass */}
       {/* Sits at starCrystalZ so the bevelled bottom starts just above the hands.

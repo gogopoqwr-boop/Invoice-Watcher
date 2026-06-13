@@ -319,6 +319,42 @@ export default function Configure() {
             </div>
           </div>
 
+          {/* ── Watch-face inscription ── */}
+          <div>
+            <h2 className="text-lg font-bold tracking-tight mb-1">Надпись на циферблате</h2>
+            <p className="text-xs text-muted-foreground mb-3">Имя, дата, слово — до 16 символов</p>
+
+            <input
+              type="text"
+              maxLength={16}
+              placeholder="Ваш текст…"
+              value={config.watchfaceText ?? ''}
+              onChange={e => updateConfig({ watchfaceText: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-xl text-sm border border-border/60 bg-card/60 focus:outline-none focus:ring-2 focus:ring-primary/60 placeholder:text-muted-foreground/50 mb-3"
+            />
+
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { value: 'center', label: 'По центру', desc: '3D если без стрелок, иначе плоский' },
+                { value: 'circular', label: 'По кругу', desc: 'Буквы вдоль безеля, всегда 3D' },
+              ] as const).map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => updateConfig({ watchfaceTextMode: opt.value })}
+                  className={cn(
+                    'flex flex-col items-start gap-0.5 p-3 rounded-2xl transition-all duration-100 text-left',
+                    (config.watchfaceTextMode ?? 'center') === opt.value
+                      ? 'ring-2 ring-primary bg-primary/10 shadow-sm'
+                      : 'border border-border/60 bg-card/60 hover:bg-card/80'
+                  )}
+                >
+                  <p className={cn('text-sm font-bold', (config.watchfaceTextMode ?? 'center') === opt.value ? 'text-primary' : '')}>{opt.label}</p>
+                  <p className="text-[11px] text-muted-foreground leading-snug">{opt.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* ── Closing mechanism ── */}
           <div>
             <h2 className="text-lg font-bold tracking-tight mb-3">Застёжка</h2>
