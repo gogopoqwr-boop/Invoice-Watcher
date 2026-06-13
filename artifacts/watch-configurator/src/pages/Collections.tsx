@@ -49,9 +49,8 @@ export default function Collections() {
   const [buyError, setBuyError] = useState('');
 
   const [inventory, setInventory] = useState<InventoryData>({});
-  const [activeIdx, setActiveIdx] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const isScrolling = useRef(false);
+  const [activeSection, setActiveSection] = useState(0);
+  const sectionRefs = useRef<(HTMLElement | null)[]>([]);
 
   useEffect(() => {
     fetch('/api/presets/inventory')
@@ -72,25 +71,28 @@ export default function Collections() {
     ...(classics.length > 0 ? [{ name: null, displayName: 'КЛАССИКА', items: classics.slice(0, MAX_PER_COLLECTION) }] : []),
   ];
 
-  const scrollToCollection = useCallback((idx: number) => {
-    if (!scrollRef.current) return;
-    isScrolling.current = true;
-    const container = scrollRef.current;
-    container.scrollTo({ left: idx * container.clientWidth, behavior: 'smooth' });
-    setActiveIdx(idx);
-    setTimeout(() => { isScrolling.current = false; }, 600);
-  }, []);
-
+  // Track which section is in view to highlight the nav tab
   useEffect(() => {
-    const container = scrollRef.current;
-    if (!container) return;
-    const handleScroll = () => {
-      if (isScrolling.current) return;
-      const idx = Math.round(container.scrollLeft / container.clientWidth);
-      setActiveIdx(idx);
-    };
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container.removeEventListener('scroll', handleScroll);
+    if (sectionRefs.current.length === 0) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const idx = sectionRefs.current.findIndex(el => el === entry.target);
+            if (idx !== -1) setActiveSection(idx);
+          }
+        }
+      },
+      { rootMargin: '-30% 0px -60% 0px', threshold: 0 }
+    );
+    sectionRefs.current.forEach(el => { if (el) obs.observe(el); });
+    return () => obs.disconnect();
+  }, [collections.length]);
+
+  const scrollToSection = useCallback((idx: number) => {
+    const el = sectionRefs.current[idx];
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
   const handleSelectPreset = (preset: any) => {
@@ -169,7 +171,6 @@ export default function Collections() {
       });
       if (!orderRes.ok) throw new Error('order');
       const order = await orderRes.json();
-
       setLocation(`/payment/${order.id}`);
     } catch {
       setBuyError('Не удалось создать заказ. Попробуйте ещё раз.');
@@ -227,9 +228,10 @@ export default function Collections() {
           >
             <WatchMiniCanvas preset={preset} />
 
-            {/* Watch name text overlay */}
-            <div className="absolute bottom-0 left-0 right-0 px-3 py-2.5"
-              style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%)' }}>
+            <div
+              className="absolute bottom-0 left-0 right-0 px-3 py-2.5"
+              style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%)' }}
+            >
               <p className="text-white text-xs font-black tracking-tight leading-tight line-clamp-1">
                 {preset.name}
               </p>
@@ -276,75 +278,72 @@ export default function Collections() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background relative overflow-hidden">
-      <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full pointer-events-none"
-        style={{ background: 'var(--orb-1)', filter: 'blur(100px)', opacity: 0.5 }} />
-      <div className="absolute bottom-[-5%] left-[-5%] w-[400px] h-[400px] rounded-full pointer-events-none"
-        style={{ background: 'var(--orb-2)', filter: 'blur(90px)', opacity: 0.35 }} />
+    <div className="min-h-[100dvh] bg-background relative">
+      {/* Background orbs */}
+      <div className="fixed top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full pointer-events-none"
+        style={{ background: 'var(--orb-1)', filter: 'blur(100px)', opacity: 0.4 }} />
+      <div className="fixed bottom-[-5%] left-[-5%] w-[400px] h-[400px] rounded-full pointer-events-none"
+        style={{ background: 'var(--orb-2)', filter: 'blur(90px)', opacity: 0.28 }} />
 
-      <div className="relative z-10 flex flex-col min-h-[100dvh]">
-        {/* Header */}
-        <div className="px-5 py-6 md:px-10 md:py-8 shrink-0">
-          <div className="flex items-end justify-between max-w-6xl mx-auto">
-            <div>
+      {/* Sticky header + nav */}
+      <div
+        className="sticky top-0 z-30"
+        style={{ background: 'rgba(var(--background-rgb, 10,10,14), 0.88)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <div className="px-5 pt-5 pb-0 md:px-10 max-w-6xl mx-auto">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
               <Link href="/">
-                <button className="text-xs text-muted-foreground hover:text-foreground transition-colors mb-3 flex items-center gap-1 liquid-button px-3 py-1.5">
+                <button className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 liquid-button px-3 py-1.5">
                   ← Назад
                 </button>
               </Link>
-              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-1 animate-fade-up">
+              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground/60">
                 ЧЕБЛЯЧАС · КОЛЛЕКЦИИ
               </p>
-              <h1 className="text-4xl md:text-5xl font-black tracking-tight animate-fade-up">
-                Готовые коллекции
-              </h1>
             </div>
-            <div className="flex flex-col items-end gap-2 animate-fade-up">
-              {hasOrders && (
-                <Link href="/orders">
-                  <button className="liquid-button px-4 py-2 text-xs font-semibold">
-                    Мои заказы
-                  </button>
-                </Link>
-              )}
-            </div>
+            {hasOrders && (
+              <Link href="/orders">
+                <button className="liquid-button px-4 py-2 text-xs font-semibold">
+                  Мои заказы
+                </button>
+              </Link>
+            )}
           </div>
-        </div>
 
-        {/* Collection navigation */}
-        {!isLoading && collections.length > 0 && (
-          <div className="px-5 md:px-10 mb-5 shrink-0 max-w-6xl mx-auto w-full">
-            <div className="flex items-center gap-1">
+          {/* Collection nav tabs */}
+          {!isLoading && collections.length > 0 && (
+            <div className="flex items-end gap-0">
               {collections.map((c, i) => (
                 <button
                   key={i}
-                  onClick={() => scrollToCollection(i)}
+                  onClick={() => scrollToSection(i)}
                   className={cn(
-                    'text-xs font-black tracking-widest uppercase transition-all px-3 py-1.5 rounded-full',
-                    activeIdx === i
-                      ? 'text-foreground'
-                      : 'text-muted-foreground/40 hover:text-muted-foreground'
+                    'text-xs font-black tracking-widest uppercase transition-all px-4 py-2 border-b-2',
+                    activeSection === i
+                      ? 'text-foreground border-primary'
+                      : 'text-muted-foreground/40 hover:text-muted-foreground border-transparent'
                   )}
                 >
                   {c.displayName}
                 </button>
               ))}
             </div>
-            {/* Progress bar */}
-            <div className="mt-2 h-px bg-border/30 relative rounded-full overflow-hidden">
-              <div
-                className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all duration-500 ease-out"
-                style={{
-                  width: `${100 / Math.max(collections.length, 1)}%`,
-                  transform: `translateX(${activeIdx * 100}%)`,
-                }}
-              />
-            </div>
-          </div>
-        )}
+          )}
+        </div>
+      </div>
 
+      {/* Page title */}
+      <div className="px-5 pt-8 pb-4 md:px-10 max-w-6xl mx-auto">
+        <h1 className="text-4xl md:text-5xl font-black tracking-tight animate-fade-up">
+          Готовые коллекции
+        </h1>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10">
         {isLoading ? (
-          <div className="px-5 md:px-10 max-w-6xl mx-auto w-full">
+          <div className="px-5 md:px-10 max-w-6xl mx-auto pb-12">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {[1, 2, 3, 4, 5, 6].map(i => (
                 <div key={i} className="liquid-glass rounded-3xl h-64 animate-pulse" />
@@ -352,60 +351,36 @@ export default function Collections() {
             </div>
           </div>
         ) : (
-          /* Horizontal snap scroll container */
-          <div className="relative flex-1">
-            {/* Prev arrow */}
-            {activeIdx > 0 && (
-              <button
-                onClick={() => scrollToCollection(activeIdx - 1)}
-                className="absolute left-2 md:left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full liquid-glass flex items-center justify-center text-foreground hover:scale-110 transition-all shadow-lg"
-              >
-                ←
-              </button>
-            )}
-            {/* Next arrow */}
-            {activeIdx < collections.length - 1 && (
-              <button
-                onClick={() => scrollToCollection(activeIdx + 1)}
-                className="absolute right-2 md:right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full liquid-glass flex items-center justify-center text-foreground hover:scale-110 transition-all shadow-lg"
-              >
-                →
-              </button>
-            )}
-
-            <div
-              ref={scrollRef}
-              className="flex overflow-x-auto scrollbar-none"
-              style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}
+          collections.map((group, gi) => (
+            <section
+              key={group.name ?? '__classics'}
+              ref={el => { sectionRefs.current[gi] = el; }}
+              className="px-5 md:px-10 pb-16 scroll-mt-24"
             >
-              {collections.map((group, gi) => (
-                <section
-                  key={group.name ?? '__classics'}
-                  style={{ scrollSnapAlign: 'start', minWidth: '100%' }}
-                  className="px-5 md:px-16 pb-12"
-                >
-                  <div className="max-w-5xl mx-auto">
-                    <div className="mb-6">
-                      <h2 className="text-3xl md:text-4xl font-black tracking-tight">
-                        {group.displayName}
-                      </h2>
-                      <p className="text-xs text-muted-foreground/50 mt-1 uppercase tracking-widest">
-                        {group.items.length} моделей
-                      </p>
-                    </div>
+              <div className="max-w-6xl mx-auto">
+                {/* Section header */}
+                <div className="mb-6 pt-2">
+                  <h2 className="text-3xl md:text-4xl font-black tracking-tight animate-fade-up">
+                    {group.displayName}
+                  </h2>
+                  <p className="text-xs text-muted-foreground/50 mt-1 uppercase tracking-widest">
+                    {group.items.length} моделей
+                  </p>
+                </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {group.items.map((preset: any, idx: number) => (
-                        <PresetCard key={preset.id} preset={preset} idx={idx} />
-                      ))}
-                    </div>
-                  </div>
-                </section>
-              ))}
-            </div>
-          </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {group.items.map((preset: any, idx: number) => (
+                    <PresetCard key={preset.id} preset={preset} idx={idx} />
+                  ))}
+                </div>
+              </div>
+            </section>
+          ))
         )}
       </div>
+
+      {/* Bottom spacing */}
+      <div className="h-16" />
 
       {/* Fullscreen 3D Viewer */}
       {fullscreenPreset && (
@@ -490,7 +465,7 @@ export default function Collections() {
                 disabled={buying}
                 className="w-full py-3.5 rounded-2xl bg-primary text-white font-black text-sm tracking-widest uppercase shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-60"
               >
-                {buying ? 'Оформляем…' : `Оформить заказ`}
+                {buying ? 'Оформляем…' : 'Оформить заказ'}
               </button>
             </div>
           </div>
