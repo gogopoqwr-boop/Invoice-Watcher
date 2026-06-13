@@ -357,23 +357,113 @@ function WatchInBox({ config, visible }: { config: WatchConfig; visible: boolean
   );
 }
 
+// ─── Gift Ribbon ────────────────────────────────────────────────────────────
+
+const RIBBON_Y_LID = H / 2 + LID_T + 0.018;  // just above the closed lid top
+
+function GiftRibbon({ visible }: { visible: boolean }) {
+  const { sc } = useSpring({
+    sc: visible ? 1 : 0,
+    config: { mass: 0.8, tension: 180, friction: 22 },
+  });
+
+  const mat = {
+    color: '#d63370',
+    metalness: 0.18,
+    roughness: 0.52,
+    side: THREE.DoubleSide,
+  };
+
+  return (
+    <animated.group scale={sc as any}>
+      {/* ── Cross-strips on lid top ── */}
+      {/* Along Z (front-to-back) */}
+      <mesh position={[0, RIBBON_Y_LID, 0]}>
+        <boxGeometry args={[0.22, 0.022, D + 0.05]} />
+        <meshStandardMaterial {...mat} />
+      </mesh>
+      {/* Along X (left-to-right), raised a hair so intersection is clean */}
+      <mesh position={[0, RIBBON_Y_LID + 0.012, 0]}>
+        <boxGeometry args={[W + 0.05, 0.022, 0.22]} />
+        <meshStandardMaterial {...mat} />
+      </mesh>
+
+      {/* ── Ribbon strip on front face (visible face z = +D/2) ── */}
+      <mesh position={[0, 0, D / 2 + 0.018]}>
+        <boxGeometry args={[0.22, H + LID_T + 0.04, 0.018]} />
+        <meshStandardMaterial {...mat} />
+      </mesh>
+      {/* ── Ribbon strip on right face (visible face x = +W/2) ── */}
+      <mesh position={[W / 2 + 0.018, 0, 0]}>
+        <boxGeometry args={[0.018, H + LID_T + 0.04, 0.22]} />
+        <meshStandardMaterial {...mat} />
+      </mesh>
+
+      {/* ── Bow — two squashed torus loops ── */}
+      {/* Left loop */}
+      <mesh
+        position={[-0.27, RIBBON_Y_LID + 0.06, 0]}
+        rotation={[Math.PI / 2, 0, 0.22]}
+        scale={[1, 0.36, 1]}
+      >
+        <torusGeometry args={[0.22, 0.068, 4, 28]} />
+        <meshStandardMaterial {...mat} />
+      </mesh>
+      {/* Right loop */}
+      <mesh
+        position={[0.27, RIBBON_Y_LID + 0.06, 0]}
+        rotation={[Math.PI / 2, 0, -0.22]}
+        scale={[1, 0.36, 1]}
+      >
+        <torusGeometry args={[0.22, 0.068, 4, 28]} />
+        <meshStandardMaterial {...mat} />
+      </mesh>
+
+      {/* ── Bow tails (two short strips fanning outward from knot) ── */}
+      <mesh
+        position={[-0.16, RIBBON_Y_LID + 0.01, 0.04]}
+        rotation={[0.12, 0, 0.28]}
+      >
+        <boxGeometry args={[0.26, 0.022, 0.18]} />
+        <meshStandardMaterial {...mat} />
+      </mesh>
+      <mesh
+        position={[0.16, RIBBON_Y_LID + 0.01, 0.04]}
+        rotation={[0.12, 0, -0.28]}
+      >
+        <boxGeometry args={[0.26, 0.022, 0.18]} />
+        <meshStandardMaterial {...mat} />
+      </mesh>
+
+      {/* ── Knot (centre sphere) ── */}
+      <mesh position={[0, RIBBON_Y_LID + 0.09, 0]}>
+        <sphereGeometry args={[0.10, 14, 10]} />
+        <meshStandardMaterial {...mat} roughness={0.38} />
+      </mesh>
+    </animated.group>
+  );
+}
+
 // ─── Scene ─────────────────────────────────────────────────────────────────
 
-function Scene({ config, boxType, autoOpen }: { config: WatchConfig; boxType: string; autoOpen: boolean }) {
+function Scene({ config, boxType, autoOpen, giftWrap }: { config: WatchConfig; boxType: string; autoOpen: boolean; giftWrap: boolean }) {
   const [open, setOpen] = useState(false);
+
+  // When gift-wrapped, keep the box closed for 1.5 s so the ribbon is visible
+  const openDelay = giftWrap ? 1500 : 380;
 
   useEffect(() => {
     if (!autoOpen) return;
-    const t = setTimeout(() => setOpen(true), 380);
+    const t = setTimeout(() => setOpen(true), openDelay);
     return () => clearTimeout(t);
   }, [autoOpen]);
 
   useEffect(() => {
     setOpen(false);
     if (!autoOpen) return;
-    const t = setTimeout(() => setOpen(true), 320);
+    const t = setTimeout(() => setOpen(true), giftWrap ? 1500 : 320);
     return () => clearTimeout(t);
-  }, [boxType]);
+  }, [boxType, giftWrap]);
 
   return (
     <>
@@ -387,6 +477,8 @@ function Scene({ config, boxType, autoOpen }: { config: WatchConfig; boxType: st
       <group rotation={[0, -0.46, 0]}>
         <Box3D boxType={boxType} open={open} />
         <WatchInBox config={config} visible={open} />
+        {/* Ribbon sits on the closed box and springs away when the lid opens */}
+        <GiftRibbon visible={giftWrap && !open} />
       </group>
     </>
   );
@@ -398,11 +490,12 @@ export interface WatchBoxSceneProps {
   config: WatchConfig;
   boxType?: string;
   autoOpen?: boolean;
+  giftWrap?: boolean;
   /** height class e.g. "h-72" */
   className?: string;
 }
 
-export default function WatchBoxScene({ config, boxType = 'standard', autoOpen = true, className }: WatchBoxSceneProps) {
+export default function WatchBoxScene({ config, boxType = 'standard', autoOpen = true, giftWrap = false, className }: WatchBoxSceneProps) {
   if (!WEB_GL_OK) {
     const s = BOX_STYLES[boxType as keyof typeof BOX_STYLES] ?? BOX_STYLES.standard;
     const faceCol   = config.watchfaceColor  ?? '#C0C0C0';
@@ -488,7 +581,7 @@ export default function WatchBoxScene({ config, boxType = 'standard', autoOpen =
         style={{ background: 'transparent' }}
         shadows
       >
-        <Scene config={config} boxType={boxType} autoOpen={autoOpen} />
+        <Scene config={config} boxType={boxType} autoOpen={autoOpen} giftWrap={giftWrap} />
       </Canvas>
     </div>
   );

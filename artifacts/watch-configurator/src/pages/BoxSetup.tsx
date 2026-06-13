@@ -154,6 +154,7 @@ export default function BoxSetup() {
             config={config}
             boxType={selectedBox}
             autoOpen
+            giftWrap={giftWrap}
             className="h-72 md:h-80"
           />
         </div>
