@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { useParams, useLocation, Link } from 'wouter';
 import { QRCodeSVG } from 'qrcode.react';
 import { useGetOrder, useGetConfiguration, useCreateOrder } from '@workspace/api-client-react';
-import WatchMiniCanvas from '@/components/WatchMiniCanvas';
 import { cn } from '@/lib/utils';
+
+const WatchBoxScene = lazy(() => import('@/components/WatchBoxScene'));
 
 const PAYMENT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -15,7 +16,7 @@ function formatCountdown(ms: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-// ─── Watch preview panel ────────────────────────────────────────────────────
+// ─── Watch + box preview panel ──────────────────────────────────────────────
 
 function WatchPreviewPanel({ configId }: { configId: number }) {
   const { data: cfg } = useGetConfiguration(configId, {
@@ -23,29 +24,27 @@ function WatchPreviewPanel({ configId }: { configId: number }) {
   } as any);
 
   return (
-    <div className="relative w-full h-full min-h-[220px] flex items-center justify-center overflow-hidden">
-      {/* Ambient glow behind the watch */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: cfg
-            ? `radial-gradient(ellipse at 50% 50%, ${cfg.watchfaceColor}44 0%, transparent 70%)`
-            : 'none',
-        }}
-      />
-      <div className="w-full h-full">
-        <WatchMiniCanvas
-          forceMount
-          preset={{
-            watchfaceGeometry: cfg?.watchfaceGeometry ?? 'circle',
-            watchfaceColor: cfg?.watchfaceColor ?? '#1e293b',
-            braceletColor: cfg?.braceletColor ?? '#0f172a',
-            braceletMaterial: cfg?.braceletMaterial ?? 'metal_solid',
-            handsColor: cfg?.handsColor ?? '#cbd5e1',
-            handsEnabled: cfg?.handsEnabled ?? true,
+    <div className="relative w-full h-full min-h-[260px] flex items-center justify-center overflow-hidden">
+      <Suspense fallback={
+        <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+          <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        </div>
+      }>
+        <WatchBoxScene
+          config={{
+            watchfaceGeometry: cfg?.watchfaceGeometry,
+            watchfaceColor:    cfg?.watchfaceColor,
+            braceletMaterial:  cfg?.braceletMaterial,
+            braceletColor:     cfg?.braceletColor,
+            handsEnabled:      cfg?.handsEnabled,
+            handsColor:        cfg?.handsColor,
+            watchfaceText:     cfg?.watchfaceText ?? (cfg as any)?.handsStyle,
           }}
+          boxType={cfg?.boxType ?? 'standard'}
+          autoOpen
+          className="h-full w-full"
         />
-      </div>
+      </Suspense>
     </div>
   );
 }

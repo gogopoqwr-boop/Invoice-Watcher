@@ -217,6 +217,7 @@ interface WatchConfig {
   braceletColor?: string | null;
   handsEnabled?: boolean | null;
   handsColor?: string | null;
+  watchfaceText?: string | null;
 }
 
 function buildShape(geom: string): THREE.Shape {
@@ -237,6 +238,37 @@ function buildShape(geom: string): THREE.Shape {
   return s;
 }
 
+function buildFaceTex(faceCol: string, text: string | null | undefined): THREE.CanvasTexture {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = S; cv.height = S;
+  const ctx = cv.getContext('2d')!;
+
+  ctx.fillStyle = faceCol;
+  ctx.fillRect(0, 0, S, S);
+
+  const grad = ctx.createRadialGradient(S*0.38, S*0.33, 0, S/2, S/2, S*0.52);
+  grad.addColorStop(0, 'rgba(255,255,255,0.10)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.18)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, S, S);
+
+  if (text?.trim()) {
+    const t = text.trim().toUpperCase().slice(0, 12);
+    const fontSize = Math.max(24, Math.min(52, Math.floor(S * 0.095)));
+    ctx.font = `900 ${fontSize}px system-ui, -apple-system, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.letterSpacing = '0.12em';
+    ctx.globalAlpha = 0.72;
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillText(t, S/2, S * 0.61);
+    ctx.globalAlpha = 1;
+  }
+
+  return new THREE.CanvasTexture(cv);
+}
+
 function WatchInBox({ config, visible }: { config: WatchConfig; visible: boolean }) {
   const groupRef = useRef<THREE.Group>(null);
 
@@ -248,13 +280,13 @@ function WatchInBox({ config, visible }: { config: WatchConfig; visible: boolean
   const mat     = config.braceletMaterial  ?? 'metal_solid';
   const isMetal = mat === 'metal_solid' || mat === 'metal_segmented';
   const isResin = mat === 'resin';
+  const text    = config.watchfaceText ?? null;
 
   const bodyGeo  = useMemo(() => new THREE.ExtrudeGeometry(buildShape(geom), { depth: 0.38, bevelEnabled: true, bevelSize: 0.09, bevelThickness: 0.09, bevelSegments: 6 }), [geom]);
   const faceGeo  = useMemo(() => new THREE.ShapeGeometry(buildShape(geom), 48), [geom]);
   const crystalGeo = useMemo(() => new THREE.ExtrudeGeometry(buildShape(geom), { depth: 0.04, bevelEnabled: true, bevelSize: 0.035, bevelThickness: 0.035, bevelSegments: 8 }), [geom]);
-  useEffect(() => () => { bodyGeo.dispose(); faceGeo.dispose(); crystalGeo.dispose(); }, [bodyGeo, faceGeo, crystalGeo]);
-
-  const { opacity } = useSpring({ opacity: visible ? 1 : 0, config: { tension: 80, friction: 20, delay: visible ? 400 : 0 } });
+  const faceTex  = useMemo(() => buildFaceTex(faceCol, text), [faceCol, text]);
+  useEffect(() => () => { bodyGeo.dispose(); faceGeo.dispose(); crystalGeo.dispose(); faceTex.dispose(); }, [bodyGeo, faceGeo, crystalGeo, faceTex]);
 
   useFrame((_, delta) => {
     if (!groupRef.current) return;
@@ -275,7 +307,7 @@ function WatchInBox({ config, visible }: { config: WatchConfig; visible: boolean
       </mesh>
       <mesh position={[0, 0, 0.48]}>
         <primitive object={faceGeo} />
-        <meshStandardMaterial color={faceCol} roughness={0.26} metalness={0.05} />
+        <meshStandardMaterial map={faceTex} roughness={0.26} metalness={0.05} />
       </mesh>
       <mesh position={[0, 0, 0.54]}>
         <primitive object={crystalGeo} />
