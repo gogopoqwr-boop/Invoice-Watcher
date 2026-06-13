@@ -266,6 +266,32 @@ export default function Configure() {
             </div>
           </div>
 
+          {/* ── Strap width ── */}
+          <div>
+            <div className="flex items-baseline justify-between mb-3">
+              <h2 className="text-lg font-bold tracking-tight">Ширина ремешка</h2>
+              <span className="text-sm font-bold tabular-nums">
+                {Math.round(12 + ((config.strapWidth ?? 1) - 0.5) * 16)} мм
+              </span>
+            </div>
+            <div className="relative">
+              <input
+                type="range"
+                min={0.5}
+                max={1.5}
+                step={0.01}
+                value={config.strapWidth ?? 1}
+                onChange={e => updateConfig({ strapWidth: parseFloat(e.target.value) })}
+                className="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary bg-border/60"
+              />
+              <div className="flex justify-between mt-1.5 px-0.5">
+                <span className="text-[10px] text-muted-foreground">12 мм</span>
+                <span className="text-[10px] text-muted-foreground">20 мм</span>
+                <span className="text-[10px] text-muted-foreground">28 мм</span>
+              </div>
+            </div>
+          </div>
+
           {/* ── Bracelet preset picker ── */}
           <div>
             <h2 className="text-lg font-bold tracking-tight mb-1">Ремешок</h2>

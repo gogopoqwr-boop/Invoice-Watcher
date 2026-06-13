@@ -266,26 +266,26 @@ const SEG_LEN   = 0.44;
 // StrapClasp — rendered at the chain terminus.
 // isDeployant → fold-over butterfly clasp (metal bracelets)
 // !isDeployant → traditional pin-buckle (leather / resin / fabric)
-function StrapClasp({ sign, claspColor, isDeployant }: {
-  sign: number; claspColor: string; isDeployant: boolean;
+function StrapClasp({ sign, claspColor, isDeployant, width }: {
+  sign: number; claspColor: string; isDeployant: boolean; width: number;
 }) {
   const m = { color: claspColor, metalness: 0.97, roughness: 0.03, envMapIntensity: 2.0 };
   return (
     <group position={[0, sign * 0.10, 0]}>
       {/* Clasp frame bar */}
       <mesh castShadow>
-        <boxGeometry args={[0.82, 0.20, 0.14]} />
+        <boxGeometry args={[0.82 * width, 0.20, 0.14]} />
         <meshStandardMaterial {...m} />
       </mesh>
       {isDeployant ? (
         // Deployant: upper leaf + hinge pin
         <>
           <mesh position={[0, sign * 0.20, 0.02]} castShadow>
-            <boxGeometry args={[0.76, 0.14, 0.05]} />
+            <boxGeometry args={[0.76 * width, 0.14, 0.05]} />
             <meshStandardMaterial {...m} />
           </mesh>
           <mesh position={[0, sign * 0.20, 0.05]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.015, 0.015, 0.78, 8]} />
+            <cylinderGeometry args={[0.015, 0.015, 0.78 * width, 8]} />
             <meshStandardMaterial color={claspColor} metalness={0.99} roughness={0.01} />
           </mesh>
         </>
@@ -293,11 +293,11 @@ function StrapClasp({ sign, claspColor, isDeployant }: {
         // Pin buckle: axial pin + two keeper loops
         <>
           <mesh position={[0, 0, 0.10]} rotation={[0, 0, Math.PI / 2]} castShadow>
-            <cylinderGeometry args={[0.015, 0.015, 0.60, 8]} />
+            <cylinderGeometry args={[0.015, 0.015, 0.60 * width, 8]} />
             <meshStandardMaterial color={claspColor} metalness={0.99} roughness={0.01} />
           </mesh>
           {([-0.24, 0.24] as const).map(x => (
-            <mesh key={x} position={[x, 0, 0.08]}>
+            <mesh key={x} position={[x * width, 0, 0.08]}>
               <boxGeometry args={[0.06, 0.22, 0.10]} />
               <meshStandardMaterial {...m} roughness={0.06} />
             </mesh>
@@ -319,9 +319,9 @@ function StrapClasp({ sign, claspColor, isDeployant }: {
 // sign   +1 = upper arm (strap grows +Y), −1 = lower arm (−Y).
 // θ      a @react-spring SpringValue<number> — React Spring writes the GPU
 //        matrix every animation frame without triggering React re-renders.
-function StrapJoint({ k, sign, θ, color, mat, isSegmented, claspColor }: {
+function StrapJoint({ k, sign, θ, color, mat, isSegmented, claspColor, width }: {
   k: number; sign: number; θ: any;
-  color: string; mat: string; isSegmented: boolean; claspColor: string;
+  color: string; mat: string; isSegmented: boolean; claspColor: string; width: number;
 }) {
   const segH    = SEG_LEN * 0.86;
   const isResin = mat === 'resin';
@@ -329,10 +329,11 @@ function StrapJoint({ k, sign, θ, color, mat, isSegmented, claspColor }: {
   const isLeath = mat === 'leather';
   const metal   = isSegmented ? 0.92 : mat.includes('metal') ? 0.85 : 0;
   const rough   = isSegmented ? 0.07 : isLeath ? 0.92 : isFab ? 0.88 : isResin ? 0.06 : 0.78;
+  const segW    = 1.05 * width;
 
   // Terminus: render clasp instead of another joint
   if (k >= WRAP_SEGS) {
-    return <StrapClasp sign={sign} claspColor={claspColor} isDeployant={isSegmented} />;
+    return <StrapClasp sign={sign} claspColor={claspColor} isDeployant={isSegmented} width={width} />;
   }
 
   return (
@@ -341,12 +342,12 @@ function StrapJoint({ k, sign, θ, color, mat, isSegmented, claspColor }: {
       {isFab ? (
         <>
           <mesh position={[0, sign * segH / 2, 0]} castShadow>
-            <boxGeometry args={[1.05, segH, 0.10]} />
+            <boxGeometry args={[segW, segH, 0.10]} />
             <meshStandardMaterial color={color} roughness={0.90} metalness={0} />
           </mesh>
           {([-0.36, -0.12, 0.12, 0.36] as const).map(x => (
-            <mesh key={x} position={[x, sign * segH / 2, 0.06]} castShadow>
-              <boxGeometry args={[0.05, segH, 0.03]} />
+            <mesh key={x} position={[x * width, sign * segH / 2, 0.06]} castShadow>
+              <boxGeometry args={[0.05 * width, segH, 0.03]} />
               <meshStandardMaterial
                 color={new THREE.Color(color).offsetHSL(0, 0, 0.12).getStyle()}
                 roughness={0.85} metalness={0}
@@ -356,7 +357,7 @@ function StrapJoint({ k, sign, θ, color, mat, isSegmented, claspColor }: {
         </>
       ) : (
         <mesh position={[0, sign * segH / 2, 0]} castShadow>
-          <boxGeometry args={[1.05, segH, 0.15]} />
+          <boxGeometry args={[segW, segH, 0.15]} />
           <meshStandardMaterial
             color={color} metalness={metal} roughness={rough}
             transparent={isResin} opacity={isResin ? 0.72 : 1}
@@ -366,7 +367,7 @@ function StrapJoint({ k, sign, θ, color, mat, isSegmented, claspColor }: {
       {/* Next joint pivot at the far tip of this segment */}
       <group position={[0, sign * SEG_LEN, 0]}>
         <StrapJoint k={k + 1} sign={sign} θ={θ} color={color} mat={mat}
-          isSegmented={isSegmented} claspColor={claspColor} />
+          isSegmented={isSegmented} claspColor={claspColor} width={width} />
       </group>
     </animated.group>
   );
@@ -999,7 +1000,8 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         <animated.group position-z={spread}>
           <StrapJoint k={0} sign={1} θ={θUpper}
             color={config.braceletColor} mat={config.braceletMaterial}
-            isSegmented={isSegmented} claspColor={caseMat.color} />
+            isSegmented={isSegmented} claspColor={caseMat.color}
+            width={config.strapWidth ?? 1} />
         </animated.group>
       </group>
 
@@ -1008,7 +1010,8 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         <animated.group position-z={spread}>
           <StrapJoint k={0} sign={-1} θ={θLower}
             color={config.braceletColor} mat={config.braceletMaterial}
-            isSegmented={isSegmented} claspColor={caseMat.color} />
+            isSegmented={isSegmented} claspColor={caseMat.color}
+            width={config.strapWidth ?? 1} />
         </animated.group>
       </group>
 

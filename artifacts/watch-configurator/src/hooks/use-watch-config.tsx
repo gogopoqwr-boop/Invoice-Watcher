@@ -26,12 +26,15 @@ export type ExtendedConfigState = ApiConfigState & {
   giftWrap?: boolean;
   // Case size scale: 0.65–1.35 maps to ~32–48 mm equivalent
   watchfaceSize?: number;
+  // Strap width multiplier: 0.5–1.5 maps to ~12–28 mm equivalent
+  strapWidth?: number;
 };
 
 const defaultState: ExtendedConfigState = {
   watchfaceGeometry: "circle",
   watchfaceMaterial: "metal",
   watchfaceSize: 1.0,
+  strapWidth: 1.0,
   watchfaceColor: "#1e293b",
   watchfaceBackgroundType: "solid",
   watchfaceGradientEnd: "#0f172a",
