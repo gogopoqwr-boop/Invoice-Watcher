@@ -240,6 +240,32 @@ export default function Configure() {
         {/* Config panel */}
         <div className="flex-1 overflow-y-auto px-5 py-3 space-y-6">
 
+          {/* ── Case size ── */}
+          <div>
+            <div className="flex items-baseline justify-between mb-3">
+              <h2 className="text-lg font-bold tracking-tight">Размер корпуса</h2>
+              <span className="text-sm font-bold tabular-nums">
+                {Math.round(32 + ((config.watchfaceSize ?? 1) - 0.65) / 0.70 * 16)} мм
+              </span>
+            </div>
+            <div className="relative">
+              <input
+                type="range"
+                min={0.65}
+                max={1.35}
+                step={0.01}
+                value={config.watchfaceSize ?? 1}
+                onChange={e => updateConfig({ watchfaceSize: parseFloat(e.target.value) })}
+                className="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary bg-border/60"
+              />
+              <div className="flex justify-between mt-1.5 px-0.5">
+                <span className="text-[10px] text-muted-foreground">32 мм</span>
+                <span className="text-[10px] text-muted-foreground">40 мм</span>
+                <span className="text-[10px] text-muted-foreground">48 мм</span>
+              </div>
+            </div>
+          </div>
+
           {/* ── Bracelet preset picker ── */}
           <div>
             <h2 className="text-lg font-bold tracking-tight mb-1">Ремешок</h2>

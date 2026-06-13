@@ -24,11 +24,14 @@ export type ExtendedConfigState = ApiConfigState & {
   boxType?: BoxType;
   boxMessage?: string;
   giftWrap?: boolean;
+  // Case size scale: 0.65–1.35 maps to ~32–48 mm equivalent
+  watchfaceSize?: number;
 };
 
 const defaultState: ExtendedConfigState = {
   watchfaceGeometry: "circle",
   watchfaceMaterial: "metal",
+  watchfaceSize: 1.0,
   watchfaceColor: "#1e293b",
   watchfaceBackgroundType: "solid",
   watchfaceGradientEnd: "#0f172a",

@@ -811,7 +811,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
 
   return (
     <>
-    <animated.group ref={groupRef} rotation-x={tiltX} position-z={watchZ}>
+    <animated.group ref={groupRef} rotation-x={tiltX} position-z={watchZ} scale={config.watchfaceSize ?? 1}>
 
       {/* ── Case body ── */}
       <mesh castShadow receiveShadow>
