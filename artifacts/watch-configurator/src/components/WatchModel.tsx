@@ -476,37 +476,6 @@ function BezelRing({ geom, caseMat }: {
   );
 }
 
-// ─── Realistic star bezel ring with chamfered arms ─────────────────────────
-// Extra ring only for star geometry — adds a visible machined star bezel face
-function StarCaseAccent({ caseMat }: { caseMat: { color: string; metalness: number; roughness: number } }) {
-  const geo = useMemo(() => {
-    // Build a slightly-inset star shape for the accent ring (outer edge of the star case face)
-    const outerShape = buildFaceShape('star');
-    const innerPts = buildFaceShape('star').getPoints(64);
-    const innerShape = new THREE.Shape(innerPts.map(p => new THREE.Vector2(p.x * 0.82, p.y * 0.82)));
-    outerShape.holes = [innerShape];
-    return new THREE.ExtrudeGeometry(outerShape, {
-      depth: 0.12,
-      bevelEnabled: true,
-      bevelSize: 0.035,
-      bevelThickness: 0.035,
-      bevelSegments: 6,
-    });
-  }, []);
-  useEffect(() => () => geo.dispose(), [geo]);
-
-  return (
-    <mesh position={[0, 0, 0.28]} castShadow receiveShadow>
-      <primitive object={geo} />
-      <meshStandardMaterial
-        color={caseMat.color}
-        metalness={Math.min(1, caseMat.metalness + 0.10)}
-        roughness={Math.max(0.03, caseMat.roughness - 0.08)}
-        envMapIntensity={2.0}
-      />
-    </mesh>
-  );
-}
 
 // ─── Wrist mannequin (improved) ────────────────────────────────────────────
 
@@ -634,14 +603,12 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
 
   const bodyGeo = useMemo(() => {
     const shape = buildFaceShape(config.watchfaceGeometry);
-    // Star gets extra depth + larger bevel for machined look
-    const isStar = config.watchfaceGeometry === 'star';
     return new THREE.ExtrudeGeometry(shape, {
-      depth: isStar ? 0.52 : 0.38,
+      depth: 0.38,
       bevelEnabled: true,
-      bevelSize: isStar ? 0.12 : 0.09,
-      bevelThickness: isStar ? 0.12 : 0.09,
-      bevelSegments: isStar ? 12 : 8,
+      bevelSize: 0.09,
+      bevelThickness: 0.09,
+      bevelSegments: 8,
     });
   }, [config.watchfaceGeometry]);
 
