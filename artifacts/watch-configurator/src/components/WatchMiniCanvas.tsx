@@ -1,11 +1,13 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import WatchSVG from './WatchSVG';
 
+// Keep at most 3 simultaneous WebGL contexts — browsers hard-cap around 8–16,
+// and each one here uses HDR-free lighting so they're lightweight but the limit
+// prevents context loss when all 6 cards are on screen at once.
 let _activeContexts = 0;
-const MAX_CONTEXTS = 6;
+const MAX_CONTEXTS = 3;
 
 function checkWebGL(): boolean {
   if (typeof document === 'undefined') return false;
@@ -66,13 +68,7 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
   const faceGeo = useMemo(() => new THREE.ShapeGeometry(buildShape(watchfaceGeometry), 48), [watchfaceGeometry]);
   const crystalGeo = useMemo(() => {
     const shape = buildShape(watchfaceGeometry);
-    return new THREE.ExtrudeGeometry(shape, {
-      depth: 0.04,
-      bevelEnabled: true,
-      bevelSize: 0.035,
-      bevelThickness: 0.035,
-      bevelSegments: 8,
-    });
+    return new THREE.ExtrudeGeometry(shape, { depth: 0.04, bevelEnabled: true, bevelSize: 0.035, bevelThickness: 0.035, bevelSegments: 8 });
   }, [watchfaceGeometry]);
 
   useEffect(() => () => { bodyGeo.dispose(); faceGeo.dispose(); crystalGeo.dispose(); }, [bodyGeo, faceGeo, crystalGeo]);
@@ -82,7 +78,6 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
 
   useFrame((_, delta) => {
     if (!groupRef.current) return;
-    // Slow down smoothly when hovered, spin normally otherwise
     const targetSpeed = paused ? 0.004 : 0.012;
     rotRef.current += (targetSpeed - rotRef.current) * 0.08;
     groupRef.current.rotation.y += rotRef.current;
@@ -92,31 +87,26 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
     <group ref={groupRef} rotation-x={-0.28}>
       <mesh>
         <primitive object={bodyGeo} />
-        <meshStandardMaterial color={watchfaceColor} metalness={0.76} roughness={0.14} envMapIntensity={1.2} />
+        <meshStandardMaterial color={watchfaceColor} metalness={0.76} roughness={0.14} envMapIntensity={0} />
       </mesh>
-
       <mesh position={[0, 0, 0.48]}>
         <primitive object={faceGeo} />
         <meshStandardMaterial color={watchfaceColor} roughness={0.26} metalness={0.05} />
       </mesh>
-
       <mesh position={[0, 0, 0.54]}>
         <primitive object={crystalGeo} />
         <meshPhysicalMaterial
           color="#daeeff"
           metalness={0}
-          roughness={0.0}
-          transmission={0.95}
-          ior={1.52}
-          thickness={0.08}
-          envMapIntensity={4.0}
-          clearcoat={1.0}
-          clearcoatRoughness={0.04}
-          reflectivity={0.6}
-          specularIntensity={1.8}
+          roughness={0.04}
+          transmission={0.82}
+          ior={1.45}
+          thickness={0.06}
+          clearcoat={0.8}
+          clearcoatRoughness={0.06}
+          reflectivity={0.5}
+          specularIntensity={1.2}
           specularColor="#ffffff"
-          attenuationDistance={0.6}
-          attenuationColor="#cce8ff"
         />
       </mesh>
 
@@ -153,18 +143,10 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
               <boxGeometry args={[0.058, 0.52, 0.018]} />
               <meshStandardMaterial color={handsColor} metalness={0.94} roughness={0.06} />
             </mesh>
-            <mesh position={[0, -0.07, 0]}>
-              <boxGeometry args={[0.070, 0.10, 0.022]} />
-              <meshStandardMaterial color={handsColor} metalness={0.94} roughness={0.06} />
-            </mesh>
           </group>
           <group rotation={[0, 0, -Math.PI / 3.5]}>
             <mesh position={[0, 0.38, 0]}>
               <boxGeometry args={[0.040, 0.76, 0.016]} />
-              <meshStandardMaterial color={handsColor} metalness={0.94} roughness={0.06} />
-            </mesh>
-            <mesh position={[0, -0.08, 0]}>
-              <boxGeometry args={[0.053, 0.12, 0.020]} />
               <meshStandardMaterial color={handsColor} metalness={0.94} roughness={0.06} />
             </mesh>
           </group>
@@ -173,18 +155,10 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
               <boxGeometry args={[0.010, 0.68, 0.008]} />
               <meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} />
             </mesh>
-            <mesh position={[0, -0.10, 0.002]}>
-              <boxGeometry args={[0.022, 0.16, 0.010]} />
-              <meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} />
-            </mesh>
           </group>
           <mesh rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[0.054, 0.054, 0.005, 24]} />
             <meshStandardMaterial color={handsColor} metalness={1} roughness={0.02} />
-          </mesh>
-          <mesh position={[0, 0, 0.006]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.022, 0.022, 0.004, 16]} />
-            <meshStandardMaterial color="#ef4444" metalness={0.85} roughness={0.08} />
           </mesh>
         </group>
       )}
@@ -194,6 +168,34 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
         <meshStandardMaterial color={watchfaceColor} metalness={0.76} roughness={0.14} />
       </mesh>
     </group>
+  );
+}
+
+// Lightweight color placeholder shown while a context slot isn't available.
+// Uses the watch's own colors so each card looks distinct and intentional.
+function WatchColorCard({ watchfaceColor, braceletColor }: { watchfaceColor: string; braceletColor: string }) {
+  return (
+    <div
+      className="w-full h-full flex items-center justify-center relative overflow-hidden"
+      style={{
+        background: `radial-gradient(ellipse at 50% 38%, ${watchfaceColor}cc 0%, ${watchfaceColor}66 40%, ${braceletColor}44 75%, transparent 100%)`,
+      }}
+    >
+      {/* watch silhouette */}
+      <div className="flex flex-col items-center gap-[3px] select-none pointer-events-none" style={{ transform: 'scale(0.72)' }}>
+        <div className="w-[34px] h-[22px] rounded-[5px]" style={{ backgroundColor: braceletColor, opacity: 0.72 }} />
+        <div
+          className="w-[52px] h-[52px] rounded-full border-[3px] flex items-center justify-center"
+          style={{ backgroundColor: watchfaceColor, borderColor: braceletColor + 'aa' }}
+        >
+          <div
+            className="w-[38px] h-[38px] rounded-full"
+            style={{ background: `linear-gradient(135deg, ${watchfaceColor}ff 0%, ${watchfaceColor}88 100%)` }}
+          />
+        </div>
+        <div className="w-[34px] h-[22px] rounded-[5px]" style={{ backgroundColor: braceletColor, opacity: 0.72 }} />
+      </div>
+    </div>
   );
 }
 
@@ -218,22 +220,29 @@ export default function WatchMiniCanvas({ preset, paused }: WatchMiniCanvasProps
   const [mounted, setMounted] = useState(false);
   const didMount = useRef(false);
 
+  const faceColor = preset.watchfaceColor ?? '#888888';
+  const strapColor = preset.braceletColor ?? '#333333';
+
   useEffect(() => {
     if (!WEB_GL_OK) return;
     const el = containerRef.current;
     if (!el) return;
+
+    const tryMount = () => {
+      if (didMount.current) return;
+      if (_activeContexts < MAX_CONTEXTS) {
+        didMount.current = true;
+        _activeContexts++;
+        setMounted(true);
+      }
+    };
+
     const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !didMount.current && _activeContexts < MAX_CONTEXTS) {
-          didMount.current = true;
-          _activeContexts++;
-          setMounted(true);
-          obs.disconnect();
-        }
-      },
-      { rootMargin: '120px', threshold: 0 }
+      ([entry]) => { if (entry.isIntersecting) tryMount(); },
+      { rootMargin: '80px', threshold: 0 }
     );
     obs.observe(el);
+
     return () => {
       obs.disconnect();
       if (didMount.current) {
@@ -251,8 +260,8 @@ export default function WatchMiniCanvas({ preset, paused }: WatchMiniCanvasProps
             mini
             config={{
               watchfaceGeometry: (preset.watchfaceGeometry ?? 'rounded') as any,
-              watchfaceColor: preset.watchfaceColor ?? '#888888',
-              braceletColor: preset.braceletColor ?? '#333333',
+              watchfaceColor: faceColor,
+              braceletColor: strapColor,
               braceletMaterial: (preset.braceletMaterial ?? 'leather') as any,
               braceletType: (preset.braceletType ?? 'strap') as any,
               handsEnabled: preset.handsEnabled ?? true,
@@ -269,29 +278,37 @@ export default function WatchMiniCanvas({ preset, paused }: WatchMiniCanvasProps
   }
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
+    <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
+      {/* Color card always visible underneath — no blank flash */}
+      <div className="absolute inset-0">
+        <WatchColorCard watchfaceColor={faceColor} braceletColor={strapColor} />
+      </div>
+
       {mounted && (
-        <Canvas
-          camera={{ position: [0, 0, 7.4], fov: 38 }}
-          gl={{ alpha: true, antialias: true, powerPreference: 'low-power' }}
-          style={{ background: 'transparent', width: '100%', height: '100%' }}
-          dpr={[1, 1.5]}
-        >
-          <ambientLight intensity={0.50} />
-          <directionalLight position={[4, 6, 5]} intensity={1.0} castShadow />
-          <directionalLight position={[-2, -2, -3]} intensity={0.18} />
-          <hemisphereLight intensity={0.20} />
-          <Environment preset="city" />
-          <MiniWatch
-            watchfaceGeometry={preset.watchfaceGeometry ?? 'rounded'}
-            watchfaceColor={preset.watchfaceColor ?? '#888888'}
-            braceletColor={preset.braceletColor ?? '#333333'}
-            braceletMaterial={preset.braceletMaterial ?? 'leather'}
-            handsColor={preset.handsColor ?? '#ffffff'}
-            handsEnabled={preset.handsEnabled ?? true}
-            paused={paused}
-          />
-        </Canvas>
+        <div className="absolute inset-0">
+          <Canvas
+            camera={{ position: [0, 0, 7.4], fov: 38 }}
+            gl={{ alpha: true, antialias: true, powerPreference: 'low-power', preserveDrawingBuffer: false }}
+            style={{ background: 'transparent', width: '100%', height: '100%' }}
+            dpr={[1, 1.2]}
+          >
+            {/* No Environment HDR — saves a full GPU texture per context */}
+            <ambientLight intensity={0.65} />
+            <directionalLight position={[4, 6, 5]} intensity={1.3} />
+            <directionalLight position={[-3, -1, -4]} intensity={0.22} />
+            <pointLight position={[0, 3, 4]} intensity={0.6} color="#e0eeff" />
+            <hemisphereLight intensity={0.30} />
+            <MiniWatch
+              watchfaceGeometry={preset.watchfaceGeometry ?? 'rounded'}
+              watchfaceColor={faceColor}
+              braceletColor={strapColor}
+              braceletMaterial={preset.braceletMaterial ?? 'leather'}
+              handsColor={preset.handsColor ?? '#ffffff'}
+              handsEnabled={preset.handsEnabled ?? true}
+              paused={paused}
+            />
+          </Canvas>
+        </div>
       )}
     </div>
   );
