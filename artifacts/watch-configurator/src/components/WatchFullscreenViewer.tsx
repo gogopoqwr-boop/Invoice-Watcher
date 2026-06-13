@@ -18,18 +18,26 @@ const MAT_LABELS: Record<string, string> = {
 };
 
 export const BRACELET_COMBOS = [
-  { id: 'black_leather',  label: 'Чёрная кожа',    material: 'leather',        color: '#1c1917' },
-  { id: 'cognac_leather', label: 'Коньяк',          material: 'leather',        color: '#6b3a2a' },
-  { id: 'white_leather',  label: 'Белая кожа',      material: 'leather',        color: '#f0ede8' },
-  { id: 'black_nato',     label: 'Чёрный NATO',     material: 'cotton_fabric',  color: '#0f172a' },
-  { id: 'khaki_nato',     label: 'Хаки NATO',       material: 'cotton_fabric',  color: '#4a5240' },
-  { id: 'red_nato',       label: 'Красный NATO',    material: 'cotton_fabric',  color: '#7f1d1d' },
-  { id: 'navy_nato',      label: 'Морской NATO',    material: 'cotton_fabric',  color: '#1e3a5f' },
-  { id: 'olive_nato',     label: 'Олива NATO',      material: 'cotton_fabric',  color: '#556b2f' },
-  { id: 'silver_steel',   label: 'Нержавейка',      material: 'metal_solid',    color: '#c0c0c0' },
-  { id: 'black_rubber',   label: 'Чёрный каучук',   material: 'plastic_solid',  color: '#1e1e1e' },
-  { id: 'white_rubber',   label: 'Белый каучук',    material: 'plastic_solid',  color: '#f0f0f0' },
-  { id: 'resin_ocean',    label: 'Смола «Океан»',   material: 'resin',          color: '#0c4a6e' },
+  { id: 'black_leather',    label: 'Чёрная кожа',        material: 'leather',        color: '#1c1917' },
+  { id: 'cognac_leather',   label: 'Коньяк',              material: 'leather',        color: '#6b3a2a' },
+  { id: 'tan_leather',      label: 'Карамель',            material: 'leather',        color: '#c2845a' },
+  { id: 'white_leather',    label: 'Белая кожа',          material: 'leather',        color: '#f0ede8' },
+  { id: 'black_nato',       label: 'Чёрный NATO',         material: 'cotton_fabric',  color: '#0f172a' },
+  { id: 'khaki_nato',       label: 'Хаки NATO',           material: 'cotton_fabric',  color: '#4a5240' },
+  { id: 'red_nato',         label: 'Красный NATO',        material: 'cotton_fabric',  color: '#7f1d1d' },
+  { id: 'navy_nato',        label: 'Морской NATO',        material: 'cotton_fabric',  color: '#1e3a5f' },
+  { id: 'olive_nato',       label: 'Олива NATO',          material: 'cotton_fabric',  color: '#556b2f' },
+  { id: 'orange_nato',      label: 'Оранж NATO',          material: 'cotton_fabric',  color: '#c2410c' },
+  { id: 'purple_nato',      label: 'Фиолет NATO',         material: 'cotton_fabric',  color: '#6b21a8' },
+  { id: 'teal_nato',        label: 'Мята NATO',           material: 'cotton_fabric',  color: '#0f766e' },
+  { id: 'silver_steel',     label: 'Нержавейка',          material: 'metal_solid',    color: '#c0c0c0' },
+  { id: 'gold_steel',       label: 'Золото',              material: 'metal_solid',    color: '#b5942b' },
+  { id: 'black_rubber',     label: 'Чёрный каучук',       material: 'plastic_solid',  color: '#1e1e1e' },
+  { id: 'white_rubber',     label: 'Белый каучук',        material: 'plastic_solid',  color: '#f0f0f0' },
+  { id: 'red_rubber',       label: 'Красный каучук',      material: 'plastic_solid',  color: '#dc2626' },
+  { id: 'resin_ocean',      label: 'Смола «Океан»',       material: 'resin',          color: '#0c4a6e' },
+  { id: 'resin_forest',     label: 'Смола «Лес»',         material: 'resin',          color: '#14532d' },
+  { id: 'resin_amber',      label: 'Смола «Янтарь»',      material: 'resin',          color: '#78350f' },
 ];
 
 interface Props {
@@ -64,7 +72,6 @@ function WatchScene() {
   );
 }
 
-// ── Bracelet bottom sheet ─────────────────────────────────────────────────────
 function BraceletSheet({
   open,
   onClose,
@@ -83,6 +90,14 @@ function BraceletSheet({
     return () => window.removeEventListener('keydown', handler);
   }, [open, onClose]);
 
+  const groups = [
+    { label: 'Кожа', items: BRACELET_COMBOS.filter(c => c.material === 'leather') },
+    { label: 'Нейлон NATO', items: BRACELET_COMBOS.filter(c => c.material === 'cotton_fabric') },
+    { label: 'Металл', items: BRACELET_COMBOS.filter(c => c.material === 'metal_solid') },
+    { label: 'Каучук', items: BRACELET_COMBOS.filter(c => c.material === 'plastic_solid') },
+    { label: 'Смола', items: BRACELET_COMBOS.filter(c => c.material === 'resin') },
+  ];
+
   return createPortal(
     <div
       className="fixed inset-0 z-[100] flex flex-col justify-end md:justify-center md:items-center"
@@ -92,33 +107,30 @@ function BraceletSheet({
         transition: 'opacity 0.18s ease',
       }}
     >
-      {/* Backdrop */}
       <div
         className="absolute inset-0"
         style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(16px)' }}
         onClick={onClose}
       />
 
-      {/* Sheet panel */}
       <div
-        className="relative z-10 w-full md:w-[480px] md:rounded-3xl overflow-hidden"
+        className="relative z-10 w-full md:w-[520px] md:rounded-3xl overflow-hidden"
         style={{
           background: 'rgba(14,14,20,0.96)',
           backdropFilter: 'blur(32px)',
           border: '1px solid rgba(255,255,255,0.09)',
           transform: open ? 'translateY(0)' : 'translateY(100%)',
           transition: 'transform 0.32s cubic-bezier(0.32,0.08,0.08,1)',
-          maxHeight: '80dvh',
+          maxHeight: '82dvh',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
-        {/* Handle / header */}
         <div className="px-5 pt-4 pb-3 flex items-center justify-between shrink-0 border-b border-white/[0.07]">
           <div>
             <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-3 md:hidden" />
-            <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 font-semibold">Выберите ремешок</p>
-            <p className="text-base font-black text-white mt-0.5">12 вариантов</p>
+            <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 font-semibold">Ремешок</p>
+            <p className="text-base font-black text-white mt-0.5">{BRACELET_COMBOS.length} вариантов</p>
           </div>
           <button
             onClick={onClose}
@@ -129,41 +141,45 @@ function BraceletSheet({
           </button>
         </div>
 
-        {/* Combo grid */}
-        <div className="overflow-y-auto p-4">
-          <div className="grid grid-cols-3 gap-2.5">
-            {BRACELET_COMBOS.map(combo => {
-              const active = selectedId === combo.id;
-              return (
-                <button
-                  key={combo.id}
-                  onClick={() => { onSelect(combo); onClose(); }}
-                  className={cn(
-                    'flex flex-col items-center gap-2 p-3 rounded-2xl transition-all duration-100 text-center',
-                    active ? 'ring-2 ring-blue-400 bg-blue-400/10' : 'hover:bg-white/6 active:scale-95'
-                  )}
-                  style={{ border: active ? undefined : '1px solid rgba(255,255,255,0.07)' }}
-                >
-                  {/* Big colour dot */}
-                  <div
-                    className="w-11 h-11 rounded-full border-[3px] shrink-0 shadow-lg"
-                    style={{
-                      backgroundColor: combo.color,
-                      borderColor: active ? 'rgba(96,165,250,0.9)' : 'rgba(255,255,255,0.18)',
-                      boxShadow: active ? '0 0 14px rgba(96,165,250,0.35)' : 'inset 0 0 0 1px rgba(255,255,255,0.06)',
-                    }}
-                  />
-                  <div>
-                    <p className="text-[11px] font-bold text-white leading-tight">{combo.label}</p>
-                    <p className="text-[9px] text-white/38 mt-0.5">{MAT_LABELS[combo.material] ?? combo.material}</p>
-                  </div>
-                  {active && (
-                    <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">✓ выбран</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+        <div className="overflow-y-auto p-4 space-y-5">
+          {groups.map(group => (
+            <div key={group.label}>
+              <p className="text-[10px] uppercase tracking-[0.25em] text-white/30 font-semibold mb-2.5 px-1">
+                {group.label}
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                {group.items.map(combo => {
+                  const active = selectedId === combo.id;
+                  return (
+                    <button
+                      key={combo.id}
+                      onClick={() => { onSelect(combo); onClose(); }}
+                      className={cn(
+                        'flex flex-col items-center gap-2 p-2.5 rounded-2xl transition-all duration-100 text-center',
+                        active ? 'ring-2 ring-blue-400 bg-blue-400/10' : 'hover:bg-white/6 active:scale-95'
+                      )}
+                      style={{ border: active ? undefined : '1px solid rgba(255,255,255,0.07)' }}
+                    >
+                      <div
+                        className="w-10 h-10 rounded-full border-[3px] shrink-0 shadow-lg"
+                        style={{
+                          backgroundColor: combo.color,
+                          borderColor: active ? 'rgba(96,165,250,0.9)' : 'rgba(255,255,255,0.18)',
+                          boxShadow: active ? '0 0 14px rgba(96,165,250,0.35)' : 'inset 0 0 0 1px rgba(255,255,255,0.06)',
+                        }}
+                      />
+                      <div>
+                        <p className="text-[10px] font-bold text-white leading-tight">{combo.label}</p>
+                        {active && (
+                          <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">выбран</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>,
@@ -171,20 +187,17 @@ function BraceletSheet({
   );
 }
 
-// ── Main viewer ───────────────────────────────────────────────────────────────
 export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfigure, originRect }: Props) {
   const { updateConfig } = useWatchConfig();
 
-  // Find the initial combo that matches the preset's bracelet
   const initialCombo = BRACELET_COMBOS.find(
     c => c.color === preset.braceletColor && c.material === preset.braceletMaterial
   ) ?? BRACELET_COMBOS[0];
 
   const [selectedCombo, setSelectedCombo] = useState(initialCombo);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [entering, setEntering] = useState(true);
+  const [phase, setPhase] = useState<'enter' | 'open' | 'exit'>('enter');
 
-  // Compute the starting clip-path from the origin card rect
   const clipStart = useMemo(() => {
     if (!originRect) return 'inset(0% 0% 0% 0% round 0px)';
     const vw = window.innerWidth;
@@ -197,13 +210,12 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
   }, [originRect]);
 
   useEffect(() => {
-    const t = requestAnimationFrame(() =>
-      requestAnimationFrame(() => setEntering(false))
+    const t1 = requestAnimationFrame(() =>
+      requestAnimationFrame(() => setPhase('open'))
     );
-    return () => cancelAnimationFrame(t);
+    return () => cancelAnimationFrame(t1);
   }, []);
 
-  // Sync selected combo → 3D model instantly
   useEffect(() => {
     updateConfig({
       presetId: preset.id,
@@ -239,31 +251,33 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
     onBuy(preset, selectedCombo.color, selectedCombo.material);
   }, [preset, selectedCombo, onBuy]);
 
+  const isOpen = phase === 'open';
+
   const content = (
     <div
       className="fixed inset-0 z-[80] flex flex-col md:flex-row overflow-hidden"
       style={{
-        clipPath: entering ? clipStart : 'inset(0% 0% 0% 0% round 0px)',
-        opacity: entering ? 0.6 : 1,
-        transition: entering
-          ? 'none'
-          : 'clip-path 0.44s cubic-bezier(0.32,0.08,0.08,1), opacity 0.18s ease',
+        clipPath: isOpen ? 'inset(0% 0% 0% 0% round 0px)' : clipStart,
+        opacity: isOpen ? 1 : 0,
+        transform: isOpen ? 'scale(1)' : 'scale(0.96)',
+        transition: isOpen
+          ? 'clip-path 0.55s cubic-bezier(0.16,1,0.3,1), opacity 0.28s ease, transform 0.55s cubic-bezier(0.16,1,0.3,1)'
+          : 'none',
       }}
     >
-      {/* Backdrop */}
       <div
         className="absolute inset-0"
-        style={{ background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(28px)' }}
+        style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(32px)' }}
         onClick={onClose}
       />
 
-      {/* ── 3D Canvas ── top half on mobile, left side on desktop */}
-      <div className="relative z-10 flex-none h-[50dvh] md:h-auto md:flex-1 md:w-[58%]">
+      {/* 3D Canvas */}
+      <div className="relative z-10 flex-none h-[52dvh] md:h-auto md:flex-1 md:w-[58%]">
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: `radial-gradient(ellipse at 50% 35%, ${preset.watchfaceColor}28 0%, ${selectedCombo.color}16 55%, transparent 88%)`,
-            transition: 'background 0.4s ease',
+            background: `radial-gradient(ellipse at 50% 35%, ${preset.watchfaceColor}30 0%, ${selectedCombo.color}18 55%, transparent 88%)`,
+            transition: 'background 0.5s ease',
           }}
         />
 
@@ -277,7 +291,6 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
           <WatchScene />
         </Canvas>
 
-        {/* Close */}
         <button
           onClick={onClose}
           className="absolute top-4 left-4 w-9 h-9 rounded-full flex items-center justify-center text-white/70 hover:text-white transition-colors"
@@ -300,16 +313,15 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
         </div>
       </div>
 
-      {/* ── Details panel ── bottom half on mobile, right side on desktop */}
+      {/* Details panel */}
       <div
-        className="relative z-10 flex-none h-[50dvh] md:h-auto md:w-[42%] flex flex-col overflow-hidden"
+        className="relative z-10 flex-none h-[48dvh] md:h-auto md:w-[42%] flex flex-col overflow-hidden"
         style={{
-          background: 'rgba(10,10,14,0.94)',
+          background: 'rgba(10,10,14,0.96)',
           backdropFilter: 'blur(32px)',
           borderTop: '1px solid rgba(255,255,255,0.07)',
         }}
       >
-        {/* ─ Header ─ */}
         <div className="px-5 pt-5 pb-3.5 border-b border-white/[0.06] shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -322,13 +334,12 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
               )}
             </div>
             <div className="text-right shrink-0">
-              <p className="text-2xl font-black text-yellow-400 leading-none">{preset.priceStars}</p>
-              <p className="text-xs text-white/30 mt-0.5">⭐ звёзд</p>
+              <p className="text-2xl font-black text-white leading-none">{preset.priceStars}</p>
+              <p className="text-xs text-white/30 mt-0.5">звёзд</p>
             </div>
           </div>
         </div>
 
-        {/* ─ Specs ─ */}
         <div className="px-5 py-3 border-b border-white/[0.06] shrink-0">
           <div className="grid grid-cols-2 gap-2">
             {[
@@ -345,11 +356,10 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
           </div>
         </div>
 
-        {/* ─ Selected bracelet + choose button ─ */}
+        {/* Strap selector */}
         <div className="px-5 py-4 border-b border-white/[0.06] shrink-0">
           <p className="text-[10px] uppercase tracking-[0.3em] text-white/30 mb-3 font-semibold">Ремешок</p>
 
-          {/* Currently selected combo chip */}
           <div className="flex items-center gap-3 mb-3">
             <div
               className="w-10 h-10 rounded-full border-2 shrink-0 shadow-md"
@@ -365,7 +375,6 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
             </div>
           </div>
 
-          {/* Choose button */}
           <button
             onClick={() => setSheetOpen(true)}
             className="w-full py-2.5 rounded-2xl text-xs font-bold tracking-wide transition-all active:scale-[0.97] flex items-center justify-center gap-2"
@@ -377,11 +386,10 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
           >
             <span>Выбрать ремешок</span>
             <span className="opacity-50">›</span>
-            <span className="ml-auto text-[10px] opacity-40">12 вариантов</span>
+            <span className="ml-auto text-[10px] opacity-40">{BRACELET_COMBOS.length} вариантов</span>
           </button>
         </div>
 
-        {/* ─ Actions ─ */}
         <div className="px-5 py-4 space-y-2 shrink-0 mt-auto">
           <button
             onClick={handleBuy}
@@ -392,7 +400,7 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
               boxShadow: '0 4px 24px rgba(99,102,241,0.35)',
             }}
           >
-            Заказать — {preset.priceStars} ⭐
+            Заказать — {preset.priceStars} зв.
           </button>
           <button
             onClick={() => onConfigure(preset)}
