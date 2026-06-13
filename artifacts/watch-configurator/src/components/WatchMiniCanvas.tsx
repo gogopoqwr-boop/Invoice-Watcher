@@ -205,9 +205,12 @@ export interface WatchMiniCanvasProps {
     watchfaceBackgroundType?: string;
   };
   paused?: boolean;
+  /** Skip IntersectionObserver and mount immediately — use when the card is
+   *  guaranteed visible but inside an overflow container that clips IO detection */
+  forceMount?: boolean;
 }
 
-export default function WatchMiniCanvas({ preset, paused }: WatchMiniCanvasProps) {
+export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMiniCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const didMount = useRef(false);
@@ -215,22 +218,38 @@ export default function WatchMiniCanvas({ preset, paused }: WatchMiniCanvasProps
   const faceColor = preset.watchfaceColor ?? '#888888';
   const strapColor = preset.braceletColor ?? '#333333';
 
+  // forceMount path — acquire context slot immediately, release when prop flips off
   useEffect(() => {
-    if (!WEB_GL_OK) return;
+    if (!WEB_GL_OK || !forceMount) return;
+    if (!didMount.current && _activeContexts < MAX_CONTEXTS) {
+      didMount.current = true;
+      _activeContexts++;
+      setMounted(true);
+    }
+    return () => {
+      if (didMount.current) {
+        _activeContexts = Math.max(0, _activeContexts - 1);
+        didMount.current = false;
+        setMounted(false);
+      }
+    };
+  }, [forceMount]);
+
+  // IntersectionObserver path — for cards in normal scrolling pages
+  useEffect(() => {
+    if (!WEB_GL_OK || forceMount) return;
     const el = containerRef.current;
     if (!el) return;
 
     const obs = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          // Scroll into view — acquire a context slot if one is free
           if (!didMount.current && _activeContexts < MAX_CONTEXTS) {
             didMount.current = true;
             _activeContexts++;
             setMounted(true);
           }
         } else {
-          // Scroll out of view — release the slot so other cards can use it
           if (didMount.current) {
             didMount.current = false;
             _activeContexts = Math.max(0, _activeContexts - 1);
@@ -249,7 +268,7 @@ export default function WatchMiniCanvas({ preset, paused }: WatchMiniCanvasProps
         didMount.current = false;
       }
     };
-  }, []);
+  }, [forceMount]);
 
   if (!WEB_GL_OK) {
     return (
