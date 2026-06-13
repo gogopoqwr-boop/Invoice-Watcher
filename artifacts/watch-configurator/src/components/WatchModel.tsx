@@ -678,10 +678,17 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   const hourHandRef   = useRef<THREE.Group>(null);
   const minuteHandRef = useRef<THREE.Group>(null);
   const secHandRef    = useRef<THREE.Group>(null);
-  // Accumulated hand angles (start at clock-face positions) + last camera azimuth
+  // Mechanical target angles (where a rigid hand would be)
   const hourAngle   = useRef(Math.PI / 5);
   const minuteAngle = useRef(-Math.PI / 3.5);
   const secAngle    = useRef(Math.PI * 0.75);
+  // Actual rendered angles + velocities — spring-damper (loose-pin physics)
+  const hourActual  = useRef(Math.PI / 5);
+  const minActual   = useRef(-Math.PI / 3.5);
+  const secActual   = useRef(Math.PI * 0.75);
+  const hourVel     = useRef(0);
+  const minVel      = useRef(0);
+  const secVel      = useRef(0);
   const prevCamAz   = useRef<number | null>(null);
 
   useEffect(() => {
@@ -722,25 +729,47 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   useFrame(({ camera }) => {
     if (!groupRef.current) return;
 
-    // ── Болванки hands: spin proportional to camera azimuthal movement ─────────
-    // Azimuth = angle of camera around the Y axis.  As the user drags left/right
-    // OR the watch auto-rotates (which appears identical from camera's viewpoint),
-    // the camera azimuth changes → hands accumulate rotation at different gear ratios.
+    // ── Болванки hands: spring-damper "loose pin" physics ───────────────────
+    // Each hand has a mechanical target (rigid gear-ratio drive from camera azimuth)
+    // and an actual rendered position that springs toward that target with low damping.
+    // Low damping ratio → underdamped → hands oscillate (wobble) around the target
+    // before settling, just like a hand loose on its friction pin.
     const camAz = Math.atan2(camera.position.x, camera.position.z);
     if (prevCamAz.current !== null) {
       let dAz = camAz - prevCamAz.current;
-      // Unwrap to keep delta in (−π, π) when crossing the ±π boundary
       if (dAz >  Math.PI) dAz -= 2 * Math.PI;
       if (dAz < -Math.PI) dAz += 2 * Math.PI;
+      // Mechanical targets — driven by watch rotation at different gear ratios
       hourAngle.current   -= dAz * 1.4;
       minuteAngle.current -= dAz * 4.8;
       secAngle.current    -= dAz * 13;
+
+      // Spring-damper for each hand: F = k*(target-actual) - b*velocity
+      // k (stiffness): lower = looser, more lag
+      // b (damping): lower = more oscillation before settling
+      const springStep = (
+        actual: React.MutableRefObject<number>,
+        vel:    React.MutableRefObject<number>,
+        target: number,
+        k: number,
+        b: number,
+      ) => {
+        let err = target - actual.current;
+        // Shortest-path wrap so spring never chooses the long way around
+        err = ((err % (Math.PI * 2)) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+        vel.current    += (k * err - b * vel.current) * delta;
+        actual.current += vel.current * delta;
+      };
+
+      springStep(hourActual, hourVel, hourAngle.current,    3.5, 0.80); // heavy, lazy
+      springStep(minActual,  minVel,  minuteAngle.current,  6.0, 0.55); // medium
+      springStep(secActual,  secVel,  secAngle.current,    18.0, 0.28); // light, quick, oscillates most
     }
     prevCamAz.current = camAz;
 
-    if (hourHandRef.current)   hourHandRef.current.rotation.z   = hourAngle.current;
-    if (minuteHandRef.current) minuteHandRef.current.rotation.z = minuteAngle.current;
-    if (secHandRef.current)    secHandRef.current.rotation.z    = secAngle.current;
+    if (hourHandRef.current)   hourHandRef.current.rotation.z   = hourActual.current;
+    if (minuteHandRef.current) minuteHandRef.current.rotation.z = minActual.current;
+    if (secHandRef.current)    secHandRef.current.rotation.z    = secActual.current;
 
     // ── Watch auto-rotation ────────────────────────────────────────────────────
     const userActive = lastInteractionRef?.current
@@ -789,9 +818,11 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
     });
   }, [config.watchfaceGeometry]);
 
-  const isCircular = (config.watchfaceTextMode ?? 'center') === 'circular';
-  // Canvas draws text only for center+hands mode; all other cases use 3D WatchFaceText
-  const drawTextOnCanvas = !isCircular && (config.handsEnabled ?? true);
+  // Text is always rendered as circular 3D letters around the bezel
+  const hasText = !!(config.watchfaceText?.trim()) && !config.watchfaceText.startsWith('EYE:');
+  const isCircular = hasText;
+  // Never draw text on the canvas — 3D WatchFaceText handles it
+  const drawTextOnCanvas = false;
   const faceTexture = useMemo(
     () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular, config.watchfaceText, drawTextOnCanvas),
     [config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular, config.watchfaceText, drawTextOnCanvas]
@@ -843,7 +874,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
           <Suspense fallback={null}>
             <WatchFaceText
               text={config.watchfaceText}
-              mode={(config.watchfaceTextMode ?? 'center') as 'center' | 'circular'}
+              mode="circular"
               handsColor={config.handsColor ?? '#ffffff'}
               faceZ={faceZ}
               handsEnabled={config.handsEnabled ?? true}
