@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation, Link } from 'wouter';
 import { QRCodeSVG } from 'qrcode.react';
-import { useGetOrder, useGetConfiguration } from '@workspace/api-client-react';
+import { useGetOrder, useGetConfiguration, useCreateOrder } from '@workspace/api-client-react';
 import WatchMiniCanvas from '@/components/WatchMiniCanvas';
 import { cn } from '@/lib/utils';
 
@@ -72,6 +72,7 @@ export default function Payment() {
     },
   } as any);
 
+  const { mutateAsync: createOrder, isPending: isCreating } = useCreateOrder();
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
@@ -96,6 +97,14 @@ export default function Payment() {
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
   }, [order?.createdAt]);
+
+  const handleRepeatPayment = async () => {
+    if (!order?.configId || !order?.totalStars) return;
+    try {
+      const newOrder = await createOrder({ data: { configId: order.configId, totalStars: order.totalStars } });
+      setLocation(`/payment/${newOrder.id}`);
+    } catch {}
+  };
 
   const handleCopy = async () => {
     try {
@@ -188,12 +197,26 @@ export default function Payment() {
             <>
               <div className="text-6xl mt-4">⏰</div>
               <h1 className="text-2xl font-black">Время истекло</h1>
-              <p className="text-muted-foreground text-sm">Окно оплаты закрылось. Создайте новый заказ.</p>
-              <Link href="/configure" className="w-full mt-auto">
-                <button className="w-full bg-primary text-white rounded-full py-3.5 font-bold text-sm tracking-widest uppercase shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all">
-                  Настроить заново
+              <p className="text-muted-foreground text-sm">Окно оплаты закрылось. Повторите оплату или настройте заново.</p>
+              <div className="flex flex-col gap-3 w-full mt-auto">
+                <button
+                  onClick={handleRepeatPayment}
+                  disabled={isCreating}
+                  className="w-full bg-primary text-white rounded-full py-3.5 font-bold text-sm tracking-widest uppercase shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-wait flex items-center justify-center gap-2"
+                >
+                  {isCreating ? (
+                    <>
+                      <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                      Создаём заказ…
+                    </>
+                  ) : '🔄 Повторить оплату'}
                 </button>
-              </Link>
+                <Link href="/configure" className="w-full">
+                  <button className="liquid-button w-full py-3 text-sm font-semibold">
+                    Настроить заново
+                  </button>
+                </Link>
+              </div>
             </>
           ) : (
             <>
