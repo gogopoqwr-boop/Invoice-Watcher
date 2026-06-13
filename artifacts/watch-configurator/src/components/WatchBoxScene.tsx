@@ -361,86 +361,69 @@ function WatchInBox({ config, visible }: { config: WatchConfig; visible: boolean
 
 const RIBBON_Y_LID = H / 2 + LID_T + 0.018;  // just above the closed lid top
 
+const RIBBON_COLOR = '#d63370';
+const RIBBON_M = { color: RIBBON_COLOR, metalness: 0.18, roughness: 0.52 } as const;
+
 function GiftRibbon({ visible }: { visible: boolean }) {
   const { sc } = useSpring({
     sc: visible ? 1 : 0,
     config: { mass: 0.8, tension: 180, friction: 22 },
   });
 
-  const mat = {
-    color: '#d63370',
-    metalness: 0.18,
-    roughness: 0.52,
-    side: THREE.DoubleSide,
-  };
-
+  // THREE.js scale=0 creates a singular matrix → garbage rendering.
+  // The outer <group visible={…}> tells Three.js to skip the subtree entirely
+  // when hidden; the inner animated.group only handles the pop-in spring.
   return (
-    <animated.group scale={sc as any}>
-      {/* ── Cross-strips on lid top ── */}
-      {/* Along Z (front-to-back) */}
-      <mesh position={[0, RIBBON_Y_LID, 0]}>
-        <boxGeometry args={[0.22, 0.022, D + 0.05]} />
-        <meshStandardMaterial {...mat} />
-      </mesh>
-      {/* Along X (left-to-right), raised a hair so intersection is clean */}
-      <mesh position={[0, RIBBON_Y_LID + 0.012, 0]}>
-        <boxGeometry args={[W + 0.05, 0.022, 0.22]} />
-        <meshStandardMaterial {...mat} />
-      </mesh>
+    <group visible={visible}>
+      <animated.group scale={sc}>
+        {/* ── Cross-strips on lid top ── */}
+        <mesh position={[0, RIBBON_Y_LID, 0]}>
+          <boxGeometry args={[0.22, 0.022, D + 0.05]} />
+          <meshStandardMaterial {...RIBBON_M} />
+        </mesh>
+        <mesh position={[0, RIBBON_Y_LID + 0.012, 0]}>
+          <boxGeometry args={[W + 0.05, 0.022, 0.22]} />
+          <meshStandardMaterial {...RIBBON_M} />
+        </mesh>
 
-      {/* ── Ribbon strip on front face (visible face z = +D/2) ── */}
-      <mesh position={[0, 0, D / 2 + 0.018]}>
-        <boxGeometry args={[0.22, H + LID_T + 0.04, 0.018]} />
-        <meshStandardMaterial {...mat} />
-      </mesh>
-      {/* ── Ribbon strip on right face (visible face x = +W/2) ── */}
-      <mesh position={[W / 2 + 0.018, 0, 0]}>
-        <boxGeometry args={[0.018, H + LID_T + 0.04, 0.22]} />
-        <meshStandardMaterial {...mat} />
-      </mesh>
+        {/* ── Ribbon strip on front face ── */}
+        <mesh position={[0, 0, D / 2 + 0.018]}>
+          <boxGeometry args={[0.22, H + LID_T + 0.04, 0.018]} />
+          <meshStandardMaterial {...RIBBON_M} />
+        </mesh>
+        {/* ── Ribbon strip on right face ── */}
+        <mesh position={[W / 2 + 0.018, 0, 0]}>
+          <boxGeometry args={[0.018, H + LID_T + 0.04, 0.22]} />
+          <meshStandardMaterial {...RIBBON_M} />
+        </mesh>
 
-      {/* ── Bow — two squashed torus loops ── */}
-      {/* Left loop */}
-      <mesh
-        position={[-0.27, RIBBON_Y_LID + 0.06, 0]}
-        rotation={[Math.PI / 2, 0, 0.22]}
-        scale={[1, 0.36, 1]}
-      >
-        <torusGeometry args={[0.22, 0.068, 4, 28]} />
-        <meshStandardMaterial {...mat} />
-      </mesh>
-      {/* Right loop */}
-      <mesh
-        position={[0.27, RIBBON_Y_LID + 0.06, 0]}
-        rotation={[Math.PI / 2, 0, -0.22]}
-        scale={[1, 0.36, 1]}
-      >
-        <torusGeometry args={[0.22, 0.068, 4, 28]} />
-        <meshStandardMaterial {...mat} />
-      </mesh>
+        {/* ── Bow loops ── */}
+        <mesh position={[-0.27, RIBBON_Y_LID + 0.06, 0]} rotation={[Math.PI / 2, 0, 0.22]} scale={[1, 0.36, 1]}>
+          <torusGeometry args={[0.22, 0.068, 4, 28]} />
+          <meshStandardMaterial {...RIBBON_M} side={THREE.DoubleSide} />
+        </mesh>
+        <mesh position={[0.27, RIBBON_Y_LID + 0.06, 0]} rotation={[Math.PI / 2, 0, -0.22]} scale={[1, 0.36, 1]}>
+          <torusGeometry args={[0.22, 0.068, 4, 28]} />
+          <meshStandardMaterial {...RIBBON_M} side={THREE.DoubleSide} />
+        </mesh>
 
-      {/* ── Bow tails (two short strips fanning outward from knot) ── */}
-      <mesh
-        position={[-0.16, RIBBON_Y_LID + 0.01, 0.04]}
-        rotation={[0.12, 0, 0.28]}
-      >
-        <boxGeometry args={[0.26, 0.022, 0.18]} />
-        <meshStandardMaterial {...mat} />
-      </mesh>
-      <mesh
-        position={[0.16, RIBBON_Y_LID + 0.01, 0.04]}
-        rotation={[0.12, 0, -0.28]}
-      >
-        <boxGeometry args={[0.26, 0.022, 0.18]} />
-        <meshStandardMaterial {...mat} />
-      </mesh>
+        {/* ── Bow tails ── */}
+        <mesh position={[-0.16, RIBBON_Y_LID + 0.01, 0.04]} rotation={[0.12, 0, 0.28]}>
+          <boxGeometry args={[0.26, 0.022, 0.18]} />
+          <meshStandardMaterial {...RIBBON_M} />
+        </mesh>
+        <mesh position={[0.16, RIBBON_Y_LID + 0.01, 0.04]} rotation={[0.12, 0, -0.28]}>
+          <boxGeometry args={[0.26, 0.022, 0.18]} />
+          <meshStandardMaterial {...RIBBON_M} />
+        </mesh>
 
-      {/* ── Knot (centre sphere) ── */}
-      <mesh position={[0, RIBBON_Y_LID + 0.09, 0]}>
-        <sphereGeometry args={[0.10, 14, 10]} />
-        <meshStandardMaterial {...mat} roughness={0.38} />
-      </mesh>
-    </animated.group>
+        {/* ── Knot ── */}
+        <mesh position={[0, RIBBON_Y_LID + 0.09, 0]}>
+          <sphereGeometry args={[0.10, 14, 10]} />
+          <meshStandardMaterial {...RIBBON_M} roughness={0.38} />
+        </mesh>
+      </animated.group>
+    </group>
   );
 }
 
