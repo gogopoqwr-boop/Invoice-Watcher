@@ -578,6 +578,76 @@ export interface WatchModelProps {
   showWrist?: boolean;
 }
 
+// ─── WatchEyes — 3D eyes that track the camera (EYE: face mode) ──────────────
+//
+// Two eyeballs (sclera → iris → pupil) are placed on the face plane.
+// Each frame the pupils shift toward wherever the camera is looking from,
+// giving a creepy/fun "alive eyes" effect that works with any watch geometry.
+function WatchEyes({ faceZ, handsColor }: { faceZ: number; handsColor: string }) {
+  const leftPupilRef  = useRef<THREE.Mesh>(null);
+  const rightPupilRef = useRef<THREE.Mesh>(null);
+  const eyeGroupRef   = useRef<THREE.Group>(null);
+  // Pre-allocated temporaries — reused every frame (no per-frame allocation)
+  const _mat4 = useRef(new THREE.Matrix4());
+  const _vec3 = useRef(new THREE.Vector3());
+
+  useFrame(({ camera }) => {
+    if (!eyeGroupRef.current) return;
+    // Transform camera world position into this group's local space so the
+    // pupils track correctly even as the watch rotates around Y.
+    _mat4.current.copy(eyeGroupRef.current.matrixWorld).invert();
+    _vec3.current.copy(camera.position).applyMatrix4(_mat4.current);
+
+    const maxOff = 0.092;
+    const scale  = Math.min(1, 4 / (Math.abs(_vec3.current.z) || 4));
+    const px = THREE.MathUtils.clamp(_vec3.current.x * 0.065 * scale, -maxOff, maxOff);
+    const py = THREE.MathUtils.clamp(_vec3.current.y * 0.065 * scale, -maxOff, maxOff);
+
+    if (leftPupilRef.current) {
+      leftPupilRef.current.position.x = px;
+      leftPupilRef.current.position.y = py;
+    }
+    if (rightPupilRef.current) {
+      rightPupilRef.current.position.x = px;
+      rightPupilRef.current.position.y = py;
+    }
+  });
+
+  const eyeZ = faceZ + 0.016;
+
+  const Eye = ({ side }: { side: -1 | 1 }) => (
+    <group position={[side * 0.42, 0.10, 0]}>
+      {/* Sclera (white) */}
+      <mesh>
+        <circleGeometry args={[0.265, 36]} />
+        <meshStandardMaterial color="#f5f5ee" roughness={0.22} metalness={0} />
+      </mesh>
+      {/* Iris */}
+      <mesh position={[0, 0, 0.002]}>
+        <circleGeometry args={[0.168, 28]} />
+        <meshStandardMaterial color={handsColor} roughness={0.35} metalness={0.08} />
+      </mesh>
+      {/* Pupil — position driven by useFrame via ref */}
+      <mesh ref={side === -1 ? leftPupilRef : rightPupilRef} position={[0, 0, 0.004]}>
+        <circleGeometry args={[0.098, 22]} />
+        <meshStandardMaterial color="#060606" roughness={0.9} metalness={0} />
+      </mesh>
+      {/* Specular highlight */}
+      <mesh position={[0.072, 0.075, 0.007]}>
+        <circleGeometry args={[0.038, 12]} />
+        <meshStandardMaterial color="white" roughness={0.05} transparent opacity={0.88} />
+      </mesh>
+    </group>
+  );
+
+  return (
+    <group ref={eyeGroupRef} position={[0, 0, eyeZ]}>
+      <Eye side={-1} />
+      <Eye side={1} />
+    </group>
+  );
+}
+
 // Lug geometry measurements — all three constants kept in lockstep so
 // the lug arm, spring bar, and strap attachment always share the same Y and Z origin.
 const LUG_TIP_Y  = 1.85;  // |y| of spring bar / strap attachment (top of lug arm)
@@ -590,6 +660,16 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   const prevStepRef = useRef(step);
   const faceSnapTargetRef = useRef<number | null>(null);
   const rotResumeStartRef = useRef<number | null>(null);
+
+  // Болванки hand refs — each group's rotation.z is driven imperatively in useFrame
+  const hourHandRef   = useRef<THREE.Group>(null);
+  const minuteHandRef = useRef<THREE.Group>(null);
+  const secHandRef    = useRef<THREE.Group>(null);
+  // Accumulated hand angles (start at clock-face positions) + last camera azimuth
+  const hourAngle   = useRef(Math.PI / 5);
+  const minuteAngle = useRef(-Math.PI / 3.5);
+  const secAngle    = useRef(Math.PI * 0.75);
+  const prevCamAz   = useRef<number | null>(null);
 
   useEffect(() => {
     if (step === 3 && prevStepRef.current !== 3 && groupRef.current) {
@@ -626,8 +706,30 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   const θUpper = wrapUpper.to(v => v / WRAP_SEGS);
   const θLower = wrapLower.to(v => v / WRAP_SEGS);
 
-  useFrame(() => {
+  useFrame(({ camera }) => {
     if (!groupRef.current) return;
+
+    // ── Болванки hands: spin proportional to camera azimuthal movement ─────────
+    // Azimuth = angle of camera around the Y axis.  As the user drags left/right
+    // OR the watch auto-rotates (which appears identical from camera's viewpoint),
+    // the camera azimuth changes → hands accumulate rotation at different gear ratios.
+    const camAz = Math.atan2(camera.position.x, camera.position.z);
+    if (prevCamAz.current !== null) {
+      let dAz = camAz - prevCamAz.current;
+      // Unwrap to keep delta in (−π, π) when crossing the ±π boundary
+      if (dAz >  Math.PI) dAz -= 2 * Math.PI;
+      if (dAz < -Math.PI) dAz += 2 * Math.PI;
+      hourAngle.current   -= dAz * 1.4;
+      minuteAngle.current -= dAz * 4.8;
+      secAngle.current    -= dAz * 13;
+    }
+    prevCamAz.current = camAz;
+
+    if (hourHandRef.current)   hourHandRef.current.rotation.z   = hourAngle.current;
+    if (minuteHandRef.current) minuteHandRef.current.rotation.z = minuteAngle.current;
+    if (secHandRef.current)    secHandRef.current.rotation.z    = secAngle.current;
+
+    // ── Watch auto-rotation ────────────────────────────────────────────────────
     const userActive = lastInteractionRef?.current
       ? Date.now() - lastInteractionRef.current < INTERACTION_PAUSE_MS
       : false;
@@ -736,6 +838,11 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         </TextErrorBoundary>
       )}
 
+      {/* EYE: mode — two 3D eyeballs that track the camera every frame */}
+      {config.watchfaceText?.startsWith('EYE:') && (
+        <WatchEyes faceZ={faceZ} handsColor={config.handsColor ?? '#ffffff'} />
+      )}
+
       {/* Crystal — high-fidelity sapphire glass */}
       {/* Sits at starCrystalZ so the bevelled bottom starts just above the hands.
           transmission + clearcoat together produce two distinct visual layers:
@@ -761,10 +868,10 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         />
       </mesh>
 
-      {/* Watch hands */}
+      {/* Watch hands — болванки: rotation.z driven imperatively in useFrame */}
       {config.handsEnabled && (
         <group position={[0, 0, handsZ]}>
-          <group rotation={[0, 0, Math.PI / 5]}>
+          <group ref={hourHandRef}>
             <mesh position={[0, 0.26, 0]} castShadow>
               <boxGeometry args={[0.058, 0.52, 0.018]} />
               <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
@@ -778,7 +885,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
               <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
             </mesh>
           </group>
-          <group rotation={[0, 0, -Math.PI / 3.5]}>
+          <group ref={minuteHandRef}>
             <mesh position={[0, 0.38, 0]} castShadow>
               <boxGeometry args={[0.040, 0.76, 0.016]} />
               <meshStandardMaterial color={config.handsColor} metalness={0.94} roughness={0.06} />
@@ -793,7 +900,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
             </mesh>
           </group>
           {(config.handsCount ?? 3) >= 3 && (
-            <group rotation={[0, 0, Math.PI * 0.75]}>
+            <group ref={secHandRef}>
               <mesh position={[0, 0.34, 0.002]} castShadow>
                 <boxGeometry args={[0.010, 0.68, 0.008]} />
                 <meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} />

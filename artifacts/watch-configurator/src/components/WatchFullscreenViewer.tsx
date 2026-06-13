@@ -18,26 +18,15 @@ const MAT_LABELS: Record<string, string> = {
 
 // Exported so Collections.tsx buy-modal can reuse them
 export const BRACELET_COMBOS = [
-  { id: 'black_leather',    label: 'Чёрная кожа',        material: 'leather',        color: '#1c1917' },
-  { id: 'cognac_leather',   label: 'Коньяк',              material: 'leather',        color: '#6b3a2a' },
-  { id: 'tan_leather',      label: 'Карамель',            material: 'leather',        color: '#c2845a' },
-  { id: 'white_leather',    label: 'Белая кожа',          material: 'leather',        color: '#f0ede8' },
-  { id: 'black_nato',       label: 'Чёрный NATO',         material: 'cotton_fabric',  color: '#0f172a' },
-  { id: 'khaki_nato',       label: 'Хаки NATO',           material: 'cotton_fabric',  color: '#4a5240' },
-  { id: 'red_nato',         label: 'Красный NATO',        material: 'cotton_fabric',  color: '#7f1d1d' },
-  { id: 'navy_nato',        label: 'Морской NATO',        material: 'cotton_fabric',  color: '#1e3a5f' },
-  { id: 'olive_nato',       label: 'Олива NATO',          material: 'cotton_fabric',  color: '#556b2f' },
-  { id: 'orange_nato',      label: 'Оранж NATO',          material: 'cotton_fabric',  color: '#c2410c' },
-  { id: 'purple_nato',      label: 'Фиолет NATO',         material: 'cotton_fabric',  color: '#6b21a8' },
-  { id: 'teal_nato',        label: 'Мята NATO',           material: 'cotton_fabric',  color: '#0f766e' },
-  { id: 'silver_steel',     label: 'Нержавейка',          material: 'metal_solid',    color: '#c0c0c0' },
-  { id: 'gold_steel',       label: 'Золото',              material: 'metal_solid',    color: '#b5942b' },
-  { id: 'black_rubber',     label: 'Чёрный каучук',       material: 'plastic_solid',  color: '#1e1e1e' },
-  { id: 'white_rubber',     label: 'Белый каучук',        material: 'plastic_solid',  color: '#f0f0f0' },
-  { id: 'red_rubber',       label: 'Красный каучук',      material: 'plastic_solid',  color: '#dc2626' },
-  { id: 'resin_ocean',      label: 'Смола «Океан»',       material: 'resin',          color: '#0c4a6e' },
-  { id: 'resin_forest',     label: 'Смола «Лес»',         material: 'resin',          color: '#14532d' },
-  { id: 'resin_amber',      label: 'Смола «Янтарь»',      material: 'resin',          color: '#78350f' },
+  { id: 'black_leather',  label: 'Чёрная кожа',  material: 'leather',       color: '#1c1917' },
+  { id: 'cognac_leather', label: 'Коньяк',        material: 'leather',       color: '#6b3a2a' },
+  { id: 'tan_leather',    label: 'Карамель',      material: 'leather',       color: '#c2845a' },
+  { id: 'black_nato',     label: 'Чёрный NATO',   material: 'cotton_fabric', color: '#0f172a' },
+  { id: 'navy_nato',      label: 'Морской NATO',  material: 'cotton_fabric', color: '#1e3a5f' },
+  { id: 'silver_steel',   label: 'Нержавейка',    material: 'metal_solid',   color: '#c0c0c0' },
+  { id: 'gold_steel',     label: 'Золото',        material: 'metal_solid',   color: '#b5942b' },
+  { id: 'black_rubber',   label: 'Чёрный каучук', material: 'plastic_solid', color: '#1e1e1e' },
+  { id: 'red_rubber',     label: 'Красный каучук',material: 'plastic_solid', color: '#dc2626' },
 ];
 
 interface Props {
