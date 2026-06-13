@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation, Link } from 'wouter';
 import { QRCodeSVG } from 'qrcode.react';
-import { useGetOrder } from '@workspace/api-client-react';
+import { useGetOrder, useGetConfiguration } from '@workspace/api-client-react';
+import WatchMiniCanvas from '@/components/WatchMiniCanvas';
 import { cn } from '@/lib/utils';
 
 const PAYMENT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
@@ -14,26 +15,63 @@ function formatCountdown(ms: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+// ─── Watch preview panel ────────────────────────────────────────────────────
+
+function WatchPreviewPanel({ configId }: { configId: number }) {
+  const { data: cfg } = useGetConfiguration(configId, {
+    query: { enabled: !!configId },
+  } as any);
+
+  return (
+    <div className="relative w-full h-full min-h-[220px] flex items-center justify-center overflow-hidden">
+      {/* Ambient glow behind the watch */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: cfg
+            ? `radial-gradient(ellipse at 50% 50%, ${cfg.watchfaceColor}44 0%, transparent 70%)`
+            : 'none',
+        }}
+      />
+      <div className="w-full h-full">
+        <WatchMiniCanvas
+          forceMount
+          preset={{
+            watchfaceGeometry: cfg?.watchfaceGeometry ?? 'circle',
+            watchfaceColor: cfg?.watchfaceColor ?? '#1e293b',
+            braceletColor: cfg?.braceletColor ?? '#0f172a',
+            braceletMaterial: cfg?.braceletMaterial ?? 'metal_solid',
+            handsColor: cfg?.handsColor ?? '#cbd5e1',
+            handsEnabled: cfg?.handsEnabled ?? true,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─── Payment page ───────────────────────────────────────────────────────────
+
 export default function Payment() {
   const params = useParams();
   const [, setLocation] = useLocation();
   const orderId = params.orderId;
+
   const { data: order, isLoading, isError } = useGetOrder(Number(orderId), {
     query: {
       enabled: !!orderId && !isNaN(Number(orderId)),
-      // Don't retry 404s — the order either exists or it doesn't
-      retry: (failureCount, error: any) => {
+      retry: (failureCount: number, error: any) => {
         if (error?.status === 404 || error?.status === 400) return false;
         return failureCount < 2;
       },
-      refetchInterval: (query) => {
-        // Stop polling once paid, cancelled, or errored
+      refetchInterval: (query: any) => {
         const status = (query.state.data as any)?.status;
         if (!status || status === 'payment_pending') return 3000;
         return false;
       },
     },
   } as any);
+
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
@@ -41,18 +79,15 @@ export default function Payment() {
   const deepLink = `tg://resolve?domain=${botUsername}&start=pay_${orderId}`;
   const webLink = `https://t.me/${botUsername}?start=pay_${orderId}`;
 
-  // Redirect when payment is confirmed
   useEffect(() => {
     if (order?.status && order.status !== 'payment_pending' && order.status !== 'cancelled') {
       setTimeout(() => setLocation('/orders'), 2000);
     }
   }, [order?.status, setLocation]);
 
-  // 10-minute countdown from order creation
   useEffect(() => {
     if (!order?.createdAt) return;
     const deadline = new Date(order.createdAt).getTime() + PAYMENT_WINDOW_MS;
-
     const tick = () => {
       const remaining = deadline - Date.now();
       setTimeLeft(remaining > 0 ? remaining : 0);
@@ -102,89 +137,107 @@ export default function Payment() {
   const expired = timeLeft === 0;
 
   return (
-    <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Ambient glow */}
+    <div className="min-h-[100dvh] bg-background flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Ambient orbs */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full pointer-events-none"
-        style={{ background: "var(--orb-1)", filter: "blur(110px)", opacity: 0.5 }} />
+        style={{ background: "var(--orb-1)", filter: "blur(110px)", opacity: 0.45 }} />
 
-      {/* Back to configure */}
+      {/* Top nav */}
       <div className="absolute top-4 left-4 z-10">
         <Link href="/configure">
           <button className="liquid-button px-3 py-1.5 text-xs font-semibold">← К настройке</button>
         </Link>
       </div>
-
-      {/* My orders shortcut */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
         <Link href="/orders">
           <button className="liquid-button px-3 py-1.5 text-xs font-semibold">📦 Мои заказы</button>
         </Link>
       </div>
 
-      <div className="liquid-glass rounded-3xl p-8 max-w-sm w-full flex flex-col items-center text-center relative z-10 gap-5 animate-shimmer-in">
+      {/* Main content — split on desktop, stacked on mobile */}
+      <div className="relative z-10 w-full max-w-2xl flex flex-col md:flex-row gap-4 animate-shimmer-in">
 
-        {isPaid ? (
-          <>
-            <div className="text-6xl">✅</div>
-            <h1 className="text-2xl font-black">Оплачено!</h1>
-            <p className="text-muted-foreground text-sm">Перенаправляем в мои заказы…</p>
-          </>
-        ) : expired ? (
-          <>
-            <div className="text-6xl">⏰</div>
-            <h1 className="text-2xl font-black">Время истекло</h1>
-            <p className="text-muted-foreground text-sm">Окно оплаты закрылось. Создайте новый заказ.</p>
-            <Link href="/configure" className="w-full">
-              <button className="w-full bg-primary text-white rounded-full py-3.5 font-bold text-sm tracking-widest uppercase shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all">
-                Настроить заново
-              </button>
-            </Link>
-          </>
-        ) : (
-          <>
-            <div>
-              <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Заказ #{orderId}</p>
-              <h1 className="text-2xl font-black tracking-tight">Оплата</h1>
-            </div>
-
-            <div className="text-4xl font-black text-primary">{order.totalStars} ⭐</div>
-
-            {/* QR Code */}
-            <div className="rounded-2xl p-4 shadow-sm" style={{ background: "white" }}>
-              <QRCodeSVG value={webLink} size={180} level="M" />
-            </div>
-            <p className="text-xs text-muted-foreground">Отсканируй QR-код в Telegram</p>
-
-            {/* Pay button */}
-            <a href={deepLink} className="w-full" onClick={() => {
-              setTimeout(() => window.open(webLink, '_blank'), 500);
-            }}>
-              <button className="w-full bg-primary text-white rounded-full py-3.5 font-bold text-sm tracking-widest uppercase shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all">
-                Открыть в Telegram
-              </button>
-            </a>
-
-            <button onClick={handleCopy} className="liquid-button w-full py-3 text-sm font-semibold">
-              {copied ? '✓ Скопировано!' : 'Скопировать ссылку'}
-            </button>
-
-            {/* Status + countdown */}
-            <div className="flex items-center justify-between w-full text-xs">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                Ожидание оплаты…
+        {/* ── Left: Watch preview ── */}
+        <div className="liquid-glass rounded-3xl overflow-hidden md:w-[44%] flex-none flex flex-col">
+          <div className="flex-1 min-h-[240px] md:min-h-[340px]">
+            {order.configId ? (
+              <WatchPreviewPanel configId={order.configId} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+                Ваши часы
               </div>
-              {timeLeft !== null && (
-                <span className={cn(
-                  'font-mono font-bold tabular-nums',
-                  timeLeft < 60_000 ? 'text-red-500' : timeLeft < 3 * 60_000 ? 'text-amber-500' : 'text-muted-foreground'
-                )}>
-                  {formatCountdown(timeLeft)}
-                </span>
-              )}
-            </div>
-          </>
-        )}
+            )}
+          </div>
+          {/* Config badge */}
+          <div className="px-5 pb-5 pt-2 text-center">
+            <p className="text-xs text-muted-foreground uppercase tracking-widest">Заказ #{orderId}</p>
+            <p className="text-lg font-black tabular-nums mt-0.5">{order.totalStars} ⭐</p>
+          </div>
+        </div>
+
+        {/* ── Right: Payment card ── */}
+        <div className="liquid-glass rounded-3xl p-6 flex-1 flex flex-col items-center text-center gap-4">
+
+          {isPaid ? (
+            <>
+              <div className="text-6xl mt-4">✅</div>
+              <h1 className="text-2xl font-black">Оплачено!</h1>
+              <p className="text-muted-foreground text-sm">Перенаправляем в мои заказы…</p>
+            </>
+          ) : expired ? (
+            <>
+              <div className="text-6xl mt-4">⏰</div>
+              <h1 className="text-2xl font-black">Время истекло</h1>
+              <p className="text-muted-foreground text-sm">Окно оплаты закрылось. Создайте новый заказ.</p>
+              <Link href="/configure" className="w-full mt-auto">
+                <button className="w-full bg-primary text-white rounded-full py-3.5 font-bold text-sm tracking-widest uppercase shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all">
+                  Настроить заново
+                </button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <div>
+                <h1 className="text-xl font-black tracking-tight">Оплата Telegram Stars</h1>
+                <p className="text-xs text-muted-foreground mt-1">Отсканируй QR или открой в приложении</p>
+              </div>
+
+              {/* QR Code */}
+              <div className="rounded-2xl p-3 shadow-sm" style={{ background: "white" }}>
+                <QRCodeSVG value={webLink} size={160} level="M" />
+              </div>
+
+              {/* Pay button */}
+              <a href={deepLink} className="w-full" onClick={() => {
+                setTimeout(() => window.open(webLink, '_blank'), 500);
+              }}>
+                <button className="w-full bg-primary text-white rounded-full py-3.5 font-bold text-sm tracking-widest uppercase shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all">
+                  Открыть в Telegram
+                </button>
+              </a>
+
+              <button onClick={handleCopy} className="liquid-button w-full py-3 text-sm font-semibold">
+                {copied ? '✓ Скопировано!' : 'Скопировать ссылку'}
+              </button>
+
+              {/* Status + countdown */}
+              <div className="flex items-center justify-between w-full text-xs mt-auto">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  Ожидание оплаты…
+                </div>
+                {timeLeft !== null && (
+                  <span className={cn(
+                    'font-mono font-bold tabular-nums',
+                    timeLeft < 60_000 ? 'text-red-500' : timeLeft < 3 * 60_000 ? 'text-amber-500' : 'text-muted-foreground'
+                  )}>
+                    {formatCountdown(timeLeft)}
+                  </span>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
