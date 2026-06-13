@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { useGetConfiguration } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
+
+const WatchBoxScene = lazy(() => import('@/components/WatchBoxScene'));
 
 // ── Shared breakdown logic (mirrors api-server/src/lib/receipt.ts) ─────────
 
@@ -106,6 +108,23 @@ export default function ConfigReceipt({ configId, totalStars, alwaysOpen, compac
 
       {open && (
         <div className={cn('mt-2', compact ? 'ml-0' : '')}>
+          {!compact && cfg && (
+            <Suspense fallback={null}>
+              <WatchBoxScene
+                config={{
+                  watchfaceGeometry: cfg.watchfaceGeometry,
+                  watchfaceColor:    cfg.watchfaceColor,
+                  braceletMaterial:  cfg.braceletMaterial,
+                  braceletColor:     cfg.braceletColor,
+                  handsEnabled:      cfg.handsEnabled,
+                  handsColor:        cfg.handsColor,
+                }}
+                boxType={cfg.boxType ?? 'standard'}
+                autoOpen
+                className="h-56 mb-3"
+              />
+            </Suspense>
+          )}
           <ReceiptBody receipt={receipt} displayTotal={displayTotal} isLoading={isLoading} compact={compact} />
         </div>
       )}

@@ -7,188 +7,8 @@ import {
   useCalculatePrice,
 } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
+import WatchBoxScene from '@/components/WatchBoxScene';
 
-// ─── Box SVG illustrations ──────────────────────────────────────────────────
-
-function StandardBoxSVG({ open }: { open: boolean }) {
-  return (
-    <svg viewBox="0 0 220 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <defs>
-        <linearGradient id="std-body" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#1e293b" />
-          <stop offset="100%" stopColor="#0f172a" />
-        </linearGradient>
-        <linearGradient id="std-lid" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#334155" />
-          <stop offset="100%" stopColor="#1e293b" />
-        </linearGradient>
-        <linearGradient id="std-interior" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#0f172a" />
-          <stop offset="100%" stopColor="#020617" />
-        </linearGradient>
-      </defs>
-      {/* Box body */}
-      <rect x="20" y="100" width="180" height="90" rx="6" fill="url(#std-body)" />
-      {/* Interior visible when open */}
-      {open && (
-        <rect x="26" y="106" width="168" height="78" rx="4" fill="url(#std-interior)" />
-      )}
-      {/* Watch pillow inside */}
-      {open && (
-        <>
-          <ellipse cx="110" cy="145" rx="42" ry="22" fill="#1e293b" stroke="#334155" strokeWidth="1" />
-          <ellipse cx="110" cy="145" rx="16" ry="10" fill="#0f172a" stroke="#475569" strokeWidth="0.5" />
-        </>
-      )}
-      {/* Lid */}
-      <rect
-        x="20" y={open ? 10 : 58} width="180" height="48" rx="6"
-        fill="url(#std-lid)"
-        style={{ transition: 'y 0.6s cubic-bezier(0.34,1.56,0.64,1)' }}
-      />
-      {/* Magnetic dot */}
-      <circle cx="110" cy={open ? 34 : 82} r="4" fill="#475569"
-        style={{ transition: 'cy 0.6s cubic-bezier(0.34,1.56,0.64,1)' }} />
-      <circle cx="110" cy={open ? 34 : 82} r="2" fill="#64748b"
-        style={{ transition: 'cy 0.6s cubic-bezier(0.34,1.56,0.64,1)' }} />
-      {/* Brand */}
-      <text x="110" y={open ? 26 : 76} textAnchor="middle" fill="#475569" fontSize="7" fontFamily="system-ui" letterSpacing="2"
-        style={{ transition: 'y 0.6s cubic-bezier(0.34,1.56,0.64,1)' }}>
-        ЧЕБЛЯЧАС
-      </text>
-      {/* Side detail lines */}
-      <line x1="20" y1="112" x2="200" y2="112" stroke="#334155" strokeWidth="0.5" />
-      <line x1="20" y1="183" x2="200" y2="183" stroke="#334155" strokeWidth="0.5" />
-    </svg>
-  );
-}
-
-function PremiumBoxSVG({ open }: { open: boolean }) {
-  return (
-    <svg viewBox="0 0 220 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <defs>
-        <linearGradient id="prm-body" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#1a0a00" />
-          <stop offset="100%" stopColor="#0d0500" />
-        </linearGradient>
-        <linearGradient id="prm-lid" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#2d1100" />
-          <stop offset="100%" stopColor="#1a0a00" />
-        </linearGradient>
-        <linearGradient id="prm-velvet" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#4a1942" />
-          <stop offset="100%" stopColor="#2d0f29" />
-        </linearGradient>
-      </defs>
-      {/* Box body */}
-      <rect x="20" y="100" width="180" height="90" rx="6" fill="url(#prm-body)" />
-      {/* Gold border body */}
-      <rect x="20" y="100" width="180" height="90" rx="6" fill="none" stroke="#b8860b" strokeWidth="1.5" />
-      {/* Velvet interior */}
-      {open && (
-        <rect x="26" y="106" width="168" height="78" rx="4" fill="url(#prm-velvet)" />
-      )}
-      {/* Watch cushion */}
-      {open && (
-        <>
-          <ellipse cx="110" cy="145" rx="42" ry="22" fill="#3d1538" stroke="#6b3060" strokeWidth="1" />
-          <ellipse cx="110" cy="145" rx="16" ry="10" fill="#2d0f29" stroke="#c0a060" strokeWidth="0.5" />
-        </>
-      )}
-      {/* Lid */}
-      <rect x="20" y={open ? 10 : 58} width="180" height="48" rx="6"
-        fill="url(#prm-lid)"
-        style={{ transition: 'y 0.6s cubic-bezier(0.34,1.56,0.64,1)' }}
-      />
-      <rect x="20" y={open ? 10 : 58} width="180" height="48" rx="6"
-        fill="none" stroke="#b8860b" strokeWidth="1.5"
-        style={{ transition: 'y 0.6s cubic-bezier(0.34,1.56,0.64,1)' }}
-      />
-      {/* Gold hinge */}
-      <rect x="100" y={open ? 55 : 103} width="20" height="5" rx="2.5" fill="#b8860b"
-        style={{ transition: 'y 0.6s cubic-bezier(0.34,1.56,0.64,1)' }} />
-      {/* Brand on lid */}
-      <text x="110" y={open ? 40 : 88} textAnchor="middle" fill="#b8860b" fontSize="8" fontFamily="system-ui" letterSpacing="3"
-        style={{ transition: 'y 0.6s cubic-bezier(0.34,1.56,0.64,1)' }}>
-        ЧЕБЛЯЧАС
-      </text>
-      <text x="110" y={open ? 50 : 98} textAnchor="middle" fill="#7a5c00" fontSize="5" fontFamily="system-ui" letterSpacing="1"
-        style={{ transition: 'y 0.6s cubic-bezier(0.34,1.56,0.64,1)' }}>
-        PREMIUM
-      </text>
-      {/* Corner accents */}
-      {[{x:20,y:100},{x:196,y:100},{x:20,y:186},{x:196,y:186}].map((c, i) => (
-        <circle key={i} cx={c.x} cy={c.y} r="3" fill="#b8860b" />
-      ))}
-    </svg>
-  );
-}
-
-function CollectorBoxSVG({ open }: { open: boolean }) {
-  return (
-    <svg viewBox="0 0 220 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <defs>
-        <linearGradient id="col-body" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#5c3d1e" />
-          <stop offset="100%" stopColor="#3b2410" />
-        </linearGradient>
-        <linearGradient id="col-lid" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#7c5228" />
-          <stop offset="100%" stopColor="#5c3d1e" />
-        </linearGradient>
-        <linearGradient id="col-satin" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#1e3a5f" />
-          <stop offset="100%" stopColor="#0f1f35" />
-        </linearGradient>
-      </defs>
-      {/* Box body */}
-      <rect x="20" y="100" width="180" height="90" rx="4" fill="url(#col-body)" />
-      {/* Wood grain lines */}
-      {[108,116,124,132,140,148,156,164,172,180].map((y, i) => (
-        <line key={i} x1="20" y1={y} x2="200" y2={y} stroke="#4a3018" strokeWidth="0.5" strokeOpacity="0.6" />
-      ))}
-      {/* Satin interior */}
-      {open && (
-        <rect x="26" y="106" width="168" height="78" rx="3" fill="url(#col-satin)" />
-      )}
-      {/* Watch cushion */}
-      {open && (
-        <>
-          <ellipse cx="110" cy="145" rx="44" ry="24" fill="#142847" stroke="#1e3a5f" strokeWidth="1" />
-          <ellipse cx="110" cy="145" rx="17" ry="11" fill="#0f1f35" stroke="#9ca3af" strokeWidth="0.5" />
-        </>
-      )}
-      {/* Lid */}
-      <rect x="20" y={open ? 8 : 56} width="180" height="50" rx="4"
-        fill="url(#col-lid)"
-        style={{ transition: 'y 0.6s cubic-bezier(0.34,1.56,0.64,1)' }}
-      />
-      {/* Wood grain on lid */}
-      {[open ? 20 : 68, open ? 28 : 76, open ? 36 : 84, open ? 44 : 92, open ? 52 : 100].map((y, i) => (
-        <line key={i} x1="20" y1={y} x2="200" y2={y} stroke="#4a3018" strokeWidth="0.4" strokeOpacity="0.5"
-          style={{ transition: 'y 0.6s cubic-bezier(0.34,1.56,0.64,1)' }} />
-      ))}
-      {/* Brass corners — body */}
-      {([{x:20,y:100},{x:200,y:100},{x:20,y:190},{x:200,y:190}] as {x:number;y:number}[]).map((c, i) => (
-        <g key={i}>
-          <rect x={c.x - 5} y={c.y - 5} width="10" height="10" rx="1" fill="#b8860b" />
-          <rect x={c.x - 3} y={c.y - 3} width="6" height="6" rx="0.5" fill="#daa520" />
-        </g>
-      ))}
-      {/* Brass plate on lid */}
-      <rect x="75" y={open ? 22 : 70} width="70" height="22" rx="2" fill="#b8860b"
-        style={{ transition: 'y 0.6s cubic-bezier(0.34,1.56,0.64,1)' }}
-      />
-      <rect x="77" y={open ? 24 : 72} width="66" height="18" rx="1.5" fill="#daa520"
-        style={{ transition: 'y 0.6s cubic-bezier(0.34,1.56,0.64,1)' }}
-      />
-      <text x="110" y={open ? 36 : 84} textAnchor="middle" fill="#3b2410" fontSize="7" fontFamily="system-ui" fontWeight="bold" letterSpacing="1"
-        style={{ transition: 'y 0.6s cubic-bezier(0.34,1.56,0.64,1)' }}>
-        ЧЕБЛЯЧАС
-      </text>
-    </svg>
-  );
-}
 
 // ─── Box options data ────────────────────────────────────────────────────────
 
@@ -239,7 +59,6 @@ export default function BoxSetup() {
   const [selectedBox, setSelectedBox] = useState<BoxType>(config.boxType ?? 'standard');
   const [message, setMessage] = useState(config.boxMessage ?? '');
   const [giftWrap, setGiftWrap] = useState(config.giftWrap ?? false);
-  const [previewOpen, setPreviewOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [basePrice, setBasePrice] = useState<number | null>(null);
@@ -263,19 +82,6 @@ export default function BoxSetup() {
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Animate box open on mount
-  useEffect(() => {
-    const t = setTimeout(() => setPreviewOpen(true), 400);
-    return () => clearTimeout(t);
-  }, []);
-
-  // Re-animate on box type change
-  useEffect(() => {
-    setPreviewOpen(false);
-    const t = setTimeout(() => setPreviewOpen(true), 300);
-    return () => clearTimeout(t);
-  }, [selectedBox]);
 
   const boxOption = BOX_OPTIONS.find(b => b.id === selectedBox)!;
   const totalStars = (basePrice ?? 0) + boxOption.surcharge + (giftWrap ? 2 : 0);
@@ -324,11 +130,6 @@ export default function BoxSetup() {
     }
   };
 
-  const BoxPreview =
-    selectedBox === 'standard' ? StandardBoxSVG :
-    selectedBox === 'premium'  ? PremiumBoxSVG  :
-                                 CollectorBoxSVG;
-
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
 
@@ -346,8 +147,13 @@ export default function BoxSetup() {
           </div>
         </div>
 
-        <div className="w-full max-w-[280px] aspect-square drop-shadow-2xl">
-          <BoxPreview open={previewOpen} />
+        <div className="w-full max-w-[360px]">
+          <WatchBoxScene
+            config={config}
+            boxType={selectedBox}
+            autoOpen
+            className="h-72 md:h-80"
+          />
         </div>
 
         <div className="text-center space-y-1">

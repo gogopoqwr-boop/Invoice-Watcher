@@ -410,7 +410,7 @@ export default function Admin() {
                           )}
 
                           {order.configId && (
-                            <ConfigReceipt configId={order.configId} compact />
+                            <ConfigReceipt configId={order.configId} totalStars={order.totalStars} compact />
                           )}
                         </div>
 
