@@ -295,14 +295,14 @@ function WatchInBox({ config, visible }: { config: WatchConfig; visible: boolean
     delay: visible ? 320 : 0,
   });
 
+  if (!visible) return null;
+
   return (
-    // three.js skips the entire subtree when visible=false — no degenerate matrix
-    <group visible={visible}>
-      <animated.group
-        position={[0, -0.28, 0]}   // sits IN the cushion (cushion top ≈ -0.235)
-        scale={sc}                  // 0 → 0.44; straps fit at this scale (tip ≈ ±1.23, wall ±1.32)
-        rotation={[-Math.PI / 2, 0, 0]}
-      >
+    <animated.group
+      position={[0, -0.28, 0]}   // sits IN the cushion (cushion top ≈ -0.235)
+      scale={sc}                  // 0 → 0.44; straps fit at this scale (tip ≈ ±1.23, wall ±1.32)
+      rotation={[-Math.PI / 2, 0, 0]}
+    >
         {/* Watch case */}
         <mesh>
           <primitive object={bodyGeo} />
@@ -362,8 +362,7 @@ function WatchInBox({ config, visible }: { config: WatchConfig; visible: boolean
           <cylinderGeometry args={[0.09, 0.085, 0.28, 14]} />
           <meshStandardMaterial color={faceCol} metalness={0.76} roughness={0.14} />
         </mesh>
-      </animated.group>
-    </group>
+    </animated.group>
   );
 }
 

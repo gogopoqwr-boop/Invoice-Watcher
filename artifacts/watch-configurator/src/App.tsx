@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, Component } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -23,6 +23,39 @@ import { CartProvider } from "@/hooks/use-cart";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const queryClient = new QueryClient();
+
+class ErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 bg-background text-foreground">
+          <p className="text-4xl">💥</p>
+          <h1 className="text-xl font-bold">Что-то пошло не так</h1>
+          <p className="text-sm text-muted-foreground text-center max-w-sm">
+            {this.state.error.message}
+          </p>
+          <button
+            className="mt-2 px-6 py-2 rounded-full bg-primary text-white text-sm font-semibold"
+            onClick={() => { this.setState({ error: null }); window.location.href = '/'; }}
+          >
+            На главную
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function MouseGlassTracker() {
   useEffect(() => {
@@ -69,26 +102,30 @@ function Router() {
 
 function App() {
   return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <AuthProvider>
-            <WatchConfigProvider>
-              <CartProvider>
-                <MouseGlassTracker />
-                <div className="fixed bottom-5 right-5 z-50">
-                  <ThemeToggle />
-                </div>
-                <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                  <Router />
-                </WouterRouter>
-                <Toaster />
-              </CartProvider>
-            </WatchConfigProvider>
-          </AuthProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <AuthProvider>
+              <WatchConfigProvider>
+                <CartProvider>
+                  <MouseGlassTracker />
+                  <div className="fixed bottom-5 right-5 z-50">
+                    <ThemeToggle />
+                  </div>
+                  <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                    <ErrorBoundary>
+                      <Router />
+                    </ErrorBoundary>
+                  </WouterRouter>
+                  <Toaster />
+                </CartProvider>
+              </WatchConfigProvider>
+            </AuthProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useLocation, Link } from 'wouter';
 import { useWatchConfig, BoxType } from '@/hooks/use-watch-config';
 import {
@@ -7,9 +7,10 @@ import {
   useCalculatePrice,
 } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
-import WatchBoxScene from '@/components/WatchBoxScene';
 import { Ribbon } from 'lucide-react';
 import { TgStar } from '@/components/TgStar';
+
+const WatchBoxScene = lazy(() => import('@/components/WatchBoxScene'));
 
 
 // ─── Box options data ────────────────────────────────────────────────────────
@@ -145,13 +146,19 @@ export default function BoxSetup() {
         </div>
 
         <div className="w-full max-w-[360px]">
-          <WatchBoxScene
-            config={config}
-            boxType={selectedBox}
-            open={boxOpen}
-            giftWrap={giftWrap}
-            className="h-64 md:h-80"
-          />
+          <Suspense fallback={
+            <div className="h-64 md:h-80 rounded-2xl bg-card/60 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+            </div>
+          }>
+            <WatchBoxScene
+              config={config}
+              boxType={selectedBox}
+              open={boxOpen}
+              giftWrap={giftWrap}
+              className="h-64 md:h-80"
+            />
+          </Suspense>
         </div>
 
         <button
