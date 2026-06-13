@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, watchConfigsTable, ordersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { generateWatchSVG } from "../lib/watchSvg.js";
+import { generateWatchBoxSVG } from "../lib/watchBoxSvg.js";
 
 const router = Router();
 
@@ -23,7 +23,7 @@ router.get("/watch-preview/:id", async (req, res) => {
       }
     }
 
-    const svg = generateWatchSVG(config ?? {}, 400);
+    const svg = generateWatchBoxSVG(config ?? {}, 600, 500);
 
     let sharp: any;
     try {
