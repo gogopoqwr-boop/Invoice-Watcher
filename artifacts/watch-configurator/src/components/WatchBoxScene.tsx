@@ -468,9 +468,11 @@ export interface WatchBoxSceneProps {
   giftWrap?: boolean;
   /** height class e.g. "h-72" */
   className?: string;
+  /** Called when the user taps/clicks anywhere on the box scene */
+  onToggle?: () => void;
 }
 
-export default function WatchBoxScene({ config, boxType = 'standard', open = false, autoOpen = false, giftWrap = false, className }: WatchBoxSceneProps) {
+export default function WatchBoxScene({ config, boxType = 'standard', open = false, autoOpen = false, giftWrap = false, className, onToggle }: WatchBoxSceneProps) {
   const [autoOpened, setAutoOpened] = useState(false);
   useEffect(() => {
     if (!autoOpen) return;
@@ -490,8 +492,9 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
     //  G'=(36.4,29.8)  H'=(62.5,44.9)
     return (
       <div
-        className={`flex items-center justify-center rounded-2xl overflow-hidden ${className ?? 'h-64'}`}
+        className={`flex items-center justify-center rounded-2xl overflow-hidden ${className ?? 'h-64'}${onToggle ? ' cursor-pointer select-none' : ''}`}
         style={{ background: `radial-gradient(ellipse at 50% 55%, ${s.bodyColor}ee 0%, ${s.bodyColor}66 55%, transparent 100%)` }}
+        onClick={onToggle}
       >
         <svg viewBox="28 24 58 54" className="w-full max-w-xs" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -555,8 +558,27 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
     );
   }
 
+  // Drag detection: fire onToggle only when pointer moves < 6px (tap, not orbit drag)
+  const pointerDown = useRef<{ x: number; y: number } | null>(null);
+
+  function handlePointerDown(e: React.PointerEvent) {
+    pointerDown.current = { x: e.clientX, y: e.clientY };
+  }
+
+  function handlePointerUp(e: React.PointerEvent) {
+    if (!pointerDown.current || !onToggle) return;
+    const dx = e.clientX - pointerDown.current.x;
+    const dy = e.clientY - pointerDown.current.y;
+    if (Math.sqrt(dx * dx + dy * dy) < 6) onToggle();
+    pointerDown.current = null;
+  }
+
   return (
-    <div className={`w-full ${className ?? 'h-64'} rounded-2xl overflow-hidden`}>
+    <div
+      className={`w-full ${className ?? 'h-64'} rounded-2xl overflow-hidden${onToggle ? ' cursor-pointer' : ''}`}
+      onPointerDown={onToggle ? handlePointerDown : undefined}
+      onPointerUp={onToggle ? handlePointerUp : undefined}
+    >
       <Canvas
         camera={{ position: [1.6, 2.4, 8.2], fov: 36 }}
         gl={{ antialias: true, alpha: true, powerPreference: 'default' }}

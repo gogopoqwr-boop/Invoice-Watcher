@@ -157,6 +157,7 @@ export default function BoxSetup() {
               open={boxOpen}
               giftWrap={giftWrap}
               className="h-64 md:h-80"
+              onToggle={() => setBoxOpen(v => !v)}
             />
           </Suspense>
         </div>
@@ -165,7 +166,7 @@ export default function BoxSetup() {
           onClick={() => setBoxOpen(v => !v)}
           className="liquid-button px-5 py-2.5 text-sm font-semibold"
         >
-          {boxOpen ? '📦 Закрыть' : '🎁 Открыть'}
+          {boxOpen ? '📦 Закрыть коробку' : '🎁 Открыть коробку'}
         </button>
 
         <div className="text-center space-y-0.5">

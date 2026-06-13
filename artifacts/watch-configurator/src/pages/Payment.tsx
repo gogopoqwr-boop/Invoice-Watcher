@@ -24,6 +24,7 @@ function WatchPreviewPanel({ configId }: { configId: number }) {
   const { data: cfg } = useGetConfiguration(configId, {
     query: { enabled: !!configId },
   } as any);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="relative w-full h-full min-h-[260px] flex items-center justify-center overflow-hidden">
@@ -43,7 +44,9 @@ function WatchPreviewPanel({ configId }: { configId: number }) {
             watchfaceText:     cfg?.watchfaceText ?? (cfg as any)?.handsStyle,
           }}
           boxType={cfg?.boxType ?? 'standard'}
+          open={open}
           autoOpen
+          onToggle={() => setOpen(v => !v)}
           className="h-full w-full"
         />
       </Suspense>
