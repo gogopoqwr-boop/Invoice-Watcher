@@ -7,6 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import ConfigReceipt from "@/components/ConfigReceipt";
 
 const STATUS_LABELS: Record<string, string> = {
   payment_pending: "Ожидает оплаты",
@@ -406,6 +407,10 @@ export default function Admin() {
                             <span className="text-xs font-bold text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full w-fit">
                               ⚠️ Ожидает решения
                             </span>
+                          )}
+
+                          {order.configId && (
+                            <ConfigReceipt configId={order.configId} compact />
                           )}
                         </div>
 

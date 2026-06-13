@@ -3,6 +3,7 @@ import { useWatchConfig } from "@/hooks/use-watch-config";
 import { useGetMyOrders } from "@workspace/api-client-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import ConfigReceipt from "@/components/ConfigReceipt";
 
 const STATUS_LABELS: Record<string, string> = {
   payment_pending: 'Ожидает оплаты',
@@ -207,6 +208,13 @@ export default function Orders() {
                     )}
                   </div>
                 </div>
+
+                {/* Receipt breakdown */}
+                {order.configId && (
+                  <div className="mt-1">
+                    <ConfigReceipt configId={order.configId} />
+                  </div>
+                )}
 
                 {/* Inline cancel reason form */}
                 {cancelTargetId === order.id && (

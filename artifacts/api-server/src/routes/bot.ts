@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, ordersTable, watchConfigsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
+import { buildBreakdown, formatReceiptText } from "../lib/receipt.js";
 
 const router = Router();
 
@@ -75,20 +76,26 @@ async function sendWatchInvoice(chatId: number | string, orderId: number) {
     ? await db.select().from(watchConfigsTable).where(eq(watchConfigsTable.id, order.configId))
     : [null];
 
-  const configLines = config
-    ? [
-        config.watchfaceGeometry ? `• Форма: ${config.watchfaceGeometry}` : null,
-        config.watchfaceMaterial ? `• Материал: ${config.watchfaceMaterial}` : null,
-        config.braceletMaterial ? `• Ремешок: ${config.braceletMaterial}` : null,
-        config.watchfaceText ? `• Надпись: "${config.watchfaceText}"` : null,
-        config.serialNumber ? `• Серийный №: ${config.serialNumber}` : null,
-      ].filter(Boolean).join("\n")
-    : "Кастомные часы";
+  let description = "Кастомные часы";
+  if (config) {
+    const { breakdown } = buildBreakdown(config);
+    const lines: string[] = [];
+    if (config.watchfaceGeometry) lines.push(`Форма: ${config.watchfaceGeometry}`);
+    if (config.watchfaceMaterial) lines.push(`Корпус: ${config.watchfaceMaterial}`);
+    if (config.braceletMaterial) lines.push(`Ремешок: ${config.braceletMaterial}`);
+    if (config.boxType && config.boxType !== "standard") lines.push(`Коробка: ${config.boxType}`);
+    if (config.watchfaceText) lines.push(`Надпись: "${config.watchfaceText}"`);
+    if (config.serialNumber) lines.push(`Серийный №: ${config.serialNumber}`);
+    lines.push(`Итого: ${order.totalStars} ⭐ (из ${breakdown.length} позиций)`);
+    description = lines.join(" · ");
+    // Telegram description max 255 chars
+    if (description.length > 255) description = description.slice(0, 252) + "…";
+  }
 
   const result = await callTelegram("sendInvoice", {
     chat_id: chatId,
     title: `⌚ Заказ #${orderId} — Чеблячас`,
-    description: configLines,
+    description,
     payload: JSON.stringify({ orderId }),
     currency: "XTR",
     prices: [{ label: "Итого", amount: order.totalStars }],
@@ -109,20 +116,20 @@ async function sendWatchInvoice(chatId: number | string, orderId: number) {
 async function sendPaymentReceipt(chatId: string | number, orderId: number, order: any, config: any) {
   const orderUrl = buildOrderReturnUrl(orderId);
 
+  let configSection = "  Кастомные часы";
+  if (config) {
+    const { breakdown, total } = buildBreakdown(config);
+    configSection = formatReceiptText(breakdown, total);
+    if (config.serialNumber) configSection += `\n  Серийный №: ${config.serialNumber}`;
+  }
+
   const receiptLines = [
     `✅ *Оплата подтверждена!*`,
     ``,
     `📋 *Заказ #${orderId}*`,
-    `💫 Стоимость: ${order.totalStars} звёзд`,
     ``,
-    `⌚ *Конфигурация:*`,
-    config ? [
-      config.watchfaceGeometry ? `  Форма: ${config.watchfaceGeometry}` : null,
-      config.watchfaceMaterial ? `  Материал: ${config.watchfaceMaterial}` : null,
-      config.braceletMaterial ? `  Ремешок: ${config.braceletMaterial}` : null,
-      config.watchfaceText ? `  Надпись: "${config.watchfaceText}"` : null,
-      config.serialNumber ? `  Серийный №: ${config.serialNumber}` : null,
-    ].filter(Boolean).join("\n") : "  Кастомные часы",
+    `⌚ *Состав заказа:*`,
+    configSection,
     ``,
     `🔨 Ваши часы уже в производстве! Мы уведомим вас об отправке.`,
   ].join("\n");
