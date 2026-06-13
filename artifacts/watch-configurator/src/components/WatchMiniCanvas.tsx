@@ -3,11 +3,11 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import WatchSVG from './WatchSVG';
 
-// Keep at most 3 simultaneous WebGL contexts — browsers hard-cap around 8–16,
-// and each one here uses HDR-free lighting so they're lightweight but the limit
-// prevents context loss when all 6 cards are on screen at once.
+// At most 8 simultaneous WebGL contexts (browsers cap ~16; these are low-power).
+// Contexts are acquired when a card scrolls into view and released when it
+// scrolls out, so any card on screen at any time will have a live render.
 let _activeContexts = 0;
-const MAX_CONTEXTS = 3;
+const MAX_CONTEXTS = 8;
 
 function checkWebGL(): boolean {
   if (typeof document === 'undefined') return false;
@@ -220,18 +220,25 @@ export default function WatchMiniCanvas({ preset, paused }: WatchMiniCanvasProps
     const el = containerRef.current;
     if (!el) return;
 
-    const tryMount = () => {
-      if (didMount.current) return;
-      if (_activeContexts < MAX_CONTEXTS) {
-        didMount.current = true;
-        _activeContexts++;
-        setMounted(true);
-      }
-    };
-
     const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) tryMount(); },
-      { rootMargin: '80px', threshold: 0 }
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          // Scroll into view — acquire a context slot if one is free
+          if (!didMount.current && _activeContexts < MAX_CONTEXTS) {
+            didMount.current = true;
+            _activeContexts++;
+            setMounted(true);
+          }
+        } else {
+          // Scroll out of view — release the slot so other cards can use it
+          if (didMount.current) {
+            didMount.current = false;
+            _activeContexts = Math.max(0, _activeContexts - 1);
+            setMounted(false);
+          }
+        }
+      },
+      { rootMargin: '120px', threshold: 0 }
     );
     obs.observe(el);
 

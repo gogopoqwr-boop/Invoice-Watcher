@@ -129,6 +129,7 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
     <div
       className="fixed inset-0 z-[80] flex flex-col md:flex-row overflow-hidden"
       style={{
+        background: '#0a0a0e',
         clipPath: isOpen ? 'inset(0% 0% 0% 0% round 0px)' : clipStart,
         opacity: isOpen ? 1 : 0,
         transform: isOpen ? 'scale(1)' : 'scale(0.96)',
@@ -137,12 +138,8 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
           : 'none',
       }}
     >
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0"
-        style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(32px)' }}
-        onClick={onClose}
-      />
+      {/* Invisible click-outside catcher (the main div IS the solid bg) */}
+      <div className="absolute inset-0" onClick={onClose} />
 
       {/* ── 3D Canvas ── */}
       <div className="relative z-10 flex-none h-[58dvh] md:h-auto md:flex-1 md:w-[62%] overflow-hidden">
