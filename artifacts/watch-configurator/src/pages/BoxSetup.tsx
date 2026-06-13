@@ -136,17 +136,11 @@ export default function BoxSetup() {
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
 
       {/* ── Left — Box preview ── */}
-      <div className="w-full md:w-[44%] md:h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background to-card/60 p-8 gap-6">
-        {/* Step indicator */}
-        <div className="flex items-center gap-2 self-start mb-2">
+      <div className="w-full md:w-[44%] md:h-screen flex flex-col items-center md:justify-center bg-gradient-to-br from-background to-card/60 px-4 pt-4 pb-2 md:p-8 gap-4 md:gap-6">
+        <div className="flex items-center self-start">
           <Link href="/configure">
             <button className="liquid-button px-4 py-2 text-xs font-semibold">← Настройка</button>
           </Link>
-          <div className="flex items-center gap-1.5 ml-2">
-            <div className="w-2 h-2 rounded-full bg-primary/30" />
-            <div className="w-2 h-2 rounded-full bg-primary/30" />
-            <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-sm shadow-primary/50" />
-          </div>
         </div>
 
         <div className="w-full max-w-[360px]">
@@ -155,19 +149,19 @@ export default function BoxSetup() {
             boxType={selectedBox}
             autoOpen
             giftWrap={giftWrap}
-            className="h-72 md:h-80"
+            className="h-64 md:h-80"
           />
         </div>
 
-        <div className="text-center space-y-1">
+        <div className="text-center space-y-0.5">
           <p
-            className="text-xl font-bold tracking-tight transition-colors duration-300"
+            className="text-lg font-bold tracking-tight transition-colors duration-300"
             style={{ color: boxOption.textColor }}
           >
             {boxOption.label}
           </p>
           <p className="text-sm text-muted-foreground">{boxOption.sublabel}</p>
-          <p className="text-xs text-muted-foreground/70 max-w-[220px] leading-relaxed">
+          <p className="text-xs text-muted-foreground/70 max-w-[220px] leading-relaxed hidden md:block">
             {boxOption.desc}
           </p>
         </div>

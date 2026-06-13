@@ -460,8 +460,8 @@ function Scene({ config, boxType, autoOpen, giftWrap }: { config: WatchConfig; b
       <group rotation={[0, -0.46, 0]}>
         <Box3D boxType={boxType} open={open} />
         <WatchInBox config={config} visible={open} />
-        {/* Ribbon sits on the closed box and springs away when the lid opens */}
-        <GiftRibbon visible={giftWrap && !open} />
+        {/* Only mount the ribbon when giftWrap is on — avoids scale=0 degenerate matrix */}
+        {giftWrap && <GiftRibbon visible={!open} />}
       </group>
     </>
   );
