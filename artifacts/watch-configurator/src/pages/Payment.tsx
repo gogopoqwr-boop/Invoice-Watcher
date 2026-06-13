@@ -18,8 +18,21 @@ export default function Payment() {
   const params = useParams();
   const [, setLocation] = useLocation();
   const orderId = params.orderId;
-  const { data: order, isLoading } = useGetOrder(Number(orderId), {
-    query: { enabled: !!orderId, refetchInterval: 3000 },
+  const { data: order, isLoading, isError } = useGetOrder(Number(orderId), {
+    query: {
+      enabled: !!orderId && !isNaN(Number(orderId)),
+      // Don't retry 404s — the order either exists or it doesn't
+      retry: (failureCount, error: any) => {
+        if (error?.status === 404 || error?.status === 400) return false;
+        return failureCount < 2;
+      },
+      refetchInterval: (query) => {
+        // Stop polling once paid, cancelled, or errored
+        const status = (query.state.data as any)?.status;
+        if (!status || status === 'payment_pending') return 3000;
+        return false;
+      },
+    },
   } as any);
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -65,15 +78,22 @@ export default function Payment() {
     );
   }
 
-  if (!order) {
+  if (!order || isError) {
     return (
       <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center gap-4 p-4">
-        <p className="text-muted-foreground">Заказ не найден</p>
-        <Link href="/configure">
-          <button className="liquid-button px-6 py-3 text-sm font-semibold">
-            Вернуться к настройке
-          </button>
-        </Link>
+        <div className="text-5xl mb-2">🔍</div>
+        <p className="text-lg font-bold">Заказ не найден</p>
+        <p className="text-sm text-muted-foreground">Проверьте ссылку или создайте новый заказ</p>
+        <div className="flex gap-3 mt-2">
+          <Link href="/orders">
+            <button className="liquid-button px-6 py-3 text-sm font-semibold">📦 Мои заказы</button>
+          </Link>
+          <Link href="/configure">
+            <button className="bg-primary text-white rounded-full px-6 py-3 text-sm font-bold hover:bg-primary/90 transition-all">
+              Настроить заново
+            </button>
+          </Link>
+        </div>
       </div>
     );
   }

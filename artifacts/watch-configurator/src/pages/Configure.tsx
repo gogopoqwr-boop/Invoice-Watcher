@@ -141,6 +141,7 @@ export default function Configure() {
   }, [hasPreset]);
 
   const [submitting, setSubmitting] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
   const [showWrist, setShowWrist] = useState(false);
@@ -189,6 +190,7 @@ export default function Configure() {
 
   const handleOrder = async () => {
     setSubmitting(true);
+    setOrderError(null);
     try {
       const cfg = await createConfig.mutateAsync({
         data: {
@@ -218,6 +220,7 @@ export default function Configure() {
       setLocation(`/payment/${order.id}`);
     } catch (e) {
       console.error(e);
+      setOrderError('Не удалось создать заказ. Проверьте соединение и попробуйте снова.');
     } finally {
       setSubmitting(false);
     }
