@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
+import { Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import WatchSVG from './WatchSVG';
 
@@ -116,16 +117,18 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
       ))}
 
       {([1, -1] as number[]).map(sign => (
-        <mesh key={sign} position={[0, sign * 3.05, 0]}>
-          <boxGeometry args={[1.05, 2.40, 0.14]} />
-          <meshStandardMaterial
-            color={braceletColor}
-            metalness={isMetal ? 0.85 : 0}
-            roughness={isMetal ? 0.10 : 0.80}
-            transparent={isResin}
-            opacity={isResin ? 0.72 : 1}
-          />
-        </mesh>
+        <group key={sign} position={[0, sign * 1.85, 0]} rotation={[sign * -0.48, 0, 0]}>
+          <mesh position={[0, sign * 1.20, 0]}>
+            <boxGeometry args={[1.05, 2.40, 0.14]} />
+            <meshStandardMaterial
+              color={braceletColor}
+              metalness={isMetal ? 0.85 : 0}
+              roughness={isMetal ? 0.10 : 0.80}
+              transparent={isResin}
+              opacity={isResin ? 0.72 : 1}
+            />
+          </mesh>
+        </group>
       ))}
 
       {handsEnabled && (
@@ -307,17 +310,17 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
       {mounted && !paused && (
         <div className="absolute inset-0">
           <Canvas
-            camera={{ position: [0, 0, 7.4], fov: 38 }}
+            camera={{ position: [0, 0.5, 8.0], fov: 40 }}
             gl={{ alpha: true, antialias: true, powerPreference: 'low-power', preserveDrawingBuffer: false }}
             style={{ background: 'transparent', width: '100%', height: '100%' }}
             dpr={[1, 1.2]}
           >
-            {/* No Environment HDR — saves a full GPU texture per context */}
-            <ambientLight intensity={0.65} />
-            <directionalLight position={[4, 6, 5]} intensity={1.3} />
-            <directionalLight position={[-3, -1, -4]} intensity={0.22} />
-            <pointLight position={[0, 3, 4]} intensity={0.6} color="#e0eeff" />
-            <hemisphereLight intensity={0.30} />
+            <ambientLight intensity={0.55} />
+            <directionalLight position={[5, 8, 6]} intensity={1.3} />
+            <directionalLight position={[-3, -2, -4]} intensity={0.28} />
+            <pointLight position={[-4, 2, 3]} intensity={0.7} color="#6366f1" />
+            <hemisphereLight intensity={0.25} />
+            <Environment preset="city" />
             <MiniWatch
               watchfaceGeometry={preset.watchfaceGeometry ?? 'rounded'}
               watchfaceColor={faceColor}
