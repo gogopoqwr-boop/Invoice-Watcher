@@ -187,11 +187,11 @@ export default function Configure() {
   if (!hasPreset) return null;
 
   return (
-    <div className="min-h-[100dvh] w-full bg-background flex flex-col md:flex-row overflow-hidden">
+    <div className="w-full bg-background flex flex-col md:flex-row md:overflow-hidden md:h-screen">
 
       {/* Left — Watch Preview */}
       <div
-        className="w-full md:w-[52%] h-[44vh] md:h-screen relative"
+        className="sticky top-0 z-10 w-full md:static md:w-[52%] h-[44dvh] md:h-screen relative shrink-0"
         style={{ background: 'radial-gradient(ellipse at 48% 42%, #1e2a4a 0%, #0d1117 55%, #060810 100%)' }}
       >
         <Link href="/collections">
@@ -224,7 +224,7 @@ export default function Configure() {
       </div>
 
       {/* Right — Configuration Panel */}
-      <div className="w-full md:w-[48%] md:h-screen flex flex-col bg-background/80 backdrop-blur-xl border-l border-border/60">
+      <div className="w-full md:w-[48%] md:h-screen flex flex-col bg-background/80 backdrop-blur-xl border-l border-border/60 overflow-y-auto md:overflow-hidden">
 
         {/* Header */}
         <div className="px-5 pt-5 pb-3">
