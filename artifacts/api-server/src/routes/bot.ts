@@ -138,8 +138,8 @@ async function sendPaymentReceipt(chatId: string | number, orderId: number, orde
 
   let configSection = "  Кастомные часы";
   if (config) {
-    const { breakdown, total } = buildBreakdown(config);
-    configSection = formatReceiptText(breakdown, total);
+    const { breakdown } = buildBreakdown(config);
+    configSection = formatReceiptText(breakdown, order.totalStars);
     if (config.serialNumber) configSection += `\n  Серийный №: ${config.serialNumber}`;
   }
 

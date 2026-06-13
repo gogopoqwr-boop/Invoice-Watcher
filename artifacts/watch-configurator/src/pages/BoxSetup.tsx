@@ -252,9 +252,11 @@ export default function BoxSetup() {
     const timer = setTimeout(() => {
       calcPrice.mutateAsync({
         data: {
+          watchfaceGeometry: config.watchfaceGeometry,
           watchfaceMaterial: config.watchfaceMaterial,
           braceletMaterial: config.braceletMaterial,
           handsEnabled: config.handsEnabled,
+          watchfaceText: config.watchfaceText || undefined,
         },
       }).then(r => setBasePrice(r.totalStars)).catch(() => {});
     }, 200);
@@ -296,16 +298,20 @@ export default function BoxSetup() {
           handsStyle: config.watchfaceText || undefined,
           serialNumber: undefined,
           sessionId,
+          boxType: selectedBox,
         },
       });
       const priceResult = await calcPrice.mutateAsync({
         data: {
+          watchfaceGeometry: config.watchfaceGeometry,
           watchfaceMaterial: config.watchfaceMaterial,
           braceletMaterial: config.braceletMaterial,
           handsEnabled: config.handsEnabled,
+          watchfaceText: config.watchfaceText || undefined,
+          boxType: selectedBox,
         },
       });
-      const finalStars = priceResult.totalStars + boxOption.surcharge + (giftWrap ? 2 : 0);
+      const finalStars = priceResult.totalStars + (giftWrap ? 2 : 0);
       const order = await createOrder.mutateAsync({
         data: { configId: cfg.id, sessionId, totalStars: finalStars },
       });

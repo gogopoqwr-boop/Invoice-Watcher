@@ -61,13 +61,15 @@ function buildBreakdown(cfg: any): { breakdown: BreakdownItem[]; total: number }
 
 export interface ConfigReceiptProps {
   configId: number | null | undefined;
+  /** Authoritative total from the order — overrides the recalculated breakdown sum */
+  totalStars?: number | null;
   /** If true, renders inline without a toggle (always open) */
   alwaysOpen?: boolean;
   /** Compact mode for admin table rows */
   compact?: boolean;
 }
 
-export default function ConfigReceipt({ configId, alwaysOpen, compact }: ConfigReceiptProps) {
+export default function ConfigReceipt({ configId, totalStars, alwaysOpen, compact }: ConfigReceiptProps) {
   const [open, setOpen] = useState(false);
   const shouldFetch = alwaysOpen || open;
 
@@ -78,10 +80,12 @@ export default function ConfigReceipt({ configId, alwaysOpen, compact }: ConfigR
   if (!configId) return null;
 
   const receipt = cfg ? buildBreakdown(cfg) : null;
+  // Use the authoritative order total when provided; fall back to recalculated
+  const displayTotal = totalStars ?? receipt?.total ?? 0;
 
   if (alwaysOpen) {
     return (
-      <ReceiptBody receipt={receipt} isLoading={isLoading} compact={compact} />
+      <ReceiptBody receipt={receipt} displayTotal={displayTotal} isLoading={isLoading} compact={compact} />
     );
   }
 
@@ -102,7 +106,7 @@ export default function ConfigReceipt({ configId, alwaysOpen, compact }: ConfigR
 
       {open && (
         <div className={cn('mt-2', compact ? 'ml-0' : '')}>
-          <ReceiptBody receipt={receipt} isLoading={isLoading} compact={compact} />
+          <ReceiptBody receipt={receipt} displayTotal={displayTotal} isLoading={isLoading} compact={compact} />
         </div>
       )}
     </div>
@@ -111,10 +115,12 @@ export default function ConfigReceipt({ configId, alwaysOpen, compact }: ConfigR
 
 function ReceiptBody({
   receipt,
+  displayTotal,
   isLoading,
   compact,
 }: {
   receipt: { breakdown: BreakdownItem[]; total: number } | null;
+  displayTotal: number;
   isLoading: boolean;
   compact?: boolean;
 }) {
@@ -153,7 +159,7 @@ function ReceiptBody({
             <tr className="bg-muted/20">
               <td className="py-1.5 px-2.5 font-black text-foreground">Итого</td>
               <td className="py-1.5 px-2.5 text-right font-black text-primary tabular-nums">
-                {receipt.total} ⭐
+                {displayTotal} ⭐
               </td>
             </tr>
           </tbody>
@@ -176,7 +182,7 @@ function ReceiptBody({
           ))}
           <div className="border-t border-border/40 mt-2 pt-2 flex items-center justify-between">
             <span className="font-black text-foreground text-sm">Итого</span>
-            <span className="font-black text-primary text-base tabular-nums">{receipt.total} ⭐</span>
+            <span className="font-black text-primary text-base tabular-nums">{displayTotal} ⭐</span>
           </div>
         </div>
       )}

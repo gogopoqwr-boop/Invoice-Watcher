@@ -212,7 +212,7 @@ export default function Orders() {
                 {/* Receipt breakdown */}
                 {order.configId && (
                   <div className="mt-1">
-                    <ConfigReceipt configId={order.configId} />
+                    <ConfigReceipt configId={order.configId} totalStars={order.totalStars} />
                   </div>
                 )}
 
