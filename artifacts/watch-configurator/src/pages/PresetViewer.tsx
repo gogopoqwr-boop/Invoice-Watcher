@@ -8,6 +8,58 @@ import WatchSVG from '@/components/WatchSVG';
 import { WebGLErrorBoundary } from '@/components/WebGLErrorBoundary';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 
+function ShareButton({ presetId }: { presetId: string | number }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = useCallback(async () => {
+    const url = `${window.location.origin}${window.location.pathname.includes('/preset/') ? '' : ''}${window.location.origin.includes('localhost') ? '' : ''}/preset/${presetId}`;
+    const shareUrl = `${window.location.protocol}//${window.location.host}/preset/${presetId}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Чеблячас — кастомные часы', url: shareUrl });
+        return;
+      } catch { /* user cancelled */ }
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* ignore */ }
+  }, [presetId]);
+
+  return (
+    <button
+      onClick={handleShare}
+      className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white/70 hover:text-white transition-all"
+      style={{
+        background: copied ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.08)',
+        border: '1px solid rgba(255,255,255,0.14)',
+        backdropFilter: 'blur(12px)',
+      }}
+      title="Поделиться"
+    >
+      {copied ? (
+        <>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Скопировано
+        </>
+      ) : (
+        <>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          Поделиться
+        </>
+      )}
+    </button>
+  );
+}
+
 function checkWebGL(): boolean {
   if (typeof document === 'undefined') return false;
   try {
@@ -285,14 +337,7 @@ export default function PresetViewer() {
           </svg>
         </button>
 
-        {preset?.collectionName && (
-          <div
-            className="absolute top-4 right-4 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest"
-            style={{ background: 'rgba(255,255,255,0.10)', backdropFilter: 'blur(12px)', color: 'rgba(255,255,255,0.7)' }}
-          >
-            {preset.collectionName}
-          </div>
-        )}
+        {preset && <ShareButton presetId={preset.id} />}
 
         <div className="absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none">
           <span className="text-[10px] uppercase tracking-[0.25em] text-white/22 font-semibold">Потяни · Прокрути</span>

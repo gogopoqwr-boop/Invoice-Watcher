@@ -96,6 +96,8 @@ export default function CollectionPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastScrollTime = useRef(0);
   const isTransitioning = useRef(false);
+  const touchStartY = useRef<number | null>(null);
+  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     fetch('/api/presets/inventory')
@@ -128,6 +130,30 @@ export default function CollectionPage() {
     setLocation(`/collections/${nextIndex}`);
     setTimeout(() => { isTransitioning.current = false; }, SCROLL_COOLDOWN);
   }, [setLocation]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartY.current === null || touchStartX.current === null) return;
+    if (buyModal) return;
+    const deltaY = touchStartY.current - e.changedTouches[0].clientY;
+    const deltaX = Math.abs(touchStartX.current - e.changedTouches[0].clientX);
+    touchStartY.current = null;
+    touchStartX.current = null;
+    // Ignore if mostly horizontal or too short a swipe
+    if (Math.abs(deltaY) < 50 || deltaX > Math.abs(deltaY) * 0.8) return;
+    const inner = scrollRef.current;
+    const atBottom = !inner || inner.scrollTop + inner.clientHeight >= inner.scrollHeight - 8;
+    const atTop = !inner || inner.scrollTop <= 8;
+    if (deltaY > 0 && hasNext && atBottom) {
+      goTo(safeIndex + 1, 1);
+    } else if (deltaY < 0 && hasPrev && atTop) {
+      goTo(safeIndex - 1, -1);
+    }
+  }, [buyModal, hasNext, hasPrev, safeIndex, goTo]);
 
   // Scroll wheel navigation
   useEffect(() => {
@@ -320,7 +346,7 @@ export default function CollectionPage() {
   };
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-background">
+    <div className="fixed inset-0 overflow-hidden bg-background" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       {/* Particles */}
       <canvas ref={particlesRef} className="fixed inset-0 pointer-events-none z-0" style={{ opacity: 0.8 }} />
 
