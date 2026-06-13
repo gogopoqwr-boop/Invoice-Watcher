@@ -168,7 +168,16 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
 
 // Lightweight color placeholder shown while a context slot isn't available.
 // Uses the watch's own colors so each card looks distinct and intentional.
-function WatchColorCard({ watchfaceColor, braceletColor }: { watchfaceColor: string; braceletColor: string }) {
+function WatchColorCard({ watchfaceColor, braceletColor, watchfaceText }: { watchfaceColor: string; braceletColor: string; watchfaceText?: string }) {
+  const textLines = watchfaceText?.trim().split('\n').slice(0, 3) ?? [];
+  const luminance = (hex: string) => {
+    const r = parseInt(hex.slice(1, 3) || '88', 16) / 255;
+    const g = parseInt(hex.slice(3, 5) || '88', 16) / 255;
+    const b = parseInt(hex.slice(5, 7) || '88', 16) / 255;
+    return 0.299 * r + 0.587 * g + 0.114 * b;
+  };
+  const textColor = luminance(watchfaceColor) > 0.55 ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.85)';
+
   return (
     <div
       className="w-full h-full flex items-center justify-center relative overflow-hidden"
@@ -183,10 +192,18 @@ function WatchColorCard({ watchfaceColor, braceletColor }: { watchfaceColor: str
           className="w-[52px] h-[52px] rounded-full border-[3px] flex items-center justify-center"
           style={{ backgroundColor: watchfaceColor, borderColor: braceletColor + 'aa' }}
         >
-          <div
-            className="w-[38px] h-[38px] rounded-full"
-            style={{ background: `linear-gradient(135deg, ${watchfaceColor}ff 0%, ${watchfaceColor}88 100%)` }}
-          />
+          {textLines.length > 0 ? (
+            <div className="flex flex-col items-center justify-center px-0.5" style={{ color: textColor }}>
+              {textLines.map((line, i) => (
+                <span key={i} style={{ fontSize: '5px', fontWeight: 900, letterSpacing: '0.05em', lineHeight: 1.15, textAlign: 'center', display: 'block' }}>{line}</span>
+              ))}
+            </div>
+          ) : (
+            <div
+              className="w-[38px] h-[38px] rounded-full"
+              style={{ background: `linear-gradient(135deg, ${watchfaceColor}ff 0%, ${watchfaceColor}88 100%)` }}
+            />
+          )}
         </div>
         <div className="w-[34px] h-[22px] rounded-[5px]" style={{ backgroundColor: braceletColor, opacity: 0.72 }} />
       </div>
@@ -299,16 +316,25 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
   }
 
   const watchText = preset.watchfaceText?.trim();
+  const textLines = watchText ? watchText.split('\n').slice(0, 3) : [];
+
+  // Determine contrasting text color for the 3D overlay
+  const luminance = (hex: string) => {
+    const r = parseInt(hex.slice(1, 3) || '88', 16) / 255;
+    const g = parseInt(hex.slice(3, 5) || '88', 16) / 255;
+    const b = parseInt(hex.slice(5, 7) || '88', 16) / 255;
+    return 0.299 * r + 0.587 * g + 0.114 * b;
+  };
+  const overlayTextColor = luminance(faceColor) > 0.55 ? 'rgba(0,0,0,0.80)' : 'rgba(255,255,255,0.90)';
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
       {/* Color card shown only while Canvas hasn't mounted — hides once 3D is live */}
       {(!mounted || paused) && (
         <div className="absolute inset-0">
-          <WatchColorCard watchfaceColor={faceColor} braceletColor={strapColor} />
+          <WatchColorCard watchfaceColor={faceColor} braceletColor={strapColor} watchfaceText={watchText} />
         </div>
       )}
-
 
       {mounted && !paused && (
         <div className="absolute inset-0">
@@ -334,6 +360,49 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
               paused={paused}
             />
           </Canvas>
+          {/* Watchface text overlay — HTML on top of the 3D canvas */}
+          {textLines.length > 0 && (
+            <div
+              className="absolute pointer-events-none select-none"
+              style={{
+                left: '50%',
+                top: '40%',
+                transform: 'translate(-50%, -50%)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '2px',
+                zIndex: 10,
+                padding: '3px 7px',
+                borderRadius: '6px',
+                background: luminance(faceColor) > 0.55
+                  ? 'rgba(0,0,0,0.22)'
+                  : 'rgba(255,255,255,0.15)',
+                backdropFilter: 'blur(2px)',
+              }}
+            >
+              {textLines.map((line, i) => (
+                <span
+                  key={i}
+                  style={{
+                    color: overlayTextColor,
+                    fontSize: textLines.length > 1 ? '9px' : '11px',
+                    fontWeight: 900,
+                    letterSpacing: '0.08em',
+                    lineHeight: 1.2,
+                    textAlign: 'center',
+                    textShadow: luminance(faceColor) > 0.55
+                      ? '0 1px 3px rgba(255,255,255,0.7), 0 0 8px rgba(255,255,255,0.4)'
+                      : '0 1px 3px rgba(0,0,0,0.7), 0 0 8px rgba(0,0,0,0.4)',
+                    display: 'block',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {line}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
