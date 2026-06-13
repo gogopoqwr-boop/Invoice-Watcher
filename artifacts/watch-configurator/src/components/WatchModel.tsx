@@ -729,7 +729,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   const θUpper = wrapUpper.to(v => v / WRAP_SEGS);
   const θLower = wrapLower.to(v => v / WRAP_SEGS);
 
-  useFrame(({ camera }) => {
+  useFrame(({ camera }, delta) => {
     if (!groupRef.current) return;
 
     // ── Болванки hands: spring-damper "loose pin" physics ───────────────────
