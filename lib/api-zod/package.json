@@ -7,6 +7,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^6.6.0",
+    "@stripe/stripe-js": "^9.8.0",
+    "stripe": "^22.2.0",
     "zod": "catalog:"
   }
 }

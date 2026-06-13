@@ -7,7 +7,10 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@tanstack/react-query": "catalog:"
+    "@stripe/react-stripe-js": "^6.6.0",
+    "@stripe/stripe-js": "^9.8.0",
+    "@tanstack/react-query": "catalog:",
+    "stripe": "^22.2.0"
   },
   "peerDependencies": {
     "react": ">=18"
