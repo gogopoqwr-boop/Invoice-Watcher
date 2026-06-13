@@ -313,21 +313,6 @@ export default function Configure() {
             </div>
           </div>
 
-          {/* ── Watch-face inscription ── */}
-          <div>
-            <h2 className="text-lg font-bold tracking-tight mb-1">Надпись на циферблате</h2>
-            <p className="text-xs text-muted-foreground mb-3">Имя, дата, слово — до 16 символов</p>
-
-            <input
-              type="text"
-              maxLength={16}
-              placeholder="Ваш текст…"
-              value={config.watchfaceText ?? ''}
-              onChange={e => updateConfig({ watchfaceText: e.target.value })}
-              className="w-full px-4 py-2.5 rounded-xl text-sm text-foreground border border-border/60 bg-card/80 focus:outline-none focus:ring-2 focus:ring-primary/60 placeholder:text-muted-foreground/50 mb-3"
-            />
-
-          </div>
 
           {/* ── Hands count ── */}
           <div>
