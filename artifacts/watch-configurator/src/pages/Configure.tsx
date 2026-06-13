@@ -243,53 +243,34 @@ export default function Configure() {
 
           {/* ── Case size ── */}
           <div>
-            <div className="flex items-baseline justify-between mb-3">
-              <h2 className="text-lg font-bold tracking-tight">Размер корпуса</h2>
-              <span className="text-sm font-bold tabular-nums">
-                {Math.round(32 + ((config.watchfaceSize ?? 1) - 0.65) / 0.70 * 16)} мм
-              </span>
-            </div>
-            <div className="relative">
-              <input
-                type="range"
-                min={0.65}
-                max={1.35}
-                step={0.01}
-                value={config.watchfaceSize ?? 1}
-                onChange={e => updateConfig({ watchfaceSize: parseFloat(e.target.value) })}
-                className="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary bg-border/60"
-              />
-              <div className="flex justify-between mt-1.5 px-0.5">
-                <span className="text-[10px] text-muted-foreground">32 мм</span>
-                <span className="text-[10px] text-muted-foreground">40 мм</span>
-                <span className="text-[10px] text-muted-foreground">48 мм</span>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Strap width ── */}
-          <div>
-            <div className="flex items-baseline justify-between mb-3">
-              <h2 className="text-lg font-bold tracking-tight">Ширина ремешка</h2>
-              <span className="text-sm font-bold tabular-nums">
-                {Math.round(12 + ((config.strapWidth ?? 1) - 0.5) * 16)} мм
-              </span>
-            </div>
-            <div className="relative">
-              <input
-                type="range"
-                min={0.5}
-                max={1.5}
-                step={0.01}
-                value={config.strapWidth ?? 1}
-                onChange={e => updateConfig({ strapWidth: parseFloat(e.target.value) })}
-                className="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary bg-border/60"
-              />
-              <div className="flex justify-between mt-1.5 px-0.5">
-                <span className="text-[10px] text-muted-foreground">12 мм</span>
-                <span className="text-[10px] text-muted-foreground">20 мм</span>
-                <span className="text-[10px] text-muted-foreground">28 мм</span>
-              </div>
+            <h2 className="text-lg font-bold tracking-tight mb-3">Размер корпуса</h2>
+            <div className="flex gap-2">
+              {([
+                { mm: 32, size: 0.65 },
+                { mm: 36, size: 0.825 },
+                { mm: 40, size: 1.0 },
+                { mm: 44, size: 1.175 },
+                { mm: 48, size: 1.35 },
+              ] as const).map(({ mm, size }) => {
+                const active = Math.abs((config.watchfaceSize ?? 1) - size) < 0.05;
+                return (
+                  <button
+                    key={mm}
+                    onClick={() => updateConfig({ watchfaceSize: size })}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
+                    style={active ? {
+                      background: 'hsl(var(--primary))',
+                      color: '#fff',
+                    } : {
+                      background: 'rgba(255,255,255,0.06)',
+                      color: 'hsl(var(--muted-foreground))',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    {mm}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
