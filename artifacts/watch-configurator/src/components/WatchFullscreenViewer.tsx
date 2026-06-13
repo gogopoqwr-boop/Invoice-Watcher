@@ -4,7 +4,6 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
 import WatchModel from './WatchModel';
 import { useWatchConfig } from '@/hooks/use-watch-config';
-import { cn } from '@/lib/utils';
 
 const MAT_LABELS: Record<string, string> = {
   metal: 'Нержавейка',
@@ -17,6 +16,7 @@ const MAT_LABELS: Record<string, string> = {
   resin: 'Смола',
 };
 
+// Exported so Collections.tsx buy-modal can reuse them
 export const BRACELET_COMBOS = [
   { id: 'black_leather',    label: 'Чёрная кожа',        material: 'leather',        color: '#1c1917' },
   { id: 'cognac_leather',   label: 'Коньяк',              material: 'leather',        color: '#6b3a2a' },
@@ -38,14 +38,6 @@ export const BRACELET_COMBOS = [
   { id: 'resin_ocean',      label: 'Смола «Океан»',       material: 'resin',          color: '#0c4a6e' },
   { id: 'resin_forest',     label: 'Смола «Лес»',         material: 'resin',          color: '#14532d' },
   { id: 'resin_amber',      label: 'Смола «Янтарь»',      material: 'resin',          color: '#78350f' },
-];
-
-const STRAP_GROUPS = [
-  { label: 'Кожа',         material: 'leather' },
-  { label: 'Нейлон NATO',  material: 'cotton_fabric' },
-  { label: 'Металл',       material: 'metal_solid' },
-  { label: 'Каучук',       material: 'plastic_solid' },
-  { label: 'Смола',        material: 'resin' },
 ];
 
 interface Props {
@@ -82,12 +74,6 @@ function WatchScene() {
 
 export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfigure, originRect }: Props) {
   const { updateConfig } = useWatchConfig();
-
-  const initialCombo = BRACELET_COMBOS.find(
-    c => c.color === preset.braceletColor && c.material === preset.braceletMaterial
-  ) ?? BRACELET_COMBOS[0];
-
-  const [selectedCombo, setSelectedCombo] = useState(initialCombo);
   const [phase, setPhase] = useState<'enter' | 'open'>('enter');
 
   const clipStart = useMemo(() => {
@@ -112,16 +98,16 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
       watchfaceGeometry: preset.watchfaceGeometry,
       watchfaceMaterial: preset.watchfaceMaterial,
       watchfaceColor: preset.watchfaceColor,
-      braceletMaterial: selectedCombo.material,
+      braceletMaterial: preset.braceletMaterial,
       braceletType: preset.braceletType,
-      braceletColor: selectedCombo.color,
+      braceletColor: preset.braceletColor,
       handsEnabled: preset.handsEnabled,
       handsColor: preset.handsColor ?? '#cbd5e1',
       watchfaceText: preset.watchfaceText ?? '',
       watchfaceTextMode: preset.watchfaceTextMode ?? 'center',
       handsCount: 3,
     });
-  }, [preset.id, selectedCombo.color, selectedCombo.material]);
+  }, [preset.id]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -134,8 +120,8 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
   }, [onClose]);
 
   const handleBuy = useCallback(() => {
-    onBuy(preset, selectedCombo.color, selectedCombo.material);
-  }, [preset, selectedCombo, onBuy]);
+    onBuy(preset, preset.braceletColor, preset.braceletMaterial);
+  }, [preset, onBuy]);
 
   const isOpen = phase === 'open';
 
@@ -159,12 +145,11 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
       />
 
       {/* ── 3D Canvas ── */}
-      <div className="relative z-10 flex-none h-[48dvh] md:h-auto md:flex-1 md:w-[58%]">
+      <div className="relative z-10 flex-none h-[58dvh] md:h-auto md:flex-1 md:w-[62%]">
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: `radial-gradient(ellipse at 50% 35%, ${preset.watchfaceColor}30 0%, ${selectedCombo.color}18 55%, transparent 88%)`,
-            transition: 'background 0.5s ease',
+            background: `radial-gradient(ellipse at 50% 35%, ${preset.watchfaceColor}30 0%, ${preset.braceletColor}18 55%, transparent 88%)`,
           }}
         />
         <Canvas
@@ -199,126 +184,59 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
         </div>
       </div>
 
-      {/* ── Details + config panel ── */}
+      {/* ── Info panel ── */}
       <div
-        className="relative z-10 flex-none h-[52dvh] md:h-auto md:w-[42%] flex flex-col overflow-hidden"
+        className="relative z-10 flex-none h-[42dvh] md:h-auto md:w-[38%] flex flex-col justify-between"
         style={{
-          background: 'rgba(10,10,14,0.96)',
+          background: 'rgba(10,10,14,0.97)',
           backdropFilter: 'blur(32px)',
           borderTop: '1px solid rgba(255,255,255,0.07)',
         }}
       >
-        {/* Header — fixed */}
-        <div className="px-5 pt-5 pb-3.5 border-b border-white/[0.06] shrink-0">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.3em] text-white/30 mb-1">
-                {preset.collectionName ?? 'Классика'}
-              </p>
-              <h2 className="text-xl font-black tracking-tight text-white leading-tight">{preset.name}</h2>
-              {preset.description && (
-                <p className="text-xs text-white/38 mt-1 leading-relaxed line-clamp-2">{preset.description}</p>
-              )}
-            </div>
-            <div className="text-right shrink-0">
-              <p className="text-2xl font-black text-white leading-none">{preset.priceStars}</p>
-              <p className="text-xs text-white/30 mt-0.5">звёзд</p>
-            </div>
+        {/* Watch info */}
+        <div className="px-6 pt-6 pb-4 flex-1 flex flex-col justify-center gap-4">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.35em] text-white/30 mb-1">
+              {preset.collectionName ?? 'Классика'}
+            </p>
+            <h2 className="text-2xl font-black tracking-tight text-white leading-tight mb-1">
+              {preset.name}
+            </h2>
+            {preset.description && (
+              <p className="text-xs text-white/38 leading-relaxed line-clamp-3">{preset.description}</p>
+            )}
           </div>
-        </div>
 
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto">
           {/* Specs */}
-          <div className="px-5 py-3.5 border-b border-white/[0.06]">
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                ['Корпус', MAT_LABELS[preset.watchfaceMaterial] ?? preset.watchfaceMaterial],
-                ['Форма', preset.watchfaceGeometry],
-                ['Стрелки', preset.handsEnabled ? '3 стрелки' : 'без стрелок'],
-                ['Серия', preset.collectionName ?? 'Классика'],
-              ].map(([k, v]) => (
-                <div key={k} className="rounded-xl px-3 py-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                  <p className="text-[10px] uppercase tracking-widest text-white/28 mb-0.5">{k}</p>
-                  <p className="text-xs font-bold text-white capitalize">{v}</p>
-                </div>
-              ))}
-            </div>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              ['Корпус', MAT_LABELS[preset.watchfaceMaterial] ?? preset.watchfaceMaterial],
+              ['Форма', preset.watchfaceGeometry],
+              ['Ремешок', MAT_LABELS[preset.braceletMaterial] ?? preset.braceletMaterial],
+              ['Стрелки', preset.handsEnabled ? '3 стрелки' : 'без стрелок'],
+            ].map(([k, v]) => (
+              <div key={k} className="rounded-xl px-3 py-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                <p className="text-[10px] uppercase tracking-widest text-white/28 mb-0.5">{k}</p>
+                <p className="text-xs font-bold text-white capitalize">{v}</p>
+              </div>
+            ))}
           </div>
 
-          {/* ── Inline strap picker ── */}
-          <div className="px-5 py-4">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-[10px] uppercase tracking-[0.3em] text-white/30 font-semibold">Ремешок</p>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-4 h-4 rounded-full border border-white/30"
-                  style={{ backgroundColor: selectedCombo.color, boxShadow: `0 0 8px ${selectedCombo.color}88` }}
-                />
-                <span className="text-[11px] text-white/60 font-semibold">{selectedCombo.label}</span>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {STRAP_GROUPS.map(group => {
-                const items = BRACELET_COMBOS.filter(c => c.material === group.material);
-                return (
-                  <div key={group.material}>
-                    <p className="text-[9px] uppercase tracking-[0.3em] text-white/20 font-semibold mb-2">
-                      {group.label}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {items.map(combo => {
-                        const active = selectedCombo.id === combo.id;
-                        return (
-                          <button
-                            key={combo.id}
-                            onClick={() => setSelectedCombo(combo)}
-                            title={combo.label}
-                            className={cn(
-                              'flex items-center gap-2 px-2.5 py-1.5 rounded-xl transition-all duration-150',
-                              active
-                                ? 'ring-1 ring-white/40 bg-white/10'
-                                : 'hover:bg-white/6 active:scale-95'
-                            )}
-                            style={{
-                              border: active ? '1px solid rgba(255,255,255,0.25)' : '1px solid rgba(255,255,255,0.07)',
-                            }}
-                          >
-                            <div
-                              className="w-5 h-5 rounded-full shrink-0"
-                              style={{
-                                backgroundColor: combo.color,
-                                boxShadow: active
-                                  ? `0 0 10px ${combo.color}99, inset 0 0 0 1.5px rgba(255,255,255,0.3)`
-                                  : 'inset 0 0 0 1px rgba(255,255,255,0.12)',
-                              }}
-                            />
-                            <span className={cn(
-                              'text-[10px] font-semibold leading-tight whitespace-nowrap transition-colors',
-                              active ? 'text-white' : 'text-white/45'
-                            )}>
-                              {combo.label}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          {/* Price */}
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-black text-white">{preset.priceStars}</span>
+            <span className="text-sm text-white/30">звёзд Telegram</span>
           </div>
         </div>
 
-        {/* Actions — fixed at bottom */}
+        {/* Actions */}
         <div
-          className="px-5 py-4 space-y-2 shrink-0"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(10,10,14,0.98)' }}
+          className="px-6 pb-6 pt-4 flex flex-col gap-2"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
         >
           <button
             onClick={handleBuy}
-            className="w-full py-3 rounded-2xl font-black text-sm tracking-widest uppercase transition-all active:scale-[0.98]"
+            className="w-full py-3.5 rounded-2xl font-black text-sm tracking-widest uppercase transition-all active:scale-[0.98]"
             style={{
               background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
               color: '#fff',
@@ -329,10 +247,10 @@ export default function WatchFullscreenViewer({ preset, onClose, onBuy, onConfig
           </button>
           <button
             onClick={() => onConfigure(preset)}
-            className="w-full py-2.5 rounded-2xl text-sm font-bold tracking-wide text-white/55 hover:text-white/85 transition-colors"
+            className="w-full py-3 rounded-2xl text-sm font-bold tracking-wide text-white/55 hover:text-white/85 transition-colors"
             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
           >
-            Настроить →
+            Настроить ремешок и цвет →
           </button>
         </div>
       </div>

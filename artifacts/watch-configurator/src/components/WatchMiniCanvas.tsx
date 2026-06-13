@@ -29,14 +29,6 @@ function buildShape(geom: string): THREE.Shape {
     s.moveTo(-w + r, -w); s.lineTo(w - r, -w); s.quadraticCurveTo(w, -w, w, -w + r);
     s.lineTo(w, w - r); s.quadraticCurveTo(w, w, w - r, w); s.lineTo(-w + r, w);
     s.quadraticCurveTo(-w, w, -w, w - r); s.lineTo(-w, -w + r); s.quadraticCurveTo(-w, -w, -w + r, -w);
-  } else if (geom === 'star') {
-    const oR = 1.52, iR = 0.68;
-    for (let i = 0; i < 10; i++) {
-      const r2 = i % 2 === 0 ? oR : iR;
-      const a = (i * Math.PI) / 5 - Math.PI / 2;
-      i === 0 ? s.moveTo(r2 * Math.cos(a), r2 * Math.sin(a)) : s.lineTo(r2 * Math.cos(a), r2 * Math.sin(a));
-    }
-    s.closePath();
   } else {
     const r = 0.65, w = 1.1;
     s.moveTo(-w + r, -w); s.lineTo(w - r, -w); s.quadraticCurveTo(w, -w, w, -w + r);
@@ -284,7 +276,7 @@ export default function WatchMiniCanvas({ preset, paused }: WatchMiniCanvasProps
         <WatchColorCard watchfaceColor={faceColor} braceletColor={strapColor} />
       </div>
 
-      {mounted && (
+      {mounted && !paused && (
         <div className="absolute inset-0">
           <Canvas
             camera={{ position: [0, 0, 7.4], fov: 38 }}

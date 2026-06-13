@@ -1,6 +1,5 @@
-import React, { useRef, useMemo, useEffect, Suspense } from 'react';
+import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Text3D, Center } from '@react-three/drei';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
@@ -10,7 +9,6 @@ import { useSpring, animated } from '@react-spring/three';
 function shapeHalfWidth(geom: string): number {
   if (geom === 'circle') return 1.5;
   if (geom === 'square') return 1.28;
-  if (geom === 'star') return 1.52;
   return 1.1;
 }
 
@@ -25,38 +23,6 @@ function buildFaceShape(geom: string): THREE.Shape {
     s.quadraticCurveTo(w, w, w - r, w); s.lineTo(-w + r, w);
     s.quadraticCurveTo(-w, w, -w, w - r); s.lineTo(-w, -w + r);
     s.quadraticCurveTo(-w, -w, -w + r, -w);
-  } else if (geom === 'star') {
-    // Machined star: straight outer edges, concave bezier valleys
-    const pts = 5;
-    const oR = 1.52;  // outer tip radius
-    const iR = 0.74;  // inner valley radius (raised slightly for machined look)
-
-    // Pre-compute all 10 vertices (alternating outer/inner)
-    const verts = Array.from({ length: pts * 2 }, (_, i) => {
-      const r = i % 2 === 0 ? oR : iR;
-      const a = (i * Math.PI) / pts - Math.PI / 2;
-      return { x: r * Math.cos(a), y: r * Math.sin(a), a };
-    });
-
-    s.moveTo(verts[0].x, verts[0].y);
-    for (let i = 1; i <= pts * 2; i++) {
-      const v = verts[i % (pts * 2)];
-      const isOuter = (i % 2 === 0);
-      if (isOuter) {
-        // Outer point: straight line (sharp tip)
-        s.lineTo(v.x, v.y);
-      } else {
-        // Inner valley: concave quadratic bezier — control point pulled toward center
-        // This creates the characteristic machined/milled concave groove
-        const prevV = verts[(i - 1) % (pts * 2)];
-        const nextV = verts[(i + 1) % (pts * 2)];
-        // Midpoint direction toward center, pulled inward
-        const cpX = v.x * 0.78;
-        const cpY = v.y * 0.78;
-        s.quadraticCurveTo(cpX, cpY, v.x, v.y);
-      }
-    }
-    s.closePath();
   } else {
     const r = 0.65, w = 1.1;
     s.moveTo(-w + r, -w); s.lineTo(w - r, -w);
@@ -75,6 +41,7 @@ function buildFaceTexture(
   handsColor: string,
   geom: string,
   isCircular: boolean,
+  text?: string,
 ): THREE.CanvasTexture {
   const S = 512;
   const cv = document.createElement('canvas');
@@ -109,7 +76,26 @@ function buildFaceTexture(
   ctx.fillStyle = handsColor;
   ctx.fill();
 
+  // Draw watchface text cleanly on the canvas (skip EYE: preset codes)
+  if (text && !text.startsWith('EYE:')) {
+    const lines = text.trim().toUpperCase().split('\n').filter(Boolean).slice(0, 3);
+    const maxLen = Math.max(...lines.map(l => l.length), 1);
+    const fontSize = Math.min(S * 0.13, S * 0.65 / maxLen);
+    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.fillStyle = handsColor;
+    ctx.globalAlpha = 0.68;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const lineH = fontSize * 1.35;
+    const totalH = (lines.length - 1) * lineH;
+    lines.forEach((line, i) => {
+      ctx.fillText(line, S / 2, S / 2 - totalH / 2 + i * lineH);
+    });
+    ctx.globalAlpha = 1;
+  }
+
   const tex = new THREE.CanvasTexture(cv);
+
   const half = shapeHalfWidth(geom);
   const rep = 0.5 / half;
   tex.offset.set(0.5, 0.5);
@@ -118,12 +104,8 @@ function buildFaceTexture(
   return tex;
 }
 
-// ─── 3D text on the watchface ──────────────────────────────────────────────
-
-const FONT_URL = '/dejavu_bold.typeface.json';
-const TEXT_DEPTH = 0.06;
-
-function WatchFaceText3D({ text, mode, handsColor, faceZ }: {
+// placeholder — WatchFaceText3D removed; text is now drawn on the canvas face texture
+function _unused_WatchFaceText3D({ text, mode, handsColor, faceZ }: {
   text: string; mode: 'center' | 'circular'; handsColor: string; faceZ: number;
 }) {
   const trimmed = text.trim().toUpperCase();
@@ -681,8 +663,8 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
 
   const isCircular = (config.watchfaceTextMode ?? 'center') === 'circular';
   const faceTexture = useMemo(
-    () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular),
-    [config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular]
+    () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular, config.watchfaceText),
+    [config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular, config.watchfaceText]
   );
 
   const isMetal = config.watchfaceMaterial === 'metal';
@@ -693,16 +675,10 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   }), [config.watchfaceColor, config.watchfaceMaterial]);
 
   const isSegmented = config.braceletMaterial === 'metal_segmented';
-  const isStar = config.watchfaceGeometry === 'star';
-  const hasText = (config.watchfaceText ?? '').trim().length > 0;
-  // How far from the origin the case body reaches in ±Y — used to root the lug arm
-  // inside the case body rather than floating above it.
   const caseHalf = shapeHalfWidth(config.watchfaceGeometry);
-
-  // Vertical Z offset when star (thicker case) to keep face disc at right z
-  const starFaceZ = isStar ? 0.62 : 0.48;
-  const starCrystalZ = isStar ? 0.70 : 0.56;
-  const starHandsZ = isStar ? 0.71 : 0.57;
+  const faceZ = 0.48;
+  const crystalZ = 0.56;
+  const handsZ = 0.57;
 
   return (
     <>
@@ -722,29 +698,17 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
       />
 
       {/* Face disc */}
-      <mesh position={[0, 0, starFaceZ]}>
+      <mesh position={[0, 0, faceZ]}>
         <primitive object={discGeo} />
         <meshStandardMaterial map={faceTexture} roughness={0.25} metalness={0.05} />
       </mesh>
-
-      {/* 3D text on face */}
-      {hasText && (
-        <Suspense fallback={null}>
-          <WatchFaceText3D
-            text={config.watchfaceText ?? ''}
-            mode={config.watchfaceTextMode ?? 'center'}
-            handsColor={config.handsColor}
-            faceZ={starFaceZ}
-          />
-        </Suspense>
-      )}
 
       {/* Crystal — high-fidelity sapphire glass */}
       {/* Sits at starCrystalZ so the bevelled bottom starts just above the hands.
           transmission + clearcoat together produce two distinct visual layers:
             1. The transmissive body lets the dial + hands show through with IOR distortion
             2. The clearcoat surface acts as a real mirror/reflection plane for env highlights */}
-      <mesh position={[0, 0, starCrystalZ]}>
+      <mesh position={[0, 0, crystalZ]}>
         <primitive object={crystalGeo} />
         <meshPhysicalMaterial
           color="#daeeff"
@@ -766,7 +730,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
 
       {/* Watch hands */}
       {config.handsEnabled && (
-        <group position={[0, 0, starHandsZ]}>
+        <group position={[0, 0, handsZ]}>
           <group rotation={[0, 0, Math.PI / 5]}>
             <mesh position={[0, 0.26, 0]} castShadow>
               <boxGeometry args={[0.058, 0.52, 0.018]} />
@@ -898,9 +862,6 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
 
       {/* Bezel ring — machined metal overlay around crystal */}
       <BezelRing geom={config.watchfaceGeometry} caseMat={caseMat} />
-
-      {/* Star-only: extra stepped accent ring for the machined case arm look */}
-      {isStar && <StarCaseAccent caseMat={caseMat} />}
 
     </animated.group>
 

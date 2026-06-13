@@ -179,7 +179,7 @@ export default function Collections() {
     }
   };
 
-  const PresetCard = ({ preset, idx }: { preset: any; idx: number }) => {
+  const PresetCard = ({ preset, idx, bgPaused }: { preset: any; idx: number; bgPaused: boolean }) => {
     const { tilt, onMove, onLeave } = useTilt();
     const collectionKey = preset.collectionName ?? 'classics';
     const inv = inventory[collectionKey];
@@ -226,7 +226,7 @@ export default function Collections() {
             className="h-52 overflow-hidden relative"
             style={{ background: `linear-gradient(135deg, ${preset.watchfaceColor}22, ${preset.braceletColor}18)` }}
           >
-            <WatchMiniCanvas preset={preset} />
+            <WatchMiniCanvas preset={preset} paused={bgPaused} />
 
             <div
               className="absolute bottom-0 left-0 right-0 px-3 py-2.5"
@@ -370,7 +370,7 @@ export default function Collections() {
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {group.items.map((preset: any, idx: number) => (
-                    <PresetCard key={preset.id} preset={preset} idx={idx} />
+                    <PresetCard key={preset.id} preset={preset} idx={idx} bgPaused={!!fullscreenPreset} />
                   ))}
                 </div>
               </div>

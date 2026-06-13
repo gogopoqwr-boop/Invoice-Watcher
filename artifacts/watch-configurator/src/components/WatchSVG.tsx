@@ -1,15 +1,6 @@
 import React from 'react';
 import { useWatchConfig, ExtendedConfigState } from '@/hooks/use-watch-config';
 
-function starPoints(cx: number, cy: number, outerR: number, innerR: number, n = 5): string {
-  const pts: string[] = [];
-  for (let i = 0; i < n * 2; i++) {
-    const angle = (i * Math.PI / n) - Math.PI / 2;
-    const r = i % 2 === 0 ? outerR : innerR;
-    pts.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`);
-  }
-  return pts.join(' ');
-}
 
 interface WatchSVGProps {
   config?: Partial<ExtendedConfigState>;
@@ -44,8 +35,6 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
       return <circle cx={cx} cy={cy} r={faceR} fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity} {...rest} />;
     } else if (geo === 'square') {
       return <rect x={cx - faceR} y={cy - faceR} width={faceR * 2} height={faceR * 2} rx="6" fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity} {...rest} />;
-    } else if (geo === 'star') {
-      return <polygon points={starPoints(cx, cy, faceR, faceR * 0.44)} fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity} {...rest} />;
     } else if (geo === 'drawn') {
       return <rect x={cx - faceR} y={cy - faceR} width={faceR * 2} height={faceR * 2} rx="22" fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity} {...rest} />;
     } else {
@@ -57,7 +46,6 @@ export default function WatchSVG({ config: propConfig, mini = false, onClick }: 
   const ClipShape = () => {
     if (geo === 'circle') return <circle cx={cx} cy={cy} r={faceR - 2} />;
     if (geo === 'square') return <rect x={cx - faceR + 2} y={cy - faceR + 2} width={(faceR - 2) * 2} height={(faceR - 2) * 2} rx="5" />;
-    if (geo === 'star') return <polygon points={starPoints(cx, cy, faceR - 2, (faceR - 2) * 0.44)} />;
     if (geo === 'drawn') return <rect x={cx - faceR + 2} y={cy - faceR + 2} width={(faceR - 2) * 2} height={(faceR - 2) * 2} rx="20" />;
     return <rect x={cx - faceR + 2} y={cy - faceR * 0.85 + 2} width={(faceR - 2) * 2} height={faceR * 1.7 - 4} rx="28" />;
   };
