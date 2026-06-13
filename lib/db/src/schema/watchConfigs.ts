@@ -26,6 +26,8 @@ export const watchConfigsTable = pgTable("watch_configs", {
   skinStripeUrl: text("skin_stripe_url"),
   boxType: text("box_type").default("standard"),
   boxColor: text("box_color").default("#1A1A1A"),
+  watchfaceText: text("watchface_text"),
+  giftWrap: boolean("gift_wrap").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

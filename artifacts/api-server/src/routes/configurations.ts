@@ -31,6 +31,8 @@ router.post("/configurations", async (req, res) => {
       skinStripeUrl: body.skinStripeUrl ?? null,
       boxType: body.boxType ?? "standard",
       boxColor: body.boxColor ?? "#1A1A1A",
+      watchfaceText: body.watchfaceText ?? null,
+      giftWrap: body.giftWrap ?? false,
     }).returning();
     res.status(201).json(config);
   } catch (err) {
@@ -63,7 +65,7 @@ router.put("/configurations/:id", async (req, res) => {
       "braceletMaterial", "braceletType", "braceletColor", "braceletWidth", "braceletLength",
       "closingMechanism", "handsStyle", "handsColor", "handsEnabled", "serialNumber",
       "customWatchfaceUrl", "customBackgroundUrl", "skinFullUrl", "skinStripeUrl",
-      "boxType", "boxColor"
+      "boxType", "boxColor", "watchfaceText", "giftWrap"
     ];
     for (const f of fields) {
       if (f in body) updateData[f] = body[f];

@@ -51,6 +51,7 @@ export interface ConfigForReceipt {
   skinFullUrl?: string | null;
   skinStripeUrl?: string | null;
   boxType?: string | null;
+  giftWrap?: boolean | null;
 }
 
 export function buildBreakdown(config: ConfigForReceipt): { breakdown: BreakdownItem[]; total: number } {
@@ -79,6 +80,8 @@ export function buildBreakdown(config: ConfigForReceipt): { breakdown: Breakdown
   const box = config.boxType ?? 'standard';
   const boxPrice = BOX_PRICES[box] ?? 0;
   if (boxPrice > 0) items.push({ label: BOX_LABELS[box] ?? `Коробка: ${box}`, stars: boxPrice });
+
+  if (config.giftWrap) items.push({ label: 'Атласная лента с бантом', stars: 2 });
 
   const total = Math.min(50, Math.max(1, items.reduce((s, i) => s + i.stars, 0)));
   return { breakdown: items, total };

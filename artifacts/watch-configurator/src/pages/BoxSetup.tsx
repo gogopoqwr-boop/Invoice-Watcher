@@ -88,7 +88,7 @@ export default function BoxSetup() {
   }, []);
 
   const boxOption = BOX_OPTIONS.find(b => b.id === selectedBox)!;
-  const totalStars = (basePrice ?? 0) + boxOption.surcharge + (giftWrap ? 2 : 0);
+  const totalStars = (basePrice ?? 0) + boxOption.surcharge + (giftWrap ? 2 : 0); // UI estimate; server recalculates on submit
 
   const handleOrder = async () => {
     setSubmitting(true);
@@ -106,9 +106,11 @@ export default function BoxSetup() {
           handsEnabled: config.handsEnabled,
           handsColor: config.handsColor,
           handsStyle: config.watchfaceText || undefined,
+          watchfaceText: config.watchfaceText || undefined,
           serialNumber: undefined,
           sessionId,
           boxType: selectedBox,
+          giftWrap,
         },
       });
       const priceResult = await calcPrice.mutateAsync({
@@ -119,9 +121,10 @@ export default function BoxSetup() {
           handsEnabled: config.handsEnabled,
           watchfaceText: config.watchfaceText || undefined,
           boxType: selectedBox,
+          giftWrap,
         },
       });
-      const finalStars = priceResult.totalStars + (giftWrap ? 2 : 0);
+      const finalStars = priceResult.totalStars;
       const order = await createOrder.mutateAsync({
         data: { configId: cfg.id, sessionId, totalStars: finalStars },
       });
