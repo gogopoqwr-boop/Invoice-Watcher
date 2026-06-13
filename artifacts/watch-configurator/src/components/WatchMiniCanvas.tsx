@@ -297,10 +297,12 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {/* Color card always visible underneath — no blank flash */}
-      <div className="absolute inset-0">
-        <WatchColorCard watchfaceColor={faceColor} braceletColor={strapColor} />
-      </div>
+      {/* Color card shown only while Canvas hasn't mounted — hides once 3D is live */}
+      {(!mounted || paused) && (
+        <div className="absolute inset-0">
+          <WatchColorCard watchfaceColor={faceColor} braceletColor={strapColor} />
+        </div>
+      )}
 
       {mounted && !paused && (
         <div className="absolute inset-0">
