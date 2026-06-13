@@ -281,79 +281,89 @@ function WatchInBox({ config, visible }: { config: WatchConfig; visible: boolean
   const isResin = mat === 'resin';
   const text    = config.watchfaceText ?? null;
 
-  const bodyGeo  = useMemo(() => new THREE.ExtrudeGeometry(buildShape(geom), { depth: 0.38, bevelEnabled: true, bevelSize: 0.09, bevelThickness: 0.09, bevelSegments: 6 }), [geom]);
-  const faceGeo  = useMemo(() => new THREE.ShapeGeometry(buildShape(geom), 48), [geom]);
+  const bodyGeo    = useMemo(() => new THREE.ExtrudeGeometry(buildShape(geom), { depth: 0.38, bevelEnabled: true, bevelSize: 0.09, bevelThickness: 0.09, bevelSegments: 6 }), [geom]);
+  const faceGeo    = useMemo(() => new THREE.ShapeGeometry(buildShape(geom), 48), [geom]);
   const crystalGeo = useMemo(() => new THREE.ExtrudeGeometry(buildShape(geom), { depth: 0.04, bevelEnabled: true, bevelSize: 0.035, bevelThickness: 0.035, bevelSegments: 8 }), [geom]);
-  const faceTex  = useMemo(() => buildFaceTex(faceCol, text), [faceCol, text]);
+  const faceTex    = useMemo(() => buildFaceTex(faceCol, text), [faceCol, text]);
   useEffect(() => () => { bodyGeo.dispose(); faceGeo.dispose(); crystalGeo.dispose(); faceTex.dispose(); }, [bodyGeo, faceGeo, crystalGeo, faceTex]);
 
+  // Pop-in spring when the box opens; scale=0 creates degenerate matrix so
+  // we gate the whole subtree with visible={visible} and only animate inside.
+  const { sc } = useSpring({
+    sc: visible ? 0.44 : 0,
+    config: { mass: 0.8, tension: 160, friction: 22 },
+    delay: visible ? 320 : 0,
+  });
 
   return (
-    <animated.group
-      position={[0, -0.12, 0]}
-      scale={[0.50, 0.50, 0.50]}
-      rotation={[-Math.PI / 2, 0, 0]}
-    >
-      {/* Watch case */}
-      <mesh>
-        <primitive object={bodyGeo} />
-        <meshStandardMaterial color={faceCol} metalness={0.76} roughness={0.14} />
-      </mesh>
-      <mesh position={[0, 0, 0.48]}>
-        <primitive object={faceGeo} />
-        <meshStandardMaterial map={faceTex} roughness={0.26} metalness={0.05} />
-      </mesh>
-      <mesh position={[0, 0, 0.54]}>
-        <primitive object={crystalGeo} />
-        <meshPhysicalMaterial color="#daeeff" metalness={0} roughness={0.04} transmission={0.82} ior={1.45} thickness={0.06} clearcoat={0.8} clearcoatRoughness={0.06} />
-      </mesh>
-      {/* Lugs */}
-      {([1.60, -1.60] as number[]).map(y => (
-        <group key={y}>
-          <mesh position={[0, y, 0.01]}>
+    // three.js skips the entire subtree when visible=false — no degenerate matrix
+    <group visible={visible}>
+      <animated.group
+        position={[0, -0.28, 0]}   // sits IN the cushion (cushion top ≈ -0.235)
+        scale={sc}                  // 0 → 0.44; straps fit at this scale (tip ≈ ±1.23, wall ±1.32)
+        rotation={[-Math.PI / 2, 0, 0]}
+      >
+        {/* Watch case */}
+        <mesh>
+          <primitive object={bodyGeo} />
+          <meshStandardMaterial color={faceCol} metalness={0.76} roughness={0.14} />
+        </mesh>
+        {/* Face dial */}
+        <mesh position={[0, 0, 0.48]}>
+          <primitive object={faceGeo} />
+          <meshStandardMaterial map={faceTex} roughness={0.26} metalness={0.05} />
+        </mesh>
+        {/* Crystal glass */}
+        <mesh position={[0, 0, 0.54]}>
+          <primitive object={crystalGeo} />
+          <meshPhysicalMaterial color="#daeeff" metalness={0} roughness={0.04} transmission={0.82} ior={1.45} thickness={0.06} clearcoat={0.8} clearcoatRoughness={0.06} />
+        </mesh>
+        {/* Lugs */}
+        {([1.60, -1.60] as number[]).map(y => (
+          <mesh key={y} position={[0, y, 0.01]}>
             <boxGeometry args={[1.14, 0.50, 0.24]} />
             <meshStandardMaterial color={faceCol} metalness={0.76} roughness={0.14} />
           </mesh>
-        </group>
-      ))}
-      {/* Straps — flat, no wrist-wrap angle */}
-      {([1, -1] as number[]).map(sign => (
-        <group key={sign} position={[0, sign * 1.85, 0]}>
-          <mesh position={[0, sign * 1.20, 0]}>
-            <boxGeometry args={[1.05, 2.40, 0.14]} />
+        ))}
+        {/* Straps — shortened to fit inside box walls.
+            At scale 0.44 the tip is at ±(2.20+0.60)*0.44 = ±1.23 world units,
+            safely inside the inner wall at ±(D/2−T) = ±1.32. */}
+        {([1, -1] as number[]).map(sign => (
+          <mesh key={sign} position={[0, sign * 2.20, 0]}>
+            <boxGeometry args={[1.05, 1.20, 0.14]} />
             <meshStandardMaterial color={strapCol} metalness={isMetal ? 0.85 : 0} roughness={isMetal ? 0.10 : 0.80} transparent={isResin} opacity={isResin ? 0.72 : 1} />
           </mesh>
-        </group>
-      ))}
-      {/* Hands */}
-      {handsOn && (
-        <group position={[0, 0, 0.59]}>
-          <group rotation={[0, 0, Math.PI / 5]}>
-            <mesh position={[0, 0.26, 0]}>
-              <boxGeometry args={[0.058, 0.52, 0.018]} />
-              <meshStandardMaterial color={handCol} metalness={0.94} roughness={0.06} />
-            </mesh>
+        ))}
+        {/* Hands */}
+        {handsOn && (
+          <group position={[0, 0, 0.59]}>
+            <group rotation={[0, 0, Math.PI / 5]}>
+              <mesh position={[0, 0.26, 0]}>
+                <boxGeometry args={[0.058, 0.52, 0.018]} />
+                <meshStandardMaterial color={handCol} metalness={0.94} roughness={0.06} />
+              </mesh>
+            </group>
+            <group rotation={[0, 0, -Math.PI / 3.5]}>
+              <mesh position={[0, 0.38, 0]}>
+                <boxGeometry args={[0.040, 0.76, 0.016]} />
+                <meshStandardMaterial color={handCol} metalness={0.94} roughness={0.06} />
+              </mesh>
+            </group>
+            <group rotation={[0, 0, Math.PI * 0.75]}>
+              <mesh position={[0, 0.34, 0.002]}>
+                <boxGeometry args={[0.010, 0.68, 0.008]} />
+                <meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} />
+              </mesh>
+            </group>
           </group>
-          <group rotation={[0, 0, -Math.PI / 3.5]}>
-            <mesh position={[0, 0.38, 0]}>
-              <boxGeometry args={[0.040, 0.76, 0.016]} />
-              <meshStandardMaterial color={handCol} metalness={0.94} roughness={0.06} />
-            </mesh>
-          </group>
-          <group rotation={[0, 0, Math.PI * 0.75]}>
-            <mesh position={[0, 0.34, 0.002]}>
-              <boxGeometry args={[0.010, 0.68, 0.008]} />
-              <meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} />
-            </mesh>
-          </group>
-        </group>
-      )}
-      {/* Crown */}
-      <mesh position={[1.62, 0.18, 0.10]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.09, 0.085, 0.28, 14]} />
-        <meshStandardMaterial color={faceCol} metalness={0.76} roughness={0.14} />
-      </mesh>
-    </animated.group>
+        )}
+        {/* Crown */}
+        <mesh position={[1.62, 0.18, 0.10]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.09, 0.085, 0.28, 14]} />
+          <meshStandardMaterial color={faceCol} metalness={0.76} roughness={0.14} />
+        </mesh>
+      </animated.group>
+    </group>
   );
 }
 
@@ -452,14 +462,23 @@ function Scene({ config, boxType, giftWrap, open }: { config: WatchConfig; boxTy
 export interface WatchBoxSceneProps {
   config: WatchConfig;
   boxType?: string;
-  /** Controlled open/close state — no autoOpen; caller owns the toggle */
+  /** Controlled open/close state */
   open?: boolean;
+  /** Auto-open the box after mount (used on the Payment page) */
+  autoOpen?: boolean;
   giftWrap?: boolean;
   /** height class e.g. "h-72" */
   className?: string;
 }
 
-export default function WatchBoxScene({ config, boxType = 'standard', open = false, giftWrap = false, className }: WatchBoxSceneProps) {
+export default function WatchBoxScene({ config, boxType = 'standard', open = false, autoOpen = false, giftWrap = false, className }: WatchBoxSceneProps) {
+  const [autoOpened, setAutoOpened] = useState(false);
+  useEffect(() => {
+    if (!autoOpen) return;
+    const t = setTimeout(() => setAutoOpened(true), 800);
+    return () => clearTimeout(t);
+  }, [autoOpen]);
+  const isOpen = open || autoOpened;
   if (!WEB_GL_OK) {
     const s = BOX_STYLES[boxType as keyof typeof BOX_STYLES] ?? BOX_STYLES.standard;
     const faceCol   = config.watchfaceColor  ?? '#C0C0C0';
@@ -545,7 +564,7 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
         style={{ background: 'transparent' }}
         shadows
       >
-        <Scene config={config} boxType={boxType} giftWrap={giftWrap} open={open} />
+        <Scene config={config} boxType={boxType} giftWrap={giftWrap} open={isOpen} />
         <OrbitControls
           enablePan={false}
           minDistance={4}
