@@ -1,6 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { db, adminUsersTable, ordersTable } from "@workspace/db";
+import { db, adminUsersTable, ordersTable, watchPresetsTable } from "@workspace/db";
 import { count, eq, lt, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -13,6 +13,51 @@ if (!rawPort) {
 const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
+}
+
+const PRESET_SEED = [
+  // ── КЛАССИКА ──────────────────────────────────────────────────────────────
+  { name: "Midnight Steel",  description: "Брутальная нержавейка, тёмный циферблат",           collectionName: null,               watchfaceGeometry: "circle", watchfaceMaterial: "metal",    watchfaceColor: "#0f172a", braceletMaterial: "metal_solid",   braceletType: "solid",     braceletColor: "#1e293b", handsEnabled: true,  handsColor: "#cbd5e1", watchfaceText: null,                   watchfaceTextMode: "center",   priceStars: 15, maxQuantity: 1000 },
+  { name: "Arctic Frost",    description: "Белоснежная керамика, полярная чистота",             collectionName: null,               watchfaceGeometry: "circle", watchfaceMaterial: "plastic",  watchfaceColor: "#f8fafc", braceletMaterial: "plastic_solid", braceletType: "solid",     braceletColor: "#e2e8f0", handsEnabled: true,  handsColor: "#0f172a", watchfaceText: null,                   watchfaceTextMode: "center",   priceStars: 12, maxQuantity: 1000 },
+  { name: "Crimson Core",    description: "Алый акцент, стальной корпус",                      collectionName: null,               watchfaceGeometry: "circle", watchfaceMaterial: "metal",    watchfaceColor: "#7f1d1d", braceletMaterial: "leather",       braceletType: "solid",     braceletColor: "#1c1917", handsEnabled: true,  handsColor: "#fbbf24", watchfaceText: null,                   watchfaceTextMode: "center",   priceStars: 18, maxQuantity: 1000 },
+  { name: "Carbon Ghost",    description: "Угольный карбон, невидимость в темноте",             collectionName: null,               watchfaceGeometry: "square", watchfaceMaterial: "plastic",  watchfaceColor: "#0a0a0a", braceletMaterial: "resin",         braceletType: "solid",     braceletColor: "#171717", handsEnabled: false, handsColor: "#ffffff", watchfaceText: null,                   watchfaceTextMode: "center",   priceStars: 20, maxQuantity: 1000 },
+  { name: "Gold Rush",       description: "Роскошное золото, классика вне времени",             collectionName: null,               watchfaceGeometry: "drawn",  watchfaceMaterial: "metal",    watchfaceColor: "#78350f", braceletMaterial: "metal_segmented",braceletType: "segmented", braceletColor: "#b8860b", handsEnabled: true,  handsColor: "#fbbf24", watchfaceText: null,                   watchfaceTextMode: "center",   priceStars: 25, maxQuantity: 1000 },
+  { name: "Ocean Drive",     description: "Морская синева, дух свободы",                       collectionName: null,               watchfaceGeometry: "circle", watchfaceMaterial: "plastic",  watchfaceColor: "#1e3a5f", braceletMaterial: "cotton_fabric", braceletType: "solid",     braceletColor: "#1e40af", handsEnabled: true,  handsColor: "#60a5fa", watchfaceText: null,                   watchfaceTextMode: "center",   priceStars: 14, maxQuantity: 1000 },
+  // ── РОФЛ ──────────────────────────────────────────────────────────────────
+  { name: "ДОХУИЩА",                description: "Ядрёная красота. Текст по кругу, буквы в хаосе.",            collectionName: "РОФЛ", watchfaceGeometry: "circle", watchfaceMaterial: "plastic", watchfaceColor: "#dc2626", braceletMaterial: "resin",         braceletType: "solid",     braceletColor: "#ef4444", handsEnabled: true,  handsColor: "#ffffff", watchfaceText: "ДОХУИЩА",             watchfaceTextMode: "circular", priceStars: 11, maxQuantity: 1000 },
+  { name: "МНОГО",                  description: "Жёлтый крик. Слишком громко на любое запястье.",             collectionName: "РОФЛ", watchfaceGeometry: "circle", watchfaceMaterial: "plastic", watchfaceColor: "#ca8a04", braceletMaterial: "cotton_fabric", braceletType: "solid",     braceletColor: "#facc15", handsEnabled: true,  handsColor: "#1a1a1a", watchfaceText: "МНОГО",               watchfaceTextMode: "circular", priceStars: 10, maxQuantity: 1000 },
+  { name: "АЛЕ",                    description: "Зелёный шок. Кольцевые буквы. Алёёё??",                      collectionName: "РОФЛ", watchfaceGeometry: "square", watchfaceMaterial: "plastic", watchfaceColor: "#15803d", braceletMaterial: "plastic_solid", braceletType: "solid",     braceletColor: "#22c55e", handsEnabled: true,  handsColor: "#f0fdf4", watchfaceText: "АЛЕ",                 watchfaceTextMode: "circular", priceStars:  9, maxQuantity: 1000 },
+  { name: "TOO MUCH",               description: "Фиолетовый хаос на запястье. Слишком.",                      collectionName: "РОФЛ", watchfaceGeometry: "drawn",  watchfaceMaterial: "plastic", watchfaceColor: "#6d28d9", braceletMaterial: "resin",         braceletType: "solid",     braceletColor: "#a855f7", handsEnabled: true,  handsColor: "#fde68a", watchfaceText: "TOO MUCH",            watchfaceTextMode: "circular", priceStars: 12, maxQuantity: 1000 },
+  { name: "БЕЗ ПЯТИ ШЕСТЬ УТРОВ",  description: "Оранжевый рассвет. Дедлайны горят синим пламенем.",         collectionName: "РОФЛ", watchfaceGeometry: "circle", watchfaceMaterial: "plastic", watchfaceColor: "#c2410c", braceletMaterial: "leather",       braceletType: "solid",     braceletColor: "#7c2d12", handsEnabled: false, handsColor: "#fed7aa", watchfaceText: "БЕЗ ПЯТИ ШЕСТЬ УТРОВ", watchfaceTextMode: "circular", priceStars: 13, maxQuantity: 1000 },
+  { name: "ЧЕТЫРЕ ЧАСОВ ЧАСА",      description: "Полночный кризис. Грамматика устала вместе с тобой.",       collectionName: "РОФЛ", watchfaceGeometry: "square", watchfaceMaterial: "plastic", watchfaceColor: "#1e1b4b", braceletMaterial: "resin",         braceletType: "solid",     braceletColor: "#312e81", handsEnabled: true,  handsColor: "#a5b4fc", watchfaceText: "ЧЕТЫРЕ ЧАСОВ ЧАСА",   watchfaceTextMode: "circular", priceStars: 11, maxQuantity: 1000 },
+  { name: "A LOT",                  description: "Максимально международно. Просто A LOT.",                   collectionName: "РОФЛ", watchfaceGeometry: "circle", watchfaceMaterial: "plastic", watchfaceColor: "#0f172a", braceletMaterial: "cotton_fabric", braceletType: "solid",     braceletColor: "#1e293b", handsEnabled: true,  handsColor: "#e2e8f0", watchfaceText: "A LOT",               watchfaceTextMode: "circular", priceStars: 10, maxQuantity: 1000 },
+  // ── ГИПЕРСЕРЬЕЗНОСТЬ ──────────────────────────────────────────────────────
+  { name: "KPI",      description: "Часы для людей, чьи KPI не сходятся с дедлайном бытия.",      collectionName: "ГИПЕРСЕРЬЕЗНОСТЬ", watchfaceGeometry: "square",  watchfaceMaterial: "metal", watchfaceColor: "#09090b", braceletMaterial: "metal_solid",    braceletType: "solid",     braceletColor: "#18181b", handsEnabled: true,  handsColor: "#e4e4e7", watchfaceText: "KPI",    watchfaceTextMode: "center", priceStars: 20, maxQuantity: 1000 },
+  { name: "DEADLINE", description: "Вместо делений — одно слово. Всё, что нужно знать.",          collectionName: "ГИПЕРСЕРЬЕЗНОСТЬ", watchfaceGeometry: "square",  watchfaceMaterial: "metal", watchfaceColor: "#1c1917", braceletMaterial: "metal_solid",    braceletType: "solid",     braceletColor: "#292524", handsEnabled: false, handsColor: "#d6d3d1", watchfaceText: "DEAD\nLINE", watchfaceTextMode: "center", priceStars: 19, maxQuantity: 1000 },
+  { name: "Q1",       description: "Серый стандарт. Квартал не ждёт. Никогда.",                   collectionName: "ГИПЕРСЕРЬЕЗНОСТЬ", watchfaceGeometry: "circle",  watchfaceMaterial: "metal", watchfaceColor: "#27272a", braceletMaterial: "metal_segmented",braceletType: "segmented", braceletColor: "#3f3f46", handsEnabled: true,  handsColor: "#a1a1aa", watchfaceText: "Q1",     watchfaceTextMode: "center", priceStars: 18, maxQuantity: 1000 },
+  { name: "ASAP",     description: "Дресс-код тёмно-синий. Ответить нужно было вчера.",           collectionName: "ГИПЕРСЕРЬЕЗНОСТЬ", watchfaceGeometry: "drawn",   watchfaceMaterial: "metal", watchfaceColor: "#0f172a", braceletMaterial: "leather",        braceletType: "solid",     braceletColor: "#1e293b", handsEnabled: true,  handsColor: "#f8fafc", watchfaceText: "ASAP",   watchfaceTextMode: "center", priceStars: 22, maxQuantity: 1000 },
+  { name: "EXEC",     description: "Золотые стрелки на угольном. Молчаливое превосходство.",      collectionName: "ГИПЕРСЕРЬЕЗНОСТЬ", watchfaceGeometry: "circle",  watchfaceMaterial: "metal", watchfaceColor: "#111827", braceletMaterial: "metal_segmented",braceletType: "segmented", braceletColor: "#1f2937", handsEnabled: true,  handsColor: "#f59e0b", watchfaceText: null,     watchfaceTextMode: "center", priceStars: 25, maxQuantity: 1000 },
+  // ── ЖИВНОСТЬ ──────────────────────────────────────────────────────────────
+  { name: "ПАУК",   description: "Членистоногий. Восемь точек зрения на ваш запрос.",             collectionName: "ЖИВНОСТЬ", watchfaceGeometry: "drawn",  watchfaceMaterial: "plastic", watchfaceColor: "#0a0a0a", braceletMaterial: "metal_segmented", braceletType: "segmented", braceletColor: "#1a1a1a", handsEnabled: true,  handsColor: "#4ade80", watchfaceText: "EYE:spider",  watchfaceTextMode: "center", priceStars: 22, maxQuantity: 1000 },
+  { name: "КРАКЕН", description: "Из глубины. Присоски, щупальца, вертикальный зрачок.",         collectionName: "ЖИВНОСТЬ", watchfaceGeometry: "circle", watchfaceMaterial: "plastic", watchfaceColor: "#0c4a6e", braceletMaterial: "resin",            braceletType: "solid",     braceletColor: "#075985", handsEnabled: false, handsColor: "#7dd3fc", watchfaceText: "EYE:squid",  watchfaceTextMode: "center", priceStars: 25, maxQuantity: 1000 },
+  { name: "ДРАКОН", description: "Чешуя, когти, рептильный глаз не моргает просто так.",         collectionName: "ЖИВНОСТЬ", watchfaceGeometry: "drawn",  watchfaceMaterial: "plastic", watchfaceColor: "#7f1d1d", braceletMaterial: "leather",          braceletType: "solid",     braceletColor: "#451a03", handsEnabled: true,  handsColor: "#fde68a", watchfaceText: "EYE:reptile",watchfaceTextMode: "center", priceStars: 24, maxQuantity: 1000 },
+  { name: "ЧУДИК",  description: "Мохнатый паразит с выпученными глазами. Обнимает крепко.",     collectionName: "ЖИВНОСТЬ", watchfaceGeometry: "circle", watchfaceMaterial: "plastic", watchfaceColor: "#4a044e", braceletMaterial: "cotton_fabric",    braceletType: "solid",     braceletColor: "#7e22ce", handsEnabled: true,  handsColor: "#f0abfc", watchfaceText: "EYE:gremlin",watchfaceTextMode: "center", priceStars: 20, maxQuantity: 1000 },
+  { name: "КИБЕР",  description: "Прозрачный полимер, пульсирующие вены, биомеханические зажимы.",collectionName: "ЖИВНОСТЬ", watchfaceGeometry: "square", watchfaceMaterial: "plastic", watchfaceColor: "#042f2e", braceletMaterial: "resin",            braceletType: "solid",     braceletColor: "#134e4a", handsEnabled: false, handsColor: "#5eead4", watchfaceText: "EYE:cyber",  watchfaceTextMode: "center", priceStars: 28, maxQuantity: 1000 },
+];
+
+async function ensurePresets() {
+  const [row] = await db.select({ n: count() }).from(watchPresetsTable);
+  if ((row?.n ?? 0) > 0) return; // already seeded
+
+  logger.info("Presets table is empty — seeding...");
+  for (const preset of PRESET_SEED) {
+    try {
+      await db.insert(watchPresetsTable).values(preset as any).onConflictDoNothing();
+    } catch (err) {
+      logger.error({ err, name: preset.name }, "Failed to seed preset");
+    }
+  }
+  logger.info({ count: PRESET_SEED.length }, "Presets seeded");
 }
 
 async function ensureAdminUsers() {
@@ -116,6 +161,7 @@ app.listen(port, (err) => {
   }
   logger.info({ port }, "Server listening");
 
+  ensurePresets().catch((err) => logger.error({ err }, "Preset seed error"));
   ensureAdminUsers().catch((err) => logger.error({ err }, "Admin seed error"));
   registerWebhook().catch((err) => logger.error({ err }, "Webhook registration error"));
   startPaymentExpirationWorker();
