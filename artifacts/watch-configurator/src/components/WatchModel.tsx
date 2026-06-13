@@ -5,8 +5,9 @@ import { useWatchConfig } from '@/hooks/use-watch-config';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
 
-// Roboto Bold — Google Fonts CDN, full Cyrillic+Latin support
-const FONT_URL = 'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlfCxc4EsA.woff2';
+// Roboto Bold — jsDelivr mirrors Google Fonts repo; full Cyrillic+Latin in one TTF file.
+// jsDelivr always sets Access-Control-Allow-Origin:* so troika's Worker can fetch it.
+const FONT_URL = 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/roboto/Roboto-Bold.ttf';
 
 // Eagerly preload the font so it's ready before Text components mount
 try { Text.preload(FONT_URL); } catch { /* ignore if preload not available */ }

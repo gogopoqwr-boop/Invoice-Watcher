@@ -1,5 +1,5 @@
 import React, { useRef, useMemo, useEffect, useState } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 import { Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
@@ -270,7 +270,6 @@ function buildFaceTex(faceCol: string, text: string | null | undefined): THREE.C
 }
 
 function WatchInBox({ config, visible }: { config: WatchConfig; visible: boolean }) {
-  const groupRef = useRef<THREE.Group>(null);
 
   const geom    = config.watchfaceGeometry ?? 'circle';
   const faceCol = config.watchfaceColor    ?? '#C0C0C0';
@@ -288,14 +287,9 @@ function WatchInBox({ config, visible }: { config: WatchConfig; visible: boolean
   const faceTex  = useMemo(() => buildFaceTex(faceCol, text), [faceCol, text]);
   useEffect(() => () => { bodyGeo.dispose(); faceGeo.dispose(); crystalGeo.dispose(); faceTex.dispose(); }, [bodyGeo, faceGeo, crystalGeo, faceTex]);
 
-  useFrame((_, delta) => {
-    if (!groupRef.current) return;
-    groupRef.current.rotation.y += delta * 0.28;
-  });
 
   return (
     <animated.group
-      ref={groupRef}
       position={[0, -H/2 + T + 0.42, 0]}
       scale={[0.52, 0.52, 0.52]}
       rotation={[-0.18, 0, 0]}
