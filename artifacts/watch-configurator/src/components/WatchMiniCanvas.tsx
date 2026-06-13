@@ -298,12 +298,35 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
     );
   }
 
+  const watchText = preset.watchfaceText?.trim();
+
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
       {/* Color card shown only while Canvas hasn't mounted — hides once 3D is live */}
       {(!mounted || paused) && (
         <div className="absolute inset-0">
           <WatchColorCard watchfaceColor={faceColor} braceletColor={strapColor} />
+        </div>
+      )}
+
+      {/* Watchface text overlay — centred at the dial position */}
+      {watchText && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
+          style={{ paddingBottom: '18%' }}>
+          <span
+            className="font-black tracking-widest text-center leading-none select-none"
+            style={{
+              fontSize: 'clamp(5px, 2.6cqw, 9px)',
+              color: faceColor,
+              filter: 'brightness(3.5) contrast(1.4)',
+              textShadow: `0 0 4px ${faceColor}88`,
+              maxWidth: '52%',
+              wordBreak: 'break-all',
+              whiteSpace: 'normal',
+            }}
+          >
+            {watchText.toUpperCase()}
+          </span>
         </div>
       )}
 

@@ -253,6 +253,15 @@ export default function CollectionPage() {
             style={{ background: `linear-gradient(135deg, ${preset.watchfaceColor}22, ${preset.braceletColor}18)` }}
           >
             <WatchMiniCanvas preset={preset} paused={false} forceMount />
+
+            {/* Price badge */}
+            {preset.priceStars != null && (
+              <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-black tabular-nums"
+                style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }}>
+                от {preset.priceStars} ⭐
+              </div>
+            )}
+
             <div
               className="absolute bottom-0 left-0 right-0 px-2.5 py-2"
               style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)' }}
