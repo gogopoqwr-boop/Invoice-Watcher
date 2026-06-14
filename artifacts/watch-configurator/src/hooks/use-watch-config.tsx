@@ -28,6 +28,8 @@ export type ExtendedConfigState = ApiConfigState & {
   watchfaceSize?: number;
   // Strap width multiplier: 0.5–1.5 maps to ~12–28 mm equivalent
   strapWidth?: number;
+  // Preset base price — seeded when a preset is loaded so Configure never starts blank
+  priceStars?: number;
 };
 
 const defaultState: ExtendedConfigState = {

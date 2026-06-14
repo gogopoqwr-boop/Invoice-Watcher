@@ -860,11 +860,6 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
     config: { mass: 1, tension: 110, friction: 22 },
   });
 
-  const { spread } = useSpring({
-    spread: step === 2 ? 0.5 : 0,
-    config: { mass: 1, tension: 120, friction: 20 },
-  });
-
   // Strap wrap — each spring drives the TOTAL bend angle for one arm.
   // The StrapJoint chain distributes this across WRAP_SEGS pivot joints
   // (θ = total / WRAP_SEGS per joint) to produce a smooth circular arc.
@@ -1220,22 +1215,18 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
       {/* θUpper is the PER-JOINT rotation (total / WRAP_SEGS); nesting
           joints inside each other accumulates the total bend at the tip. */}
       <group position={[0, LUG_TIP_Y, LUG_ARM_Z]}>
-        <animated.group position-z={spread}>
-          <StrapJoint k={0} sign={1} θ={θUpper}
-            color={config.braceletColor} mat={config.braceletMaterial}
-            isSegmented={isSegmented} isDeployant={isDeployant} claspColor={caseMat.color}
-            width={config.strapWidth ?? 1} />
-        </animated.group>
+        <StrapJoint k={0} sign={1} θ={θUpper}
+          color={config.braceletColor} mat={config.braceletMaterial}
+          isSegmented={isSegmented} isDeployant={isDeployant} claspColor={caseMat.color}
+          width={config.strapWidth ?? 1} />
       </group>
 
       {/* ── Lower strap — mirror bone chain ── */}
       <group position={[0, -LUG_TIP_Y, LUG_ARM_Z]}>
-        <animated.group position-z={spread}>
-          <StrapJoint k={0} sign={-1} θ={θLower}
-            color={config.braceletColor} mat={config.braceletMaterial}
-            isSegmented={isSegmented} isDeployant={isDeployant} claspColor={caseMat.color}
-            width={config.strapWidth ?? 1} />
-        </animated.group>
+        <StrapJoint k={0} sign={-1} θ={θLower}
+          color={config.braceletColor} mat={config.braceletMaterial}
+          isSegmented={isSegmented} isDeployant={isDeployant} claspColor={caseMat.color}
+          width={config.strapWidth ?? 1} />
       </group>
 
       {/* Bezel ring — machined metal overlay around crystal */}

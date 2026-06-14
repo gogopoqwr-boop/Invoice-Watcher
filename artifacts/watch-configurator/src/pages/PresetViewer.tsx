@@ -163,6 +163,7 @@ export default function PresetViewer() {
       watchfaceText: preset.watchfaceText ?? '',
       watchfaceTextMode: preset.watchfaceTextMode ?? 'center',
       handsCount: 3,
+      priceStars: preset.priceStars,
     });
   }, [preset?.id]);
 

@@ -138,7 +138,7 @@ export default function Configure() {
     if (!hasPreset) setLocation('/collections');
   }, [hasPreset]);
 
-  const [livePrice, setLivePrice] = useState<number | null>(null);
+  const [livePrice, setLivePrice] = useState<number | null>(config.priceStars ?? null);
   const [priceLoading, setPriceLoading] = useState(false);
   const [showWrist, setShowWrist] = useState(false);
   const lastInteractionRef = useRef<number>(0);

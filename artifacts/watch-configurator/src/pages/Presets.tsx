@@ -23,6 +23,7 @@ export default function Presets() {
       handsColor: preset.handsColor ?? '#cbd5e1',
       watchfaceText: '',
       handsCount: 3,
+      priceStars: preset.priceStars,
     });
     setLocation('/configure');
   };
