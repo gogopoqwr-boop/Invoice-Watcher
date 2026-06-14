@@ -824,11 +824,11 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
     });
   }, [config.watchfaceGeometry]);
 
-  // Text is always rendered as circular 3D letters around the bezel
   const hasText = !!(config.watchfaceText?.trim()) && !config.watchfaceText.startsWith('EYE:');
-  const isCircular = hasText;
-  // Never draw text on the canvas — 3D WatchFaceText handles it
-  const drawTextOnCanvas = false;
+  const textMode = config.watchfaceTextMode ?? 'center';
+  const isCircular = hasText && textMode === 'circular';
+  // Draw text on canvas only for center+hands — flat 2D under the hands
+  const drawTextOnCanvas = hasText && textMode === 'center' && (config.handsEnabled !== false);
   const faceTexture = useMemo(
     () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular, config.watchfaceText, drawTextOnCanvas),
     [config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular, config.watchfaceText, drawTextOnCanvas]
@@ -880,7 +880,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
           <Suspense fallback={null}>
             <WatchFaceText
               text={config.watchfaceText}
-              mode="circular"
+              mode={textMode}
               handsColor={config.handsColor ?? '#ffffff'}
               faceZ={faceZ}
               handsEnabled={config.handsEnabled ?? true}
