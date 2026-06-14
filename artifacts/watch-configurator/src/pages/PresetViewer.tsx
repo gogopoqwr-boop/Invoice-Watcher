@@ -264,12 +264,11 @@ export default function PresetViewer() {
 
   return (
     <div
-      data-theme="dark"
-      className="fixed inset-0 z-0 flex flex-col md:flex-row overflow-hidden"
-      style={{ background: '#0a0a0e', clipPath, opacity, transform: `scale(${scale})`, transition }}
+      className="fixed inset-0 z-0 flex flex-col md:flex-row overflow-hidden bg-background"
+      style={{ clipPath, opacity, transform: `scale(${scale})`, transition }}
     >
       {/* ── 3D Canvas pane ── */}
-      <div className="relative z-10 flex-none h-[58dvh] md:h-auto md:flex-1 md:w-[62%] overflow-hidden">
+      <div className="relative z-10 flex-none h-[58dvh] md:h-auto md:flex-1 md:w-[62%] overflow-hidden" style={{ background: '#0a0a0e' }}>
         {preset && (
           <div
             className="absolute inset-0 pointer-events-none"

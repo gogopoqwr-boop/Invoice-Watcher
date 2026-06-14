@@ -101,9 +101,6 @@ function Router() {
 }
 
 function ThemeTogglePortal() {
-  const [location] = useLocation();
-  const hidden = location.startsWith("/preset/") || location === "/configure" || location === "/box";
-  if (hidden) return null;
   return (
     <div className="fixed bottom-5 right-5 z-50">
       <ThemeToggle />
