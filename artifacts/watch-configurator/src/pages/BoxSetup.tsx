@@ -132,7 +132,7 @@ export default function BoxSetup() {
       >
         {/* Back button — absolute, matches Configure */}
         <Link href="/configure">
-          <button className="absolute top-3 left-3 z-10 liquid-button px-3 py-1.5 text-xs font-semibold">← Настройка</button>
+          <button className="absolute top-3 left-3 z-10 canvas-overlay-btn px-3 py-1.5 text-xs font-semibold">← Настройка</button>
         </Link>
 
         {/* Box scene fills the entire pane */}

@@ -234,7 +234,7 @@ export default function OrderDetail() {
       <div className="sticky top-0 z-10 w-full md:static md:w-[52%] h-[58dvh] md:h-screen relative shrink-0 overflow-hidden canvas-box-bg">
 
         <Link href="/orders">
-          <button className="absolute top-3 left-3 z-20 liquid-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1">
+          <button className="absolute top-3 left-3 z-20 canvas-overlay-btn px-3 py-1.5 text-xs font-semibold flex items-center gap-1">
             <ArrowLeft size={13} /> Заказы
           </button>
         </Link>

@@ -320,6 +320,32 @@ iframe[src*="replit.com/badge"] {
   z-index: 1;
 }
 
+/* ── Canvas overlay button ───────────────────────────────────────────────────
+   Used for buttons that float directly over 3D canvas panels (canvas-box-bg).
+   Those panels have a fixed dark colour regardless of light/dark theme, so the
+   theme-variable --glass-bg (5 % white in dark mode) gives terrible contrast.
+   This class is theme-neutral: always dark-frosted with white text. */
+.canvas-overlay-btn {
+  backdrop-filter: blur(14px) saturate(160%);
+  background: rgba(0, 0, 0, 0.46);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 9999px;
+  color: rgba(255, 255, 255, 0.88);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.15s ease;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+.canvas-overlay-btn:hover {
+  background: rgba(0, 0, 0, 0.64);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+  transform: translateY(-1px);
+}
+.canvas-overlay-btn:active {
+  transform: translateY(0) scale(0.975);
+}
+
 /* Pill variant */
 .liquid-pill {
   backdrop-filter: var(--glass-blur);

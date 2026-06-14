@@ -182,7 +182,7 @@ export default function Configure() {
         style={{ touchAction: 'none' }}
       >
         <Link href="/collections">
-          <button className="absolute top-3 left-3 z-10 liquid-button px-3 py-1.5 text-xs font-semibold">← Коллекции</button>
+          <button className="absolute top-3 left-3 z-10 canvas-overlay-btn px-3 py-1.5 text-xs font-semibold">← Коллекции</button>
         </Link>
 
         {webglAvailable ? (
@@ -202,7 +202,7 @@ export default function Configure() {
         {webglAvailable && (
           <button
             onClick={() => setShowWrist(v => !v)}
-            className="absolute top-3 right-3 z-10 liquid-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"
+            className="absolute top-3 right-3 z-10 canvas-overlay-btn px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"
           >
             <span>{showWrist ? '🙈' : '🖐️'}</span>
             <span>{showWrist ? 'Без запястья' : 'На запястье'}</span>
