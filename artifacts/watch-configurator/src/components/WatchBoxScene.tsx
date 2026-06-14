@@ -191,8 +191,8 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
             <meshStandardMaterial color="#334155" metalness={0.1} roughness={0.85} />
           </mesh>
         )}
-        {/* Lid rim strip */}
-        <mesh position={[0, LID_T/2, -(D/2 - T/2) + 0.06]}>
+        {/* Lid rim strip — front free edge (opposite the hinge) */}
+        <mesh position={[0, LID_T/2, D - T/2 - 0.05]}>
           <boxGeometry args={[W + 0.04, LID_T * 0.35, 0.1]} />
           <meshStandardMaterial {...rimMat} />
         </mesh>
