@@ -3,6 +3,7 @@ import { useGetConfiguration } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
 import { TgStar } from '@/components/TgStar';
 import { ClipboardList, Check } from 'lucide-react';
+import WatchMiniCanvas from '@/components/WatchMiniCanvas';
 
 // ── Shared breakdown logic (mirrors api-server/src/lib/receipt.ts) ─────────
 
@@ -151,13 +152,8 @@ export default function ConfigReceipt({ configId, totalStars, alwaysOpen, compac
       {open && (
         <div className={cn('mt-2', compact ? 'ml-0' : '')}>
           {!compact && (
-            <div className="canvas-box-bg rounded-2xl overflow-hidden mb-3 flex items-center justify-center" style={{ height: 224 }}>
-              <img
-                src={`/api/watch-animation/${configId}`}
-                alt="Предпросмотр часов"
-                className="w-full h-full object-contain"
-                loading="lazy"
-              />
+            <div className="canvas-box-bg rounded-2xl overflow-hidden mb-3" style={{ height: 224 }}>
+              <WatchMiniCanvas preset={cfg as any ?? {}} forceMount />
             </div>
           )}
           <ReceiptBody receipt={receipt} displayTotal={displayTotal} isLoading={isLoading} compact={compact} />
