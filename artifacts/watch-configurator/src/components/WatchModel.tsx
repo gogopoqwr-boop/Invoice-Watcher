@@ -242,6 +242,76 @@ function buildFaceTexture(
   return tex;
 }
 
+// ─── Bump texture (white-on-black letter silhouettes) ──────────────────────
+// Applied as bumpMap on the face disc so the scene lights physically respond
+// to the letter surfaces — creates genuine raised-letter depth rather than
+// a painted-on illusion.  Only used for the two "3D" text modes.
+function buildBumpTexture(
+  geom: string,
+  textMode: 'none' | 'circular' | 'center-flat' | 'center-raised',
+  text?: string,
+): THREE.CanvasTexture | null {
+  const rawText = text?.trim().toUpperCase() ?? '';
+  const hasText = rawText.length > 0 && !rawText.startsWith('EYE:');
+  if (!hasText || textMode === 'none' || textMode === 'center-flat') return null;
+
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = S; cv.height = S;
+  const ctx = cv.getContext('2d')!;
+
+  // Black = flat (baseline face), white = raised (letter faces)
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, S, S);
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  if (textMode === 'circular') {
+    const chars = Array.from(rawText.replace(/ /g, '·'));
+    const count = chars.length;
+    if (count > 0) {
+      const circR     = S * 0.355;
+      const fullRing  = count >= 5;
+      const arcSpan   = fullRing ? Math.PI * 2 : Math.min(Math.PI * 1.55, count * 0.44);
+      const fontSize  = Math.max(18, Math.min(56, Math.round(S * 1.1 / Math.max(count, 5))));
+      const startAngle = fullRing ? Math.PI / 2 : Math.PI / 2 + arcSpan / 2;
+      const angleStep  = fullRing ? (Math.PI * 2) / count : arcSpan / Math.max(count - 1, 1);
+
+      ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
+      chars.forEach((ch, i) => {
+        const angle = startAngle - i * angleStep;
+        const x = S / 2 + circR * Math.cos(angle);
+        const y = S / 2 - circR * Math.sin(angle);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.PI / 2 - angle);
+        ctx.fillText(ch, 0, 0);
+        ctx.restore();
+      });
+    }
+  } else {
+    // center-raised
+    const lines    = rawText.split('\n').filter(Boolean).slice(0, 3);
+    const maxLen   = Math.max(...lines.map(l => l.length), 1);
+    const fontSize = Math.min(S * 0.16, S * 0.70 / maxLen);
+    const lineH    = fontSize * 1.35;
+    const totalH   = (lines.length - 1) * lineH;
+    ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
+    lines.forEach((line, i) => {
+      ctx.fillText(line, S / 2, S / 2 - totalH / 2 + i * lineH);
+    });
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  const half = shapeHalfWidth(geom);
+  const rep  = 0.5 / half;
+  tex.offset.set(0.5, 0.5);
+  tex.repeat.set(rep, rep);
+  tex.needsUpdate = true;
+  return tex;
+}
+
 // ─── Watch face 3D text ────────────────────────────────────────────────────
 // Renders user text directly in 3D space on the watch dial.
 //
@@ -959,6 +1029,13 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
     [config.watchfaceColor, config.handsColor, config.watchfaceGeometry, canvasTextMode, config.watchfaceText]
   );
 
+  // Bump map: white-on-black silhouette of the letters so the scene lights
+  // physically respond to the letter faces → genuine raised-letter look.
+  const bumpTexture = useMemo(
+    () => buildBumpTexture(config.watchfaceGeometry, canvasTextMode, config.watchfaceText),
+    [config.watchfaceGeometry, canvasTextMode, config.watchfaceText]
+  );
+
   const isMetal = config.watchfaceMaterial === 'metal';
   const caseMat = useMemo(() => ({
     color: config.watchfaceColor,
@@ -990,10 +1067,16 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         serial={config.serialNumber || undefined}
       />
 
-      {/* Face disc */}
+      {/* Face disc — bumpMap makes letter silhouettes physically respond to light */}
       <mesh position={[0, 0, faceZ]}>
         <primitive object={discGeo} />
-        <meshStandardMaterial map={faceTexture} roughness={0.25} metalness={0.05} />
+        <meshStandardMaterial
+          map={faceTexture}
+          bumpMap={bumpTexture ?? undefined}
+          bumpScale={bumpTexture ? 0.18 : 0}
+          roughness={0.18}
+          metalness={bumpTexture ? 0.22 : 0.05}
+        />
       </mesh>
 
       {/* 3D face text — rendered between dial and crystal.
