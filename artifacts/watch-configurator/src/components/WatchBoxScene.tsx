@@ -323,8 +323,10 @@ function GiftRibbon({ visible }: { visible: boolean }) {
 // ─── Scene ─────────────────────────────────────────────────────────────────
 
 function Scene({ config, boxType, giftWrap, open }: { config: ExtendedConfigState; boxType: string; giftWrap: boolean; open: boolean }) {
+  const s = BOX_STYLES[boxType as keyof typeof BOX_STYLES] ?? BOX_STYLES.standard;
   return (
     <>
+      <color attach="background" args={[s.bodyColor]} />
       <ambientLight intensity={0.55} />
       <spotLight position={[6, 8, 5]} angle={0.24} penumbra={0.6} intensity={2.8} castShadow shadow-mapSize={[1024, 1024]} />
       <directionalLight position={[-3, 5, 4]} intensity={0.7} color="#c4d4f0" />
@@ -480,8 +482,7 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
     >
       <Canvas
         camera={{ position: [1.6, 2.4, 8.2], fov: 36 }}
-        gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
-        style={{ background: 'transparent' }}
+        gl={{ antialias: true, powerPreference: 'default' }}
         shadows
       >
         <Scene config={config} boxType={boxType} giftWrap={giftWrap} open={isOpen} />
