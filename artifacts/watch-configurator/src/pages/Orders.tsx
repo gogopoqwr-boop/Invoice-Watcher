@@ -235,6 +235,17 @@ export default function Orders() {
                       </button>
                     )}
 
+                    {order.configId && (
+                      <button
+                        onClick={() => handleRepeat(order.id, order.configId)}
+                        disabled={repeatId === order.id}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border border-border/60 bg-secondary/60 text-secondary-foreground hover:bg-secondary transition-colors disabled:opacity-50 whitespace-nowrap"
+                      >
+                        <RotateCcw size={11} className={repeatId === order.id ? 'animate-spin' : ''} />
+                        {repeatId === order.id ? '…' : 'Повторить'}
+                      </button>
+                    )}
+
                     {msgs[order.id] && (
                       <span className={cn('text-xs font-medium', msgs[order.id].ok ? 'text-emerald-600' : 'text-red-500')}>
                         {msgs[order.id].msg}
