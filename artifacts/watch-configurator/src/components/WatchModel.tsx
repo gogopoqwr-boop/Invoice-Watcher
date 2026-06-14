@@ -354,12 +354,9 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled, geom }: {
     const circR    = faceR * 0.78;
     const fontSize = Math.max(0.07, Math.min(0.18, (circR * 2 * Math.PI * 0.38) / Math.max(count, 5)));
 
-    const fullRing   = count >= 5;
-    const arcSpan    = fullRing ? Math.PI * 2 : Math.min(Math.PI * 1.55, count * 0.44);
-    const startAngle = fullRing
-      ? Math.PI / 2
-      : Math.PI / 2 + arcSpan / 2 - arcSpan / count / 2;
-    const angleStep  = fullRing ? Math.PI * 2 / count : arcSpan / Math.max(count - 1, 1);
+    // Always distribute letters equally around the full 360° — regardless of count.
+    const startAngle = Math.PI / 2;           // first letter at 12 o'clock
+    const angleStep  = Math.PI * 2 / count;  // evenly spaced around the ring
 
     return (
       <group position={[0, 0, textZ]}>
