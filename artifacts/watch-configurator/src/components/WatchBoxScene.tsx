@@ -288,21 +288,21 @@ function WatchInBox({ config, visible }: { config: WatchConfig; visible: boolean
   useEffect(() => () => { bodyGeo.dispose(); faceGeo.dispose(); crystalGeo.dispose(); faceTex.dispose(); }, [bodyGeo, faceGeo, crystalGeo, faceTex]);
 
   // Pop-in spring when box opens.
-  // Never go to exactly 0 — a zero scale creates a degenerate Three.js matrix
-  // that silently breaks rendering for the rest of the frame.
-  // Use Three.js group.visible=false to skip the subtree when closed instead.
   const { sc } = useSpring({
+    from: { sc: 0.001 },
     sc: visible ? 0.44 : 0.001,
     config: { mass: 0.8, tension: 140, friction: 20 },
     delay: visible ? 180 : 0,
   });
 
+  // Outer plain R3F group controls Three.js visibility (animated.group doesn't
+  // reliably forward boolean props to the underlying Object3D).
   return (
+    <group visible={visible}>
     <animated.group
-      position={[0, -0.28, 0]}   // sits on the cushion (cushion top ≈ -0.235)
-      scale={sc}                  // 0.001 → 0.44; straps fit (tip ≈ ±1.23, wall ±1.32)
+      position={[0, -0.28, 0]}
+      scale={sc}
       rotation={[-Math.PI / 2, 0, 0]}
-      visible={visible}           // Three.js skips subtree when false; no degenerate matrix
     >
         {/* Watch case */}
         <mesh>
@@ -364,6 +364,7 @@ function WatchInBox({ config, visible }: { config: WatchConfig; visible: boolean
           <meshStandardMaterial color={faceCol} metalness={0.76} roughness={0.14} />
         </mesh>
     </animated.group>
+    </group>
   );
 }
 
