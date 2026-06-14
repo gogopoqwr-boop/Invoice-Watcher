@@ -2,3 +2,4 @@
 - [WebGL in Replit Sandbox](webgl-sandbox.md) — no GPU in Replit preview; detect upfront and skip Canvas entirely
 - [Auth token key](auth-token.md) — custom-fetch reads `localStorage["jwt"]` automatically; store token under that key
 - [Seed data](seed-data.md) — presets + admin users must be seeded via `pnpm --filter @workspace/scripts run seed`; DB starts empty
+- [Typeface.js Y-axis](typeface-y-axis.md) — opentype.js getPath() flips Y (drawing coords); use glyph.path.commands directly for correct THREE.js font JSON
