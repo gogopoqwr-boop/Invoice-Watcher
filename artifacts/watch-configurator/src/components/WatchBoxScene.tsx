@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef, Suspense } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
-import { useSpring, animated } from '@react-spring/three';
+import { useSpring } from '@react-spring/three';
 import WatchModel from '@/components/WatchModel';
 import type { ExtendedConfigState } from '@/hooks/use-watch-config';
 
@@ -72,6 +72,10 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
   const { lidAngle } = useSpring({
     lidAngle: open ? -Math.PI * 0.54 : 0.02,
     config: { mass: 1.4, tension: 48, friction: 20 },
+  });
+  const lidRef = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (lidRef.current) lidRef.current.rotation.x = lidAngle.get();
   });
 
   const bodyMat  = { color: s.bodyColor,  metalness: s.metalness,    roughness: s.roughness    };
@@ -168,7 +172,7 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
 
       {/* ── Lid (pivots at back-top edge) ── */}
       {/* Pivot group placed at the top-back edge of box */}
-      <animated.group position={[0, H/2 - T*0.1, -D/2 + T]} rotation-x={lidAngle}>
+      <group ref={lidRef} position={[0, H/2 - T*0.1, -D/2 + T]}>
         {/* Lid panel: offset so back edge is at pivot */}
         <mesh position={[0, LID_T/2, D/2 - T/2]} castShadow>
           <boxGeometry args={[W, LID_T, D]} />
@@ -205,7 +209,7 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
             <meshStandardMaterial color="#3a2208" metalness={0} roughness={1} />
           </mesh>
         ))}
-      </animated.group>
+      </group>
     </group>
   );
 }
@@ -220,19 +224,23 @@ function WatchInBox({ config, visible }: { config: ExtendedConfigState; visible:
     config: { mass: 0.8, tension: 140, friction: 20 },
     delay: visible ? 180 : 0,
   });
+  const watchRef = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (watchRef.current) watchRef.current.scale.setScalar(sc.get() * 0.42);
+  });
 
   return (
     <group visible={visible}>
       {/* Rotated flat (face-up), scaled to fit inside the box walls */}
-      <animated.group
-        position={[0, -0.28, 0]}
+      <group
+        ref={watchRef}
+        position={[0, -0.30, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
-        scale={sc.to((s: number) => s * 0.42)}
       >
         <Suspense fallback={null}>
           <WatchModel configOverride={config} />
         </Suspense>
-      </animated.group>
+      </group>
     </group>
   );
 }
@@ -252,10 +260,15 @@ function GiftRibbon({ visible }: { visible: boolean }) {
 
   // THREE.js scale=0 creates a singular matrix → garbage rendering.
   // The outer <group visible={…}> tells Three.js to skip the subtree entirely
-  // when hidden; the inner animated.group only handles the pop-in spring.
+  // when hidden; the inner group's scale is driven imperatively via useFrame.
+  const ribbonRef = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (ribbonRef.current) ribbonRef.current.scale.setScalar(sc.get());
+  });
+
   return (
     <group visible={visible}>
-      <animated.group scale={sc}>
+      <group ref={ribbonRef}>
         {/* ── Cross-strips on lid top ── */}
         <mesh position={[0, RIBBON_Y_LID, 0]}>
           <boxGeometry args={[0.22, 0.022, D + 0.05]} />
@@ -302,7 +315,7 @@ function GiftRibbon({ visible }: { visible: boolean }) {
           <sphereGeometry args={[0.10, 14, 10]} />
           <meshStandardMaterial {...RIBBON_M} roughness={0.38} />
         </mesh>
-      </animated.group>
+      </group>
     </group>
   );
 }

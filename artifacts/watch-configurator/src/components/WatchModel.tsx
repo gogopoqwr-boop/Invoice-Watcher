@@ -900,10 +900,13 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
     prevStepRef.current = step;
   }, [step]);
 
+  // In box / mini-preview mode (configOverride provided) disable tilt + auto-rotate
+  const isMiniPreview = !!configOverride;
+
   // Tilt + wrist-snap Z position (watch moves forward/into wrist when wrist shown)
   const { tiltX, watchZ } = useSpring({
-    tiltX: step === 2 ? 0.52 : -0.32,
-    watchZ: showWrist ? 0.2 : 0,
+    tiltX: isMiniPreview ? 0 : (step === 2 ? 0.52 : -0.32),
+    watchZ: isMiniPreview ? 0 : (showWrist ? 0.2 : 0),
     config: { mass: 1, tension: 110, friction: 22 },
   });
 
@@ -968,27 +971,29 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
     if (secHandRef.current)    secHandRef.current.rotation.z    = secActual.current;
     if (gmtHandRef.current)    gmtHandRef.current.rotation.z    = gmtActual.current;
 
-    // ── Tilt / Z driven imperatively from springs (replaces animated.group) ──
-    groupRef.current.rotation.x = tiltX.get();
-    groupRef.current.position.z = watchZ.get();
+    // ── Tilt / Z + auto-rotation — full view only, not in box / mini-preview ──
+    if (!isMiniPreview) {
+      groupRef.current.rotation.x = tiltX.get();
+      groupRef.current.position.z = watchZ.get();
 
-    // ── Watch auto-rotation ────────────────────────────────────────────────────
-    const userActive = lastInteractionRef?.current
-      ? Date.now() - lastInteractionRef.current < INTERACTION_PAUSE_MS
-      : false;
-    if (userActive) { rotResumeStartRef.current = null; return; }
-    if (rotResumeStartRef.current === null) rotResumeStartRef.current = Date.now();
-    const speedFactor = Math.min(1, (Date.now() - rotResumeStartRef.current) / RESUME_RAMP_MS);
+      // ── Watch auto-rotation ──────────────────────────────────────────────────
+      const userActive = lastInteractionRef?.current
+        ? Date.now() - lastInteractionRef.current < INTERACTION_PAUSE_MS
+        : false;
+      if (userActive) { rotResumeStartRef.current = null; return; }
+      if (rotResumeStartRef.current === null) rotResumeStartRef.current = Date.now();
+      const speedFactor = Math.min(1, (Date.now() - rotResumeStartRef.current) / RESUME_RAMP_MS);
 
-    if (faceSnapTargetRef.current !== null) {
-      const target = faceSnapTargetRef.current;
-      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, target, 0.06 * speedFactor);
-      if (Math.abs(groupRef.current.rotation.y - target) < 0.001) {
-        groupRef.current.rotation.y = target;
-        faceSnapTargetRef.current = null;
+      if (faceSnapTargetRef.current !== null) {
+        const target = faceSnapTargetRef.current;
+        groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, target, 0.06 * speedFactor);
+        if (Math.abs(groupRef.current.rotation.y - target) < 0.001) {
+          groupRef.current.rotation.y = target;
+          faceSnapTargetRef.current = null;
+        }
+      } else {
+        groupRef.current.rotation.y += 0.004 * speedFactor;
       }
-    } else {
-      groupRef.current.rotation.y += 0.004 * speedFactor;
     }
   });
 
@@ -1027,7 +1032,6 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   // center + hands → canvas draws flat 2D text under the hands
   // circular in mini-preview mode → canvas draws the circular ring (Text3D looks bad at card scale)
   // all other combos → canvas stays blank, Text3D handles it
-  const isMiniPreview = !!configOverride;
   const canvasTextMode: 'none' | 'circular' | 'center-flat' | 'center-raised' =
     hasText && textMode === 'center' && handsOn ? 'center-flat' :
     hasText && textMode === 'circular' && isMiniPreview ? 'circular' :
