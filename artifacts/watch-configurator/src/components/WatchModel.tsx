@@ -307,14 +307,12 @@ function buildBumpTexture(
 }
 
 // ─── Watch face 3D text (Text3D — real extruded geometry) ──────────────────
-// Uses typeface.js JSON font loaded via FontLoader (main-thread fetch, not a
-// blob WebWorker).  Letters have real depth + bevelled edges + metallic glow.
-//
-// mode='center' + handsEnabled  → canvas texture handles it (returns null here)
-// mode='center' + !handsEnabled → extruded letters centred on the dial
-// mode='circular'               → each letter individually extruded around bezel
-function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled }: {
-  text: string; mode: 'center' | 'circular'; handsColor: string; faceZ: number; handsEnabled: boolean;
+// Uses typeface.js JSON font (Y-up font coordinates, correct for THREE.js).
+// Letters face the viewer: front face is readable from +Z (camera direction).
+// Circular mode: each letter rotated so its base faces the dial centre,
+// matching the convention used on real watch/clock bezels.
+function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled, geom }: {
+  text: string; mode: 'center' | 'circular'; handsColor: string; faceZ: number; handsEnabled: boolean; geom: string;
 }) {
   const trimmed = text.trim().toUpperCase();
   if (!trimmed || trimmed.startsWith('EYE:')) return null;
@@ -323,7 +321,7 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled }: {
   if (mode === 'center' && handsEnabled) return null;
 
   // Letters sit just above face disc, safely below the crystal bottom bevel
-  const textZ = faceZ + 0.005;
+  const textZ = faceZ + 0.006;
 
   // Shared metallic-glow material for all 3D letters
   const matProps = {
@@ -334,13 +332,15 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled }: {
     emissiveIntensity: 0.45,
   };
 
-  // Shared extrusion params — bevel makes edges catch light like cast metal
+  // Subtle extrusion — depth ~10% of font size so letters look embossed,
+  // not like cubes.  Bevel chamfers the edges to catch light.
+  const depth = 0.014;
   const extrudeProps = {
-    depth: 0.028,
+    depth,
     bevelEnabled: true as const,
-    bevelSize: 0.009,
-    bevelThickness: 0.009,
-    bevelSegments: 5,
+    bevelSize: 0.005,
+    bevelThickness: 0.005,
+    bevelSegments: 4,
   };
 
   if (mode === 'circular') {
@@ -348,10 +348,14 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled }: {
     const count = chars.length;
     if (count === 0) return null;
 
+    // circR is 78 % of the face radius so letters stay inside the bezel for all
+    // geometry types (circle r=1.5, square hw=1.28, drawn hw=1.1).
+    const faceR    = shapeHalfWidth(geom);
+    const circR    = faceR * 0.78;
+    const fontSize = Math.max(0.07, Math.min(0.18, (circR * 2 * Math.PI * 0.38) / Math.max(count, 5)));
+
     const fullRing   = count >= 5;
     const arcSpan    = fullRing ? Math.PI * 2 : Math.min(Math.PI * 1.55, count * 0.44);
-    const circR      = 1.20;
-    const fontSize   = Math.max(0.09, Math.min(0.20, 1.05 / Math.max(count, 5)));
     const startAngle = fullRing
       ? Math.PI / 2
       : Math.PI / 2 + arcSpan / 2 - arcSpan / count / 2;
@@ -363,6 +367,8 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled }: {
           const angle = startAngle - i * angleStep;
           const x = circR * Math.cos(angle);
           const y = circR * Math.sin(angle);
+          // rotZ positions the letter so its baseline faces the dial centre —
+          // the standard convention on every real watch/clock bezel.
           const rotZ = angle - Math.PI / 2;
           return (
             <group key={i} position={[x, y, 0]} rotation={[0, 0, rotZ]}>
@@ -1040,6 +1046,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
               handsColor={config.handsColor ?? '#ffffff'}
               faceZ={faceZ}
               handsEnabled={config.handsEnabled ?? true}
+              geom={config.watchfaceGeometry ?? 'circle'}
             />
           </Suspense>
         </TextErrorBoundary>
