@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, useRef, lazy, Suspense } from 'react';
 import { useGetConfiguration } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
 import { TgStar } from '@/components/TgStar';
@@ -75,6 +75,7 @@ export interface ConfigReceiptProps {
 
 export default function ConfigReceipt({ configId, totalStars, alwaysOpen, compact }: ConfigReceiptProps) {
   const [open, setOpen] = useState(false);
+  const [boxOpen, setBoxOpen] = useState(false);
   const shouldFetch = alwaysOpen || open;
 
   const { data: cfg, isLoading } = useGetConfiguration(configId as number, {
@@ -122,7 +123,9 @@ export default function ConfigReceipt({ configId, totalStars, alwaysOpen, compac
                   handsColor:        cfg.handsColor,
                 }}
                 boxType={cfg.boxType ?? 'standard'}
+                open={boxOpen}
                 autoOpen
+                onToggle={() => setBoxOpen(v => !v)}
                 className="h-56 mb-3"
               />
             </Suspense>

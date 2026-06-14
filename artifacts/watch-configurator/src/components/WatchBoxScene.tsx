@@ -480,6 +480,8 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
     const t = setTimeout(() => setAutoOpened(true), 800);
     return () => clearTimeout(t);
   }, [autoOpen]);
+  // autoOpened is only the initial trigger; once the user taps,
+  // the parent's `open` prop takes full control.
   const isOpen = open || autoOpened;
   if (!WEB_GL_OK) {
     const s = BOX_STYLES[boxType as keyof typeof BOX_STYLES] ?? BOX_STYLES.standard;
@@ -493,7 +495,7 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
     //  G'=(36.4,29.8)  H'=(62.5,44.9)
     return (
       <div
-        className={`flex items-center justify-center rounded-2xl overflow-hidden ${className ?? 'h-64'}${onToggle ? ' cursor-pointer select-none' : ''}`}
+        className={`relative flex items-center justify-center rounded-2xl overflow-hidden ${className ?? 'h-64'}${onToggle ? ' cursor-pointer select-none' : ''}`}
         style={{ background: `radial-gradient(ellipse at 50% 55%, ${s.bodyColor}ee 0%, ${s.bodyColor}66 55%, transparent 100%)` }}
         onClick={onToggle}
       >
@@ -555,6 +557,13 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
           <line x1="54" y1="47" x2="54" y2="37.6" stroke={s.rimColor} strokeWidth="0.5" opacity="0.35" />
           <line x1="80.1" y1="62.1" x2="62.5" y2="72.3" stroke={s.rimColor} strokeWidth="0.4" opacity="0.3" />
         </svg>
+
+        {onToggle && (
+          <div className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-sm text-white/60 text-[10px] font-medium select-none">
+            <span>{isOpen ? '📦' : '🎁'}</span>
+            <span>{isOpen ? 'Нажмите, чтобы закрыть' : 'Нажмите, чтобы открыть'}</span>
+          </div>
+        )}
       </div>
     );
   }
@@ -570,13 +579,19 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
     if (!pointerDown.current || !onToggle) return;
     const dx = e.clientX - pointerDown.current.x;
     const dy = e.clientY - pointerDown.current.y;
-    if (Math.sqrt(dx * dx + dy * dy) < 6) onToggle();
+    if (Math.sqrt(dx * dx + dy * dy) < 6) {
+      // Once user taps, clear autoOpened so the parent's `open` prop is the
+      // sole source of truth — otherwise `isOpen = open || autoOpened` keeps
+      // the box stuck open even when the parent sets open=false.
+      setAutoOpened(false);
+      onToggle();
+    }
     pointerDown.current = null;
   }
 
   return (
     <div
-      className={`w-full ${className ?? 'h-64'} rounded-2xl overflow-hidden${onToggle ? ' cursor-pointer' : ''}`}
+      className={`w-full ${className ?? 'h-64'} rounded-2xl overflow-hidden relative${onToggle ? ' cursor-pointer' : ''}`}
       onPointerDown={onToggle ? handlePointerDown : undefined}
       onPointerUp={onToggle ? handlePointerUp : undefined}
     >
@@ -596,6 +611,14 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
           target={[0, 0, 0]}
         />
       </Canvas>
+
+      {/* Tap hint — only shown when tapping is wired up */}
+      {onToggle && (
+        <div className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-sm text-white/60 text-[10px] font-medium select-none">
+          <span>{isOpen ? '📦' : '🎁'}</span>
+          <span>{isOpen ? 'Нажмите, чтобы закрыть' : 'Нажмите, чтобы открыть'}</span>
+        </div>
+      )}
     </div>
   );
 }
