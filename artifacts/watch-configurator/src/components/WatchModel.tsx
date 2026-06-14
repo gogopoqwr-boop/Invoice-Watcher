@@ -348,25 +348,45 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled, geom }: {
     const count = chars.length;
     if (count === 0) return null;
 
-    // circR is 78 % of the face radius so letters stay inside the bezel for all
-    // geometry types (circle r=1.5, square hw=1.28, drawn hw=1.1).
-    const faceR    = shapeHalfWidth(geom);
-    const circR    = faceR * 0.78;
-    const fontSize = Math.max(0.07, Math.min(0.18, (circR * 2 * Math.PI * 0.38) / Math.max(count, 5)));
+    const faceR = shapeHalfWidth(geom);
+    const r     = faceR * 0.78;   // inset path half-width / radius
 
-    // Always distribute letters equally around the full 360° — regardless of count.
-    const startAngle = Math.PI / 2;           // first letter at 12 o'clock
-    const angleStep  = Math.PI * 2 / count;  // evenly spaced around the ring
+    // Perimeter length determines font size so letters fill the path evenly.
+    const isSquarePath = geom === 'square';
+    const perimeter    = isSquarePath ? 8 * r : 2 * Math.PI * r;
+    const fontSize     = Math.max(0.07, Math.min(0.18, (perimeter * 0.38) / Math.max(count, 5)));
+
+    // Compute (x, y) position and normal angle for letter i along the chosen path.
+    //
+    // Square path: starts at top-center (0, r), walks clockwise around all 4 sides.
+    //   Perimeter = 8r; each step = 8r / count.
+    //
+    // Circular path: classic equally-spaced angles, starting at 12 o'clock.
+    //
+    // rotZ = atan2(y, x) - π/2 in both cases so the letter's baseline always
+    // faces inward — the standard watch-bezel convention.
+    const letterPositions = Array.from({ length: count }, (_, i) => {
+      let x: number, y: number;
+      if (isSquarePath) {
+        const t = (i / count) * 8 * r;
+        if      (t < r)       { x = t;           y = r;  }          // top (right half)
+        else if (t < 3 * r)   { x = r;           y = 2 * r - t; }   // right side
+        else if (t < 5 * r)   { x = 4 * r - t;   y = -r; }          // bottom
+        else if (t < 7 * r)   { x = -r;           y = t - 6 * r; }   // left side
+        else                  { x = t - 8 * r;   y = r;  }          // top (left half)
+      } else {
+        const angle = Math.PI / 2 - (i / count) * Math.PI * 2;      // 12 o'clock first
+        x = r * Math.cos(angle);
+        y = r * Math.sin(angle);
+      }
+      const rotZ = Math.atan2(y, x) - Math.PI / 2;
+      return { x, y, rotZ };
+    });
 
     return (
       <group position={[0, 0, textZ]}>
         {chars.map((ch, i) => {
-          const angle = startAngle - i * angleStep;
-          const x = circR * Math.cos(angle);
-          const y = circR * Math.sin(angle);
-          // rotZ positions the letter so its baseline faces the dial centre —
-          // the standard convention on every real watch/clock bezel.
-          const rotZ = angle - Math.PI / 2;
+          const { x, y, rotZ } = letterPositions[i];
           return (
             <group key={i} position={[x, y, 0]} rotation={[0, 0, rotZ]}>
               <Center>
