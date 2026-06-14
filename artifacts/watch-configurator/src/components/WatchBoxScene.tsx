@@ -86,7 +86,7 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
   const s = BOX_STYLES[boxType as keyof typeof BOX_STYLES] ?? BOX_STYLES.standard;
 
   const { lidAngle } = useSpring({
-    lidAngle: open ? -Math.PI * 0.56 : 0.02,
+    lidAngle: open ? -Math.PI * 0.56 : 0,
     config: { mass: 1.4, tension: 48, friction: 20 },
   });
   const lidRef = useRef<THREE.Group>(null);
@@ -146,8 +146,9 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
       </mesh>
 
       {/* ── Rim / edge trim ── */}
-      <mesh position={[0, H/2 - T*0.3, 0]}>
-        <boxGeometry args={[W + 0.04, T * 0.32, D + 0.04]} />
+      {/* Kept well below H/2 so it never z-fights with the closed lid bottom face */}
+      <mesh position={[0, H/2 - T * 0.85, 0]}>
+        <boxGeometry args={[W + 0.04, T * 0.38, D + 0.04]} />
         <meshStandardMaterial {...rimMat} />
       </mesh>
 
@@ -182,7 +183,8 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
       ))}
 
       {/* ── Lid (pivots at back-top edge) ── */}
-      <group ref={lidRef} position={[0, H/2 - T*0.1, -D/2 + T]}>
+      {/* Pivot placed exactly at H/2 so closed lid bottom face is flush with box top — no z-fighting. */}
+      <group ref={lidRef} position={[0, H/2, -D/2 + T]}>
         <mesh position={[0, LID_T/2, D/2 - T/2]} castShadow>
           <boxGeometry args={[W, LID_T, D]} />
           <meshStandardMaterial {...lidMat} />
