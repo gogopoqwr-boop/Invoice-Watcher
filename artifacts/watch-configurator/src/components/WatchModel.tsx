@@ -1,6 +1,6 @@
 import React, { useRef, useMemo, useEffect, Suspense } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Text3D, Center } from '@react-three/drei';
+import { Text3D, Center, Billboard } from '@react-three/drei';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
@@ -386,16 +386,16 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
     return (
       <group position={[0, 0, textZ]}>
         {chars.map((ch, i) => {
-          const { x, y, rotZ } = letterPositions[i];
+          const { x, y } = letterPositions[i];
           return (
-            <group key={i} position={[x, y, 0]} rotation={[0, 0, rotZ]}>
+            <Billboard key={i} position={[x, y, 0]}>
               <Center>
                 <Text3D font={TYPEFACE_URL} size={fontSize} {...extrudeFor(fontSize)}>
                   {ch}
                   <meshStandardMaterial {...matProps} />
                 </Text3D>
               </Center>
-            </group>
+            </Billboard>
           );
         })}
       </group>
@@ -416,7 +416,7 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
   const totalH   = (lines.length - 1) * lineH;
 
   return (
-    <group position={[0, 0, textZ]}>
+    <Billboard position={[0, 0, textZ]}>
       {lines.map((line, i) => (
         <group key={i} position={[0, totalH / 2 - i * lineH, 0]}>
           <Center>
@@ -427,7 +427,7 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
           </Center>
         </group>
       ))}
-    </group>
+    </Billboard>
   );
 }
 
