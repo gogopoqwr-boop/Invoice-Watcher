@@ -7,13 +7,16 @@ import WatchSVG from '@/components/WatchSVG';
 import { WebGLErrorBoundary } from '@/components/WebGLErrorBoundary';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import { BRACELET_COMBOS } from '@/components/WatchFullscreenViewer';
-import {
-  useCalculatePrice,
-  WatchConfigInputBraceletType,
-} from '@workspace/api-client-react';
+import { WatchConfigInputBraceletType } from '@workspace/api-client-react';
 import { useLocation, Link } from 'wouter';
 import { cn } from '@/lib/utils';
 import { TgStar } from '@/components/TgStar';
+
+const BRACELET_PRICES: Record<string, number> = {
+  plastic_solid: 0, plastic_segmented: 1,
+  metal_solid: 3,   metal_segmented: 4,
+  resin: 2, leather: 3, cotton_fabric: 1,
+};
 
 function isWebGLAvailable(): boolean {
   try {
@@ -138,13 +141,9 @@ export default function Configure() {
     if (!hasPreset) setLocation('/collections');
   }, [hasPreset]);
 
-  const [livePrice, setLivePrice] = useState<number | null>(config.priceStars ?? null);
-  const [priceLoading, setPriceLoading] = useState(false);
   const [showWrist, setShowWrist] = useState(false);
   const lastInteractionRef = useRef<number>(0);
   const webglAvailable = useMemo(() => isWebGLAvailable(), []);
-
-  const calcPrice = useCalculatePrice();
 
   // Derive which combo is currently selected (fallback to first)
   const activeComboid = useMemo(() => {
@@ -160,27 +159,15 @@ export default function Configure() {
     updateConfig({ braceletColor: combo.color, braceletMaterial: combo.material });
   };
 
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      try {
-        setPriceLoading(true);
-        const result = await calcPrice.mutateAsync({
-          data: {
-            watchfaceMaterial: config.watchfaceMaterial,
-            braceletMaterial: config.braceletMaterial,
-            handsEnabled: config.handsEnabled,
-          },
-        });
-        setLivePrice(result.totalStars);
-      } catch {
-        // keep last known price
-      } finally {
-        setPriceLoading(false);
-      }
-    }, 350);
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config.braceletMaterial, config.watchfaceMaterial, config.handsEnabled]);
+  // Price = preset base price ± bracelet material delta vs. preset default
+  const livePrice = useMemo(() => {
+    const base = config.priceStars;
+    if (base == null) return null;
+    const originalBracket = config.presetBraceletMaterial ?? config.braceletMaterial ?? 'metal_solid';
+    const delta = (BRACELET_PRICES[config.braceletMaterial ?? 'metal_solid'] ?? 0)
+                - (BRACELET_PRICES[originalBracket] ?? 0);
+    return Math.min(50, Math.max(1, base + delta));
+  }, [config.priceStars, config.presetBraceletMaterial, config.braceletMaterial]);
 
   const handleProceedToBox = () => setLocation('/box');
 
@@ -455,8 +442,8 @@ export default function Configure() {
         <div className="px-5 pb-6 pt-3 border-t border-border/40 space-y-3">
           <div className="flex items-center justify-between px-1">
             <span className="text-xs text-muted-foreground uppercase tracking-widest">Стоимость</span>
-            <span className={cn('text-sm font-bold transition-opacity', priceLoading ? 'opacity-40' : 'opacity-100')}>
-              {livePrice !== null ? <span className="flex items-center gap-0.5">{livePrice} <TgStar size={13} /></span> : priceLoading ? '…' : '—'}
+            <span className="text-sm font-bold">
+              {livePrice !== null ? <span className="flex items-center gap-0.5">{livePrice} <TgStar size={13} /></span> : '—'}
             </span>
           </div>
           <div className="flex gap-3">

@@ -31,6 +31,8 @@ export type ExtendedConfigState = ApiConfigState & {
   strapWidth?: number;
   // Preset base price — seeded when a preset is loaded so Configure never starts blank
   priceStars?: number;
+  // Original bracelet material of the preset — used to compute price delta on /configure
+  presetBraceletMaterial?: string;
 };
 
 const defaultState: ExtendedConfigState = {

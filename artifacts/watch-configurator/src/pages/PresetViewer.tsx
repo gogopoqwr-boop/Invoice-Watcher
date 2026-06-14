@@ -242,6 +242,8 @@ export default function PresetViewer() {
       handsEnabled: preset.handsEnabled, handsColor: preset.handsColor ?? '#cbd5e1',
       watchfaceText: preset.watchfaceText ?? '', watchfaceTextMode: preset.watchfaceTextMode ?? 'center',
       handsCount: 3,
+      priceStars: preset.priceStars,
+      presetBraceletMaterial: preset.braceletMaterial,
     });
     setLocation('/configure');
   }, [preset, updateConfig, setLocation]);
