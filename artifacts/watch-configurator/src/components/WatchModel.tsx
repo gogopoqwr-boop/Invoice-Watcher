@@ -1,7 +1,7 @@
 import React, { useRef, useMemo, useEffect, Suspense } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Text3D, Center } from '@react-three/drei';
-import { useWatchConfig } from '@/hooks/use-watch-config';
+import { useWatchConfig, ExtendedConfigState } from '@/hooks/use-watch-config';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
 
@@ -767,6 +767,10 @@ export interface WatchModelProps {
   step?: number;
   lastInteractionRef?: React.RefObject<number>;
   showWrist?: boolean;
+  /** When provided, overrides the global WatchConfigContext for this instance.
+   *  Used by preview cards that must render a specific preset without touching
+   *  the user's in-progress configuration. */
+  configOverride?: ExtendedConfigState;
 }
 
 // ─── WatchEyes — 3D eyes that track the camera (EYE: face mode) ──────────────
@@ -845,8 +849,9 @@ const LUG_TIP_Y  = 1.85;  // |y| of spring bar / strap attachment (top of lug ar
 const LUG_ARM_Z  = 0.10;  // Z center for lug body, spring bar, and strap — single source of truth
 // STRAP_HALF removed — strap length now expressed as WRAP_SEGS × SEG_LEN in the StrapJoint chain
 
-export default function WatchModel({ step = 0, lastInteractionRef, showWrist = false }: WatchModelProps) {
-  const { config } = useWatchConfig();
+export default function WatchModel({ step = 0, lastInteractionRef, showWrist = false, configOverride }: WatchModelProps) {
+  const { config: contextConfig } = useWatchConfig();
+  const config = configOverride ?? contextConfig;
   const groupRef = useRef<THREE.Group>(null);
   const prevStepRef = useRef(step);
   const faceSnapTargetRef = useRef<number | null>(null);

@@ -1,8 +1,10 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Environment, Html } from '@react-three/drei';
+import { Environment, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import WatchSVG from './WatchSVG';
+import WatchModel from './WatchModel';
+import type { ExtendedConfigState } from '@/hooks/use-watch-config';
 
 // At most 8 simultaneous WebGL contexts (browsers cap ~16; these are low-power).
 // Contexts are acquired when a card scrolls into view and released when it
@@ -297,6 +299,7 @@ export interface WatchMiniCanvasProps {
   preset: {
     watchfaceGeometry?: string;
     watchfaceColor?: string;
+    watchfaceMaterial?: string;
     braceletColor?: string;
     braceletMaterial?: string;
     handsColor?: string;
@@ -305,11 +308,58 @@ export interface WatchMiniCanvasProps {
     watchfaceTextMode?: string;
     braceletType?: string;
     watchfaceBackgroundType?: string;
+    watchfaceGradientEnd?: string;
+    watchfaceSize?: number;
+    strapWidth?: number;
   };
   paused?: boolean;
   /** Skip IntersectionObserver and mount immediately — use when the card is
    *  guaranteed visible but inside an overflow container that clips IO detection */
   forceMount?: boolean;
+}
+
+// ── Real 3D preview using the full WatchModel ─────────────────────────────
+// Builds an ExtendedConfigState from the preset object and passes it as
+// configOverride so WatchModel renders the preset without touching global state.
+function RealWatchCanvas({ preset }: { preset: WatchMiniCanvasProps['preset'] }) {
+  const presetConfig: ExtendedConfigState = useMemo(() => ({
+    watchfaceGeometry: (preset.watchfaceGeometry ?? 'rounded') as ExtendedConfigState['watchfaceGeometry'],
+    watchfaceMaterial: (preset.watchfaceMaterial ?? 'metal') as ExtendedConfigState['watchfaceMaterial'],
+    watchfaceColor: preset.watchfaceColor ?? '#1e293b',
+    watchfaceBackgroundType: (preset.watchfaceBackgroundType ?? 'solid') as ExtendedConfigState['watchfaceBackgroundType'],
+    watchfaceGradientEnd: preset.watchfaceGradientEnd ?? '#0f172a',
+    braceletMaterial: (preset.braceletMaterial ?? 'metal_solid') as ExtendedConfigState['braceletMaterial'],
+    braceletType: (preset.braceletType ?? 'solid') as ExtendedConfigState['braceletType'],
+    braceletColor: preset.braceletColor ?? '#0f172a',
+    handsEnabled: preset.handsEnabled ?? true,
+    handsCount: 3,
+    handsColor: preset.handsColor ?? '#cbd5e1',
+    watchfaceText: preset.watchfaceText ?? '',
+    watchfaceTextMode: (preset.watchfaceTextMode ?? 'circular') as ExtendedConfigState['watchfaceTextMode'],
+    watchfaceSize: preset.watchfaceSize ?? 1.0,
+    strapWidth: preset.strapWidth ?? 1.0,
+  }), [preset]);
+
+  return (
+    <Canvas
+      camera={{ position: [0, 0.5, 9], fov: 42 }}
+      gl={{ alpha: true, antialias: true, powerPreference: 'low-power', preserveDrawingBuffer: false }}
+      style={{ background: 'transparent', width: '100%', height: '100%' }}
+      dpr={[1, 1.5]}
+    >
+      <ambientLight intensity={0.45} />
+      <spotLight position={[4, 6, 8]} angle={0.28} penumbra={0.75} intensity={2.8} castShadow={false} />
+      <directionalLight position={[-4, 4, 3]} intensity={0.6} color="#c4d4f0" />
+      <pointLight position={[-5, 3, -4]} intensity={1.1} color="#6366f1" />
+      <pointLight position={[5, -2, 3]} intensity={0.45} color="#f0f4ff" />
+      <pointLight position={[0, 6, -2]} intensity={0.3} color="#e0eaff" />
+      <React.Suspense fallback={null}>
+        <WatchModel step={0} configOverride={presetConfig} />
+        <Environment preset="city" />
+        <ContactShadows position={[0, -5.9, 0]} opacity={0.4} scale={12} blur={2.5} far={6} />
+      </React.Suspense>
+    </Canvas>
+  );
 }
 
 export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMiniCanvasProps) {
@@ -409,30 +459,7 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
 
       {mounted && !paused && (
         <div className="absolute inset-0">
-          <Canvas
-            camera={{ position: [0, 0.5, 8.0], fov: 40 }}
-            gl={{ alpha: true, antialias: true, powerPreference: 'low-power', preserveDrawingBuffer: false }}
-            style={{ background: 'transparent', width: '100%', height: '100%' }}
-            dpr={[1, 1.2]}
-          >
-            <ambientLight intensity={0.55} />
-            <directionalLight position={[5, 8, 6]} intensity={1.3} />
-            <directionalLight position={[-3, -2, -4]} intensity={0.28} />
-            <pointLight position={[-4, 2, 3]} intensity={0.7} color="#6366f1" />
-            <hemisphereLight intensity={0.25} />
-            <Environment preset="city" />
-            <MiniWatch
-              watchfaceGeometry={preset.watchfaceGeometry ?? 'rounded'}
-              watchfaceColor={faceColor}
-              braceletColor={strapColor}
-              braceletMaterial={preset.braceletMaterial ?? 'leather'}
-              handsColor={preset.handsColor ?? '#ffffff'}
-              handsEnabled={preset.handsEnabled ?? true}
-              watchfaceText={preset.watchfaceText ?? ''}
-              watchfaceTextMode={preset.watchfaceTextMode ?? 'circular'}
-              paused={paused}
-            />
-          </Canvas>
+          <RealWatchCanvas preset={preset} />
         </div>
       )}
 
