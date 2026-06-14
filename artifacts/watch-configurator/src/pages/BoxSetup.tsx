@@ -140,49 +140,45 @@ export default function BoxSetup() {
   return (
     <div className="w-full bg-background flex flex-col md:flex-row md:overflow-hidden md:h-screen">
 
-      {/* ── Left — Box preview ── */}
+      {/* ── Left — Box preview (fills pane like Configure's watch canvas) ── */}
       <div
-        className="sticky top-0 z-10 w-full md:static md:w-[52%] h-[44dvh] md:h-screen relative shrink-0 flex flex-col items-center justify-center gap-4"
+        className="sticky top-0 z-10 w-full md:static md:w-[52%] h-[58dvh] md:h-screen relative shrink-0 overflow-hidden"
         style={{ background: 'radial-gradient(ellipse at 48% 42%, #1e2a4a 0%, #0d1117 55%, #060810 100%)' }}
       >
+        {/* Back button — absolute, matches Configure */}
         <Link href="/configure">
           <button className="absolute top-3 left-3 z-10 liquid-button px-3 py-1.5 text-xs font-semibold">← Настройка</button>
         </Link>
 
-        <div className="w-full max-w-[340px] px-4">
-          <Suspense fallback={
-            <div className="h-64 md:h-80 rounded-2xl bg-white/5 flex items-center justify-center">
-              <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-            </div>
-          }>
-            <WatchBoxScene
-              config={config}
-              boxType={selectedBox}
-              open={boxOpen}
-              giftWrap={giftWrap}
-              className="h-64 md:h-80"
-              onToggle={() => setBoxOpen(v => !v)}
-            />
-          </Suspense>
-        </div>
+        {/* Box scene fills the entire pane */}
+        <Suspense fallback={
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          </div>
+        }>
+          <WatchBoxScene
+            config={config}
+            boxType={selectedBox}
+            open={boxOpen}
+            giftWrap={giftWrap}
+            className="h-full rounded-none"
+            onToggle={() => setBoxOpen(v => !v)}
+          />
+        </Suspense>
 
-        <button
-          onClick={() => setBoxOpen(v => !v)}
-          className="liquid-button px-5 py-2.5 text-sm font-semibold"
-        >
-          {boxOpen ? '📦 Закрыть коробку' : '🎁 Открыть коробку'}
-        </button>
-
-        <div className="text-center space-y-0.5">
-          <p
-            className="text-lg font-bold tracking-tight transition-colors duration-300"
-            style={{ color: boxOption.textColor }}
+        {/* Bottom overlay — toggle button + box name */}
+        <div className="pointer-events-none absolute bottom-4 left-0 right-0 flex flex-col items-center gap-2">
+          <button
+            onClick={() => setBoxOpen(v => !v)}
+            className="pointer-events-auto liquid-button px-5 py-2.5 text-sm font-semibold"
           >
-            {boxOption.label}
-          </p>
-          <p className="text-sm text-muted-foreground">{boxOption.sublabel}</p>
-          <p className="text-xs text-muted-foreground/70 max-w-[220px] leading-relaxed hidden md:block">
-            {boxOption.desc}
+            {boxOpen ? '📦 Закрыть коробку' : '🎁 Открыть коробку'}
+          </button>
+          <p
+            className="text-[11px] uppercase tracking-[0.22em] font-semibold transition-colors duration-300"
+            style={{ color: boxOption.textColor, opacity: 0.7 }}
+          >
+            {boxOption.label} · {boxOption.sublabel}
           </p>
         </div>
       </div>

@@ -496,7 +496,7 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
     //  G'=(36.4,29.8)  H'=(62.5,44.9)
     return (
       <div
-        className={`relative flex items-center justify-center rounded-2xl overflow-hidden ${className ?? 'h-64'}${onToggle ? ' cursor-pointer select-none' : ''}`}
+        className={`relative flex items-center justify-center overflow-hidden ${className?.includes('rounded') ? '' : 'rounded-2xl'} ${className ?? 'h-64'}${onToggle ? ' cursor-pointer select-none' : ''}`}
         style={{ background: `radial-gradient(ellipse at 50% 55%, ${s.bodyColor}ee 0%, ${s.bodyColor}66 55%, transparent 100%)` }}
         onClick={onToggle}
       >
@@ -592,7 +592,7 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
 
   return (
     <div
-      className={`w-full ${className ?? 'h-64'} rounded-2xl overflow-hidden relative${onToggle ? ' cursor-pointer' : ''}`}
+      className={`w-full ${className ?? 'h-64'} ${className?.includes('rounded') ? '' : 'rounded-2xl'} overflow-hidden relative${onToggle ? ' cursor-pointer' : ''}`}
       onPointerDown={onToggle ? handlePointerDown : undefined}
       onPointerUp={onToggle ? handlePointerUp : undefined}
     >
