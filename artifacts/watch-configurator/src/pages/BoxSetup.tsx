@@ -138,19 +138,20 @@ export default function BoxSetup() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row">
+    <div data-theme="dark" className="w-full bg-background flex flex-col md:flex-row md:overflow-hidden md:h-screen">
 
       {/* ── Left — Box preview ── */}
-      <div className="w-full md:w-[44%] md:h-screen flex flex-col items-center md:justify-center bg-gradient-to-br from-background to-card/60 px-4 pt-4 pb-2 md:p-8 gap-4 md:gap-6">
-        <div className="flex items-center self-start">
-          <Link href="/configure">
-            <button className="liquid-button px-4 py-2 text-xs font-semibold">← Настройка</button>
-          </Link>
-        </div>
+      <div
+        className="sticky top-0 z-10 w-full md:static md:w-[52%] h-[44dvh] md:h-screen relative shrink-0 flex flex-col items-center justify-center gap-4"
+        style={{ background: 'radial-gradient(ellipse at 48% 42%, #1e2a4a 0%, #0d1117 55%, #060810 100%)' }}
+      >
+        <Link href="/configure">
+          <button className="absolute top-3 left-3 z-10 liquid-button px-3 py-1.5 text-xs font-semibold">← Настройка</button>
+        </Link>
 
-        <div className="w-full max-w-[360px]">
+        <div className="w-full max-w-[340px] px-4">
           <Suspense fallback={
-            <div className="h-64 md:h-80 rounded-2xl bg-card/60 flex items-center justify-center">
+            <div className="h-64 md:h-80 rounded-2xl bg-white/5 flex items-center justify-center">
               <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
             </div>
           }>
@@ -187,15 +188,15 @@ export default function BoxSetup() {
       </div>
 
       {/* ── Right — Options panel ── */}
-      <div className="w-full md:w-[56%] md:h-screen flex flex-col bg-background/80 backdrop-blur-xl border-l border-border/60">
+      <div className="w-full md:w-[48%] md:h-screen flex flex-col bg-background/80 backdrop-blur-xl border-l border-border/60 overflow-y-auto md:overflow-hidden">
 
         {/* Header */}
-        <div className="px-6 pt-6 pb-4">
+        <div className="px-5 pt-5 pb-3 border-b border-border/40 shrink-0">
           <h1 className="text-2xl font-black tracking-tight">Выбор упаковки</h1>
         </div>
 
         {/* Scrollable options */}
-        <div className="flex-1 overflow-y-auto px-6 py-2 space-y-6 pb-4">
+        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-6 pb-4">
 
           {/* ── Box type ── */}
           <div>
@@ -319,18 +320,34 @@ export default function BoxSetup() {
         </div>
 
         {/* Footer */}
-        <div className="px-6 pb-6 pt-3 border-t border-border/40">
-          <button
-            onClick={handleOrder}
-            disabled={submitting}
-            className="w-full py-3.5 rounded-full text-sm font-bold tracking-widest uppercase bg-primary text-white shadow-lg hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60 transition-all"
-          >
-            {submitting
-              ? 'Оформление...'
-              : basePrice !== null
-              ? <span className="flex items-center justify-center gap-1.5">Оплатить — {totalStars} <TgStar size={14} /></span>
-              : 'Оплатить →'}
-          </button>
+        <div className="px-5 pb-6 pt-3 border-t border-border/40 shrink-0 space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs text-muted-foreground uppercase tracking-widest">Итого</span>
+            <span className="text-sm font-bold">
+              {basePrice !== null
+                ? <span className="flex items-center gap-0.5">{totalStars} <TgStar size={13} /></span>
+                : '…'}
+            </span>
+          </div>
+          <div className="flex gap-3">
+            <Link href="/configure" className="flex-none">
+              <button className="liquid-button h-full px-5 py-3 text-sm font-semibold">← Назад</button>
+            </Link>
+            <button
+              onClick={handleOrder}
+              disabled={submitting}
+              className="flex-1 py-3 rounded-full text-sm font-bold tracking-widest uppercase bg-primary text-white shadow-lg hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60 transition-all"
+            >
+              {submitting
+                ? 'Оформление...'
+                : basePrice !== null
+                ? <span className="flex items-center justify-center gap-1">Оплатить — {totalStars} <TgStar size={13} /></span>
+                : 'Оплатить →'}
+            </button>
+          </div>
+          {orderError && (
+            <p className="text-xs text-red-400 text-center">{orderError}</p>
+          )}
         </div>
       </div>
     </div>
