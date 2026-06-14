@@ -373,6 +373,7 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
               ch={ch}
               x={x}
               y={y}
+              rotationZ={-(i / count) * Math.PI * 2}
               fontSize={fontSize}
               matProps={matProps}
               extrudeFor={extrudeFor}
@@ -409,19 +410,13 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
   );
 }
 
-/** Single camera-facing character for circular bezel text.
- *  Copies the camera quaternion every frame — avoids the <Billboard>+<Center>
- *  incompatibility where Billboard's rotation distorts Center's bbox offset. */
-function CameraFacingChar({ ch, x, y, fontSize, matProps, extrudeFor }: {
-  ch: string; x: number; y: number; fontSize: number; matProps: object; extrudeFor: (sz: number) => object;
+/** Single character for circular bezel text — static geometry, rotates with the watch.
+ *  rotationZ orients each letter so its top points outward (standard bezel convention). */
+function CameraFacingChar({ ch, x, y, rotationZ, fontSize, matProps, extrudeFor }: {
+  ch: string; x: number; y: number; rotationZ: number; fontSize: number; matProps: object; extrudeFor: (sz: number) => object;
 }) {
-  const groupRef = useRef<THREE.Group>(null);
-  const { camera } = useThree();
-  useFrame(() => {
-    if (groupRef.current) groupRef.current.quaternion.copy(camera.quaternion);
-  });
   return (
-    <group ref={groupRef} position={[x, y, 0]}>
+    <group position={[x, y, 0]} rotation={[0, 0, rotationZ]}>
       <Center>
         <Text3D font={TYPEFACE_URL} size={fontSize} {...(extrudeFor(fontSize) as any)}>
           {ch}
@@ -432,9 +427,7 @@ function CameraFacingChar({ ch, x, y, fontSize, matProps, extrudeFor }: {
   );
 }
 
-/** Camera-facing text block for center mode.
- *  Copies the camera quaternion every frame — avoids the <Billboard>+<Center>
- *  incompatibility where Billboard's rotation distorts Center's bbox offset. */
+/** Static raised text block for center mode — geometry fixed to the face plane. */
 function CameraFacingText({ lines, fontSize, lineH, totalH, textZ, matProps, extrudeFor }: {
   lines: string[];
   fontSize: number;
@@ -444,17 +437,8 @@ function CameraFacingText({ lines, fontSize, lineH, totalH, textZ, matProps, ext
   matProps: object;
   extrudeFor: (sz: number) => object;
 }) {
-  const groupRef = useRef<THREE.Group>(null);
-  const { camera } = useThree();
-
-  useFrame(() => {
-    if (groupRef.current) {
-      groupRef.current.quaternion.copy(camera.quaternion);
-    }
-  });
-
   return (
-    <group ref={groupRef} position={[0, 0, textZ]}>
+    <group position={[0, 0, textZ]}>
       {lines.map((line, i) => (
         <group key={i} position={[0, totalH / 2 - i * lineH, 0]}>
           <Center>
