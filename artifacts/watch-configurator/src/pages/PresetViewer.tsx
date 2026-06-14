@@ -207,22 +207,15 @@ export default function PresetViewer() {
           handsEnabled: preset.handsEnabled,
           handsColor: preset.handsColor ?? '#FFFFFF',
           handsStyle: preset.watchfaceText ?? '',
+          watchfaceText: preset.watchfaceText ?? undefined,
           serialNumber: null,
+          presetPriceStars: preset.priceStars,
+          presetBraceletMaterial: preset.braceletMaterial,
+          presetName: preset.name,
         }),
       });
       if (!cfgRes.ok) return;
       const cfg = await cfgRes.json();
-
-      const priceRes = await fetch('/api/prices/calculate', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          watchfaceMaterial: preset.watchfaceMaterial,
-          braceletMaterial: preset.braceletMaterial,
-          handsEnabled: preset.handsEnabled,
-        }),
-      });
-      if (!priceRes.ok) return;
-      const price = await priceRes.json();
 
       const orderRes = await fetch('/api/orders', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -246,6 +239,7 @@ export default function PresetViewer() {
       handsCount: 3,
       priceStars: preset.priceStars,
       presetBraceletMaterial: preset.braceletMaterial,
+      presetName: preset.name,
     });
     setLocation('/configure');
   }, [preset, updateConfig, setLocation]);
