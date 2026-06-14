@@ -314,17 +314,48 @@ export default function Configure() {
           </div>
 
 
-          {/* ── Watchface text — circular bezel inscription only ── */}
+          {/* ── Watchface text ── */}
           <div>
-            <h2 className="text-lg font-bold tracking-tight mb-3">Надпись на безеле</h2>
+            <h2 className="text-lg font-bold tracking-tight mb-3">Надпись</h2>
             <input
               type="text"
               maxLength={24}
               placeholder="Например: ДОХУИЩА"
               value={config.watchfaceText?.startsWith('EYE:') ? '' : (config.watchfaceText ?? '')}
-              onChange={e => updateConfig({ watchfaceText: e.target.value, watchfaceTextMode: 'circular' })}
+              onChange={e => updateConfig({ watchfaceText: e.target.value })}
               className="w-full px-4 py-3 rounded-xl text-sm text-foreground border border-border/60 bg-card/80 focus:outline-none focus:ring-2 focus:ring-primary/60 placeholder:text-muted-foreground/50"
             />
+
+            {/* Placement toggle — always visible once text is entered */}
+            {config.watchfaceText && !config.watchfaceText.startsWith('EYE:') && (
+              <div className="mt-3">
+                <p className="text-xs text-muted-foreground mb-2">Расположение</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { value: 'circular', label: 'По кругу', sub: '3D беzel' },
+                    { value: 'center',   label: 'По центру', sub: (config.handsEnabled !== false) ? '2D под стрелки' : '3D центр' },
+                  ] as const).map(({ value, label, sub }) => {
+                    const active = (config.watchfaceTextMode ?? 'circular') === value;
+                    return (
+                      <button
+                        key={value}
+                        onClick={() => updateConfig({ watchfaceTextMode: value })}
+                        className={[
+                          'flex flex-col items-center gap-0.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all border',
+                          active
+                            ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                            : 'bg-card/60 text-muted-foreground border-border/50 hover:bg-card hover:text-foreground',
+                        ].join(' ')}
+                      >
+                        <span>{label}</span>
+                        <span className="text-[10px] opacity-60 font-normal">{sub}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {config.watchfaceText && (
               <div className="mt-3 flex items-center gap-3">
                 <label className="text-sm text-muted-foreground flex-shrink-0">Цвет надписи</label>

@@ -402,8 +402,33 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
     );
   }
 
-  // Should never reach here — mode is always 'circular'.
-  return null;
+  // Center mode
+  if (handsEnabled) return null; // center+hands handled by canvas texture (center-flat)
+
+  // center + no hands → 3D raised text centred on the face
+  const lines = text.trim().split('\n').slice(0, 3).filter(Boolean).map(l => l.toUpperCase().trim());
+  if (lines.length === 0) return null;
+
+  const faceHalf = shapeHalfWidth(geom);
+  const maxLen   = Math.max(...lines.map(l => l.length), 1);
+  const fontSize = Math.max(0.14, Math.min(0.34, (faceHalf * 1.5) / Math.max(maxLen, 3)));
+  const lineH    = fontSize * 1.35;
+  const totalH   = (lines.length - 1) * lineH;
+
+  return (
+    <group position={[0, 0, textZ]}>
+      {lines.map((line, i) => (
+        <group key={i} position={[0, totalH / 2 - i * lineH, 0]}>
+          <Center>
+            <Text3D font={TYPEFACE_URL} size={fontSize} {...extrudeFor(fontSize)}>
+              {line}
+              <meshStandardMaterial {...matProps} />
+            </Text3D>
+          </Center>
+        </group>
+      ))}
+    </group>
+  );
 }
 
 // ─── Clasp & bone-chain strap system ───────────────────────────────────────
@@ -969,15 +994,16 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   }, [config.watchfaceGeometry]);
 
   const hasText = !!(config.watchfaceText?.trim()) && !config.watchfaceText.startsWith('EYE:');
-  // Text is always circular (around the bezel) — center mode removed from the UI.
-  // Force it here so legacy presets with textMode='center' also render correctly.
-  const textMode = 'circular' as const;
+  // Resolve text mode from config — 'circular' (default) or 'center'
+  const textMode = ((config.watchfaceTextMode ?? 'circular') === 'center' ? 'center' : 'circular') as 'circular' | 'center';
   const handsOn  = config.handsEnabled !== false;
 
-  // All text is handled by Text3D (circular bezel letters) — canvas never draws text.
-  const canvasTextMode: 'none' | 'circular' | 'center-flat' | 'center-raised' = 'none';
+  // center + hands → canvas draws flat 2D text under the hands
+  // all other combos → canvas stays blank, Text3D handles it
+  const canvasTextMode: 'none' | 'circular' | 'center-flat' | 'center-raised' =
+    hasText && textMode === 'center' && handsOn ? 'center-flat' : 'none';
 
-  const isCircular = hasText;
+  const isCircular = hasText && textMode === 'circular';
 
   const faceTexture = useMemo(
     () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceGeometry, canvasTextMode, config.watchfaceText),
