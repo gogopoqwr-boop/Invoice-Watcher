@@ -400,3 +400,20 @@ iframe[src*="replit.com/badge"] {
 .delay-400 { animation-delay: 0.4s; }
 .delay-500 { animation-delay: 0.5s; }
 .delay-600 { animation-delay: 0.6s; }
+
+/* ── Theme-aware 3D canvas backgrounds ──────────────────────────── */
+/* Watch canvas (Configure, PresetViewer) */
+.canvas-3d-bg {
+  background: radial-gradient(ellipse at 48% 42%, #c8d8f0 0%, #dce8f5 55%, #eef4fb 100%);
+}
+[data-theme="dark"] .canvas-3d-bg {
+  background: radial-gradient(ellipse at 48% 42%, #1e2a4a 0%, #0d1117 55%, #060810 100%);
+}
+
+/* Box scene canvas (WatchBoxScene, BoxSetup) */
+.canvas-box-bg {
+  background: #e8edf4;
+}
+[data-theme="dark"] .canvas-box-bg {
+  background: #0d1117;
+}

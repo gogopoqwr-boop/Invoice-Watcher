@@ -325,7 +325,6 @@ function GiftRibbon({ visible }: { visible: boolean }) {
 function Scene({ config, boxType, giftWrap, open }: { config: ExtendedConfigState; boxType: string; giftWrap: boolean; open: boolean }) {
   return (
     <>
-      <color attach="background" args={['#0d1117']} />
       <ambientLight intensity={0.55} />
       <spotLight position={[6, 8, 5]} angle={0.24} penumbra={0.6} intensity={2.8} castShadow shadow-mapSize={[1024, 1024]} />
       <directionalLight position={[-3, 5, 4]} intensity={0.7} color="#c4d4f0" />
@@ -475,13 +474,14 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
 
   return (
     <div
-      className={`w-full ${className ?? 'h-64'} ${className?.includes('rounded') ? '' : 'rounded-2xl'} overflow-hidden relative${onToggle ? ' cursor-pointer' : ''}`}
+      className={`w-full canvas-box-bg ${className ?? 'h-64'} ${className?.includes('rounded') ? '' : 'rounded-2xl'} overflow-hidden relative${onToggle ? ' cursor-pointer' : ''}`}
       onPointerDown={onToggle ? handlePointerDown : undefined}
       onPointerUp={onToggle ? handlePointerUp : undefined}
     >
       <Canvas
         camera={{ position: [1.6, 2.4, 8.2], fov: 36 }}
-        gl={{ antialias: true, powerPreference: 'default' }}
+        gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
+        style={{ background: 'transparent' }}
         shadows
       >
         <Scene config={config} boxType={boxType} giftWrap={giftWrap} open={isOpen} />

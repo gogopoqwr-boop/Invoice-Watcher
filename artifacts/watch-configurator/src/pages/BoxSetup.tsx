@@ -124,12 +124,11 @@ export default function BoxSetup() {
   };
 
   return (
-    <div className="w-full bg-background flex flex-col md:flex-row md:overflow-hidden md:h-screen" data-theme="dark">
+    <div className="w-full bg-background flex flex-col md:flex-row md:overflow-hidden md:h-screen">
 
       {/* ── Left — Box preview */}
       <div
-        className="sticky top-0 z-10 w-full md:static md:w-[52%] h-[58dvh] md:h-screen relative shrink-0 overflow-hidden"
-        style={{ background: 'radial-gradient(ellipse at 48% 42%, #1e2a4a 0%, #0d1117 55%, #060810 100%)' }}
+        className="sticky top-0 z-10 w-full md:static md:w-[52%] h-[58dvh] md:h-screen relative shrink-0 overflow-hidden canvas-box-bg"
       >
         {/* Back button — absolute, matches Configure */}
         <Link href="/configure">

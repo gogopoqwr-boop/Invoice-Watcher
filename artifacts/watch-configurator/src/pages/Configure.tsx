@@ -174,12 +174,12 @@ export default function Configure() {
   if (!hasPreset) return null;
 
   return (
-    <div className="w-full bg-background flex flex-col md:flex-row md:overflow-hidden md:h-screen" data-theme="dark">
+    <div className="w-full bg-background flex flex-col md:flex-row md:overflow-hidden md:h-screen">
 
       {/* Left — Watch Preview */}
       <div
-        className="sticky top-0 z-10 w-full md:static md:w-[52%] h-[44dvh] md:h-screen relative shrink-0"
-        style={{ background: 'radial-gradient(ellipse at 48% 42%, #1e2a4a 0%, #0d1117 55%, #060810 100%)', touchAction: 'none' }}
+        className="sticky top-0 z-10 w-full md:static md:w-[52%] h-[44dvh] md:h-screen relative shrink-0 canvas-3d-bg"
+        style={{ touchAction: 'none' }}
       >
         <Link href="/collections">
           <button className="absolute top-3 left-3 z-10 liquid-button px-3 py-1.5 text-xs font-semibold">← Коллекции</button>
