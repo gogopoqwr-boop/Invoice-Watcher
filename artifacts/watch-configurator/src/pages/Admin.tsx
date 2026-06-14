@@ -102,6 +102,7 @@ const PRESET_FIELDS = [
   { key:"handsColor", label:"Цвет стрелок", type:"color" },
   { key:"boxType", label:"Тип коробки", type:"select", options:["standard","premium","collector"] },
   { key:"watchfaceText", label:"Текст циферблата", type:"text" },
+  { key:"watchfaceTextMode", label:"Расположение текста", type:"select", options:["center","circular"] },
 ];
 
 function PresetModal({ preset, onSave, onClose, loading }: { preset:any|null; onSave:(d:any)=>void; onClose:()=>void; loading:boolean }) {
