@@ -311,8 +311,8 @@ function buildBumpTexture(
 // Letters face the viewer: front face is readable from +Z (camera direction).
 // Circular mode: each letter rotated so its base faces the dial centre,
 // matching the convention used on real watch/clock bezels.
-function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled, geom }: {
-  text: string; mode: 'center' | 'circular'; handsColor: string; faceZ: number; handsEnabled: boolean; geom: string;
+function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
+  text: string; mode: 'center' | 'circular'; textColor: string; faceZ: number; handsEnabled: boolean; geom: string;
 }) {
   const trimmed = text.trim().toUpperCase();
   if (!trimmed || trimmed.startsWith('EYE:')) return null;
@@ -325,10 +325,10 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled, geom }: {
 
   // Shared metallic-glow material for all 3D letters
   const matProps = {
-    color: handsColor,
+    color: textColor,
     metalness: 0.92,
     roughness: 0.08,
-    emissive: handsColor,
+    emissive: textColor,
     emissiveIntensity: 0.35,
   };
 
@@ -357,7 +357,7 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled, geom }: {
     // Perimeter length determines font size so letters fill the path evenly.
     const isSquarePath = geom === 'square';
     const perimeter    = isSquarePath ? 8 * r : 2 * Math.PI * r;
-    const fontSize     = Math.max(0.07, Math.min(0.18, (perimeter * 0.38) / Math.max(count, 5)));
+    const fontSize     = Math.max(0.12, Math.min(0.30, (perimeter * 0.52) / Math.max(count, 4)));
 
     // Compute (x, y) position and normal angle for letter i along the chosen path.
     //
@@ -408,7 +408,7 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled, geom }: {
   // ── mode === 'center', no hands — extruded bold text centred on dial ────────
   const lines   = trimmed.split('\n').filter(Boolean).slice(0, 3);
   const maxLen  = Math.max(...lines.map(l => l.length), 1);
-  const fSize   = Math.min(0.30, Math.max(0.09, 0.80 / maxLen));
+  const fSize   = Math.min(0.44, Math.max(0.14, 1.30 / maxLen));
   const lineH   = fSize * 1.4;
   const totalH  = (lines.length - 1) * lineH;
 
@@ -1058,7 +1058,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
             <WatchFaceText
               text={config.watchfaceText}
               mode={textMode}
-              handsColor={config.handsColor ?? '#ffffff'}
+              textColor={config.watchfaceTextColor ?? config.handsColor ?? '#fbbf24'}
               faceZ={faceZ}
               handsEnabled={config.handsEnabled ?? true}
               geom={config.watchfaceGeometry ?? 'circle'}

@@ -346,6 +346,26 @@ export default function Configure() {
               className="w-full px-4 py-3 rounded-xl text-sm text-foreground border border-border/60 bg-card/80 focus:outline-none focus:ring-2 focus:ring-primary/60 placeholder:text-muted-foreground/50"
             />
             {config.watchfaceText && (
+              <div className="mt-3 flex items-center gap-3">
+                <label className="text-sm text-muted-foreground flex-shrink-0">Цвет надписи</label>
+                <label className="relative cursor-pointer">
+                  <input
+                    type="color"
+                    value={config.watchfaceTextColor ?? config.handsColor ?? '#fbbf24'}
+                    onChange={e => updateConfig({ watchfaceTextColor: e.target.value })}
+                    className="sr-only"
+                  />
+                  <span
+                    className="block w-8 h-8 rounded-xl border-2 border-border/60 shadow-sm"
+                    style={{ background: config.watchfaceTextColor ?? config.handsColor ?? '#fbbf24' }}
+                  />
+                </label>
+                <span className="text-xs text-muted-foreground font-mono uppercase tracking-wider">
+                  {(config.watchfaceTextColor ?? config.handsColor ?? '#fbbf24').toUpperCase()}
+                </span>
+              </div>
+            )}
+            {config.watchfaceText && (
               <button
                 onClick={() => updateConfig({ watchfaceText: '' })}
                 className="mt-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"

@@ -17,6 +17,7 @@ export type ExtendedConfigState = ApiConfigState & {
   collectionName?: string;
   watchfaceText?: string;
   watchfaceTextMode?: "center" | "circular";
+  watchfaceTextColor?: string;
   handsCount?: number; // 0 | 2 | 3
   watchfaceBackgroundType?: "solid" | "gradient";
   watchfaceGradientEnd?: string;
