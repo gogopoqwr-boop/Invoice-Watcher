@@ -161,10 +161,11 @@ function buildFaceTexture(
   // ── Circular: embossed letters placed around the bezel ring ──────────────
   if (textMode === 'circular' && hasText) {
     const chars = Array.from(rawText.replace(/ /g, '·'));
+    const fullRing = chars.length >= 5;
+    if (fullRing) chars.push('·');   // closing separator between end and start
     const count = chars.length;
     if (count > 0) {
       const circR    = S * 0.355;
-      const fullRing = count >= 5;
       const arcSpan  = fullRing ? Math.PI * 2 : Math.min(Math.PI * 1.55, count * 0.44);
       const fontSize = Math.max(18, Math.min(56, Math.round(S * 1.1 / Math.max(count, 5))));
       const depth    = Math.max(2, fontSize * 0.10);
@@ -267,10 +268,11 @@ function buildBumpTexture(
 
   if (textMode === 'circular') {
     const chars = Array.from(rawText.replace(/ /g, '·'));
+    const fullRing  = chars.length >= 5;
+    if (fullRing) chars.push('·');   // closing separator between end and start
     const count = chars.length;
     if (count > 0) {
       const circR     = S * 0.355;
-      const fullRing  = count >= 5;
       const arcSpan   = fullRing ? Math.PI * 2 : Math.min(Math.PI * 1.55, count * 0.44);
       const fontSize  = Math.max(18, Math.min(56, Math.round(S * 1.1 / Math.max(count, 5))));
       const startAngle = fullRing ? Math.PI / 2 : Math.PI / 2 + arcSpan / 2;
@@ -349,6 +351,7 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
 
   if (mode === 'circular') {
     const chars = Array.from(trimmed.replace(/ /g, '·'));
+    if (chars.length >= 5) chars.push('·');   // closing separator between end and start
     const count = chars.length;
     if (count === 0) return null;
 
