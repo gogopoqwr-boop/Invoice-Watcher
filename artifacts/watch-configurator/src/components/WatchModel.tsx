@@ -90,10 +90,10 @@ function buildFaceTexture(
     const x = S / 2 + markerR * Math.cos(a);
     const y = S / 2 + markerR * Math.sin(a);
     ctx.beginPath();
-    const dotR = isCircular ? (i % 3 === 0 ? 5 : 2.5) : (i % 3 === 0 ? 8 : 4);
+    const dotR = isCircular ? (i % 3 === 0 ? 4 : 2) : (i % 3 === 0 ? 8 : 4);
     ctx.arc(x, y, dotR, 0, Math.PI * 2);
     ctx.fillStyle = handsColor;
-    ctx.globalAlpha = isCircular ? 0.5 : 0.8;
+    ctx.globalAlpha = isCircular ? 0.35 : 0.8;
     ctx.fill();
   }
   ctx.globalAlpha = 1;
@@ -103,12 +103,55 @@ function buildFaceTexture(
   ctx.fillStyle = handsColor;
   ctx.fill();
 
-  // Draw watchface text on canvas ONLY for center+hands mode — 3D text handles other cases
+  // ── Circular text: draw letters around the ring directly on canvas.
+  // This is the guaranteed path that works even when the CDN font fails.
+  // The 3D WatchFaceText layer adds a metallic sheen on top when the font loads.
+  if (isCircular && text && !text.startsWith('EYE:')) {
+    const chars = Array.from(text.trim().toUpperCase().replace(/ /g, '·'));
+    const count = chars.length;
+    if (count > 0) {
+      const circR   = S * 0.34;
+      const fullRing = count >= 5;
+      const arcSpan  = fullRing ? Math.PI * 2 : Math.min(Math.PI * 1.55, count * 0.44);
+      const fontSize = Math.max(16, Math.min(52, Math.round(S * 1.05 / Math.max(count, 5))));
+      // Start at 12 o'clock (π/2 in canvas-math where sin flips) and go clockwise
+      const startAngle = fullRing
+        ? Math.PI / 2
+        : Math.PI / 2 + arcSpan / 2 - arcSpan / Math.max(count - 1, 1) / 2;
+      const angleStep = fullRing
+        ? (Math.PI * 2) / count
+        : arcSpan / Math.max(count - 1, 1);
+
+      ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
+      ctx.fillStyle = handsColor;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.globalAlpha = 0.92;
+
+      chars.forEach((ch, i) => {
+        // Clockwise from 12: angle decreases in standard math convention.
+        // Canvas Y is flipped, so use (S/2 - sin) to go up at π/2.
+        const angle = startAngle - i * angleStep;
+        const x = S / 2 + circR * Math.cos(angle);
+        const y = S / 2 - circR * Math.sin(angle);
+        ctx.save();
+        ctx.translate(x, y);
+        // Rotate so each letter's base faces the dial centre
+        ctx.rotate(Math.PI / 2 - angle);
+        ctx.fillText(ch, 0, 0);
+        ctx.restore();
+      });
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // ── Center text (2-D): drawn flat on the canvas, sits underneath the hands.
+  // Used when mode='center' AND hands are enabled.
   if (drawTextOnCanvas && text && !text.startsWith('EYE:')) {
     const lines = text.trim().toUpperCase().split('\n').filter(Boolean).slice(0, 3);
     const maxLen = Math.max(...lines.map(l => l.length), 1);
     const fontSize = Math.min(S * 0.13, S * 0.65 / maxLen);
-    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
     ctx.fillStyle = handsColor;
     ctx.globalAlpha = 0.68;
     ctx.textAlign = 'center';
