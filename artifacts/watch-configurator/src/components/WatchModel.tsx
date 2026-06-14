@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Text3D, Center } from '@react-three/drei';
 import { WatchConfigContext, ExtendedConfigState } from '@/hooks/use-watch-config';
 import * as THREE from 'three';
-import { useSpring, animated } from '@react-spring/three';
+import { useSpring } from '@react-spring/three';
 
 // typeface.js JSON font — generated from DejaVuSans-Bold.ttf via opentype.js.
 // Full Cyrillic + Latin coverage. Loaded by FontLoader (main thread fetch),
@@ -516,13 +516,20 @@ function StrapJoint({ k, sign, θ, color, mat, isSegmented, isDeployant, claspCo
   const rough   = isSegmented ? 0.07 : isLeath ? 0.92 : isFab ? 0.88 : isResin ? 0.06 : 0.78;
   const segW    = 1.05 * width;
 
+  // Drive rotation imperatively so we never use animated.group (avoids __r3f
+  // teardown crashes with @react-spring/three + R3F v9).
+  const jointRef = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (jointRef.current) jointRef.current.rotation.x = typeof θ?.get === 'function' ? θ.get() : (θ ?? 0);
+  });
+
   // Terminus: render clasp instead of another joint
   if (k >= WRAP_SEGS) {
     return <StrapClasp sign={sign} claspColor={claspColor} isDeployant={isDeployant} width={width} />;
   }
 
   return (
-    <animated.group rotation-x={θ}>
+    <group ref={jointRef}>
       {/* Segment body */}
       {isFab ? (
         <>
@@ -554,7 +561,7 @@ function StrapJoint({ k, sign, θ, color, mat, isSegmented, isDeployant, claspCo
         <StrapJoint k={k + 1} sign={sign} θ={θ} color={color} mat={mat}
           isSegmented={isSegmented} isDeployant={isDeployant} claspColor={claspColor} width={width} />
       </group>
-    </animated.group>
+    </group>
   );
 }
 
@@ -961,6 +968,10 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
     if (secHandRef.current)    secHandRef.current.rotation.z    = secActual.current;
     if (gmtHandRef.current)    gmtHandRef.current.rotation.z    = gmtActual.current;
 
+    // ── Tilt / Z driven imperatively from springs (replaces animated.group) ──
+    groupRef.current.rotation.x = tiltX.get();
+    groupRef.current.position.z = watchZ.get();
+
     // ── Watch auto-rotation ────────────────────────────────────────────────────
     const userActive = lastInteractionRef?.current
       ? Date.now() - lastInteractionRef.current < INTERACTION_PAUSE_MS
@@ -1046,7 +1057,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
 
   return (
     <>
-    <animated.group ref={groupRef} rotation-x={tiltX} position-z={watchZ} scale={config.watchfaceSize ?? 1}>
+    <group ref={groupRef} scale={config.watchfaceSize ?? 1}>
 
       {/* ── Case body ── */}
       <mesh castShadow receiveShadow>
@@ -1271,7 +1282,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
       {/* Bezel ring — machined metal overlay around crystal */}
       <BezelRing geom={config.watchfaceGeometry} caseMat={caseMat} />
 
-    </animated.group>
+    </group>
 
     {/* Wrist mannequin — rendered outside watch group so it doesn't rotate with it */}
     {showWrist && <WristMannequin />}
