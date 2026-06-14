@@ -1,7 +1,6 @@
 import React, { useState, lazy, Suspense } from 'react';
 import { Link, useParams, useLocation } from 'wouter';
 import { useGetOrder, useGetConfiguration, getConfiguration } from '@workspace/api-client-react';
-import WatchMiniCanvas from '@/components/WatchMiniCanvas';
 import { TgStar } from '@/components/TgStar';
 import { cn } from '@/lib/utils';
 import { useWatchConfig } from '@/hooks/use-watch-config';
@@ -208,20 +207,6 @@ export default function OrderDetail() {
   }
 
   const o = order as any;
-  const presetFromCfg = cfg ? {
-    watchfaceGeometry: (cfg as any).watchfaceGeometry,
-    watchfaceMaterial: (cfg as any).watchfaceMaterial,
-    watchfaceColor: (cfg as any).watchfaceColor,
-    braceletMaterial: (cfg as any).braceletMaterial,
-    braceletType: (cfg as any).braceletType,
-    braceletColor: (cfg as any).braceletColor,
-    handsEnabled: (cfg as any).handsEnabled,
-    handsColor: (cfg as any).handsColor,
-    watchfaceText: (cfg as any).watchfaceText,
-    watchfaceTextMode: (cfg as any).watchfaceTextMode,
-    watchfaceSize: (cfg as any).watchfaceSize ? parseFloat((cfg as any).watchfaceSize) : 1.0,
-    strapWidth: (cfg as any).strapWidth ? parseFloat((cfg as any).strapWidth) : 1.0,
-  } : null;
 
   const boxConfig = cfg ? {
     watchfaceGeometry: (cfg as any).watchfaceGeometry,
@@ -245,52 +230,35 @@ export default function OrderDetail() {
   return (
     <div className="w-full bg-background flex flex-col md:flex-row md:overflow-hidden md:h-screen">
 
-      {/* ── Left — dual 3D preview ── */}
-      <div className="sticky top-0 z-10 w-full md:static md:w-[52%] h-[60dvh] md:h-screen relative shrink-0 flex flex-col">
+      {/* ── Left — box scene (full height, same pattern as BoxSetup) ── */}
+      <div className="sticky top-0 z-10 w-full md:static md:w-[52%] h-[58dvh] md:h-screen relative shrink-0 overflow-hidden canvas-box-bg">
 
-        {/* Top: watch model */}
-        <div className="flex-1 relative canvas-3d-bg overflow-hidden">
-          <Link href="/orders">
-            <button className="absolute top-3 left-3 z-20 liquid-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1">
-              <ArrowLeft size={13} /> Заказы
-            </button>
-          </Link>
-          {presetFromCfg ? (
-            <div className="absolute inset-0">
-              <WatchMiniCanvas preset={presetFromCfg} forceMount />
-            </div>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-16 h-16 rounded-full bg-muted/40 animate-pulse" />
-            </div>
-          )}
-          <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none">
-            <span className="text-[10px] uppercase tracking-[0.25em] text-white/40 font-semibold select-none">Часы</span>
-          </div>
-        </div>
+        <Link href="/orders">
+          <button className="absolute top-3 left-3 z-20 liquid-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1">
+            <ArrowLeft size={13} /> Заказы
+          </button>
+        </Link>
 
-        {/* Bottom: watch-in-box */}
-        <div className="h-[40%] md:h-[42%] relative canvas-box-bg overflow-hidden shrink-0">
-          {boxConfig ? (
-            <Suspense fallback={<div className="absolute inset-0 flex items-center justify-center"><div className="w-12 h-12 rounded-full bg-muted/40 animate-pulse" /></div>}>
-              <WatchBoxScene
-                config={boxConfig as any}
-                boxType={(cfg as any)?.boxType ?? 'standard'}
-                open={boxOpen}
-                autoOpen
-                onToggle={() => setBoxOpen(v => !v)}
-                className="h-full rounded-none"
-              />
-            </Suspense>
-          ) : (
+        {boxConfig ? (
+          <Suspense fallback={
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-12 h-12 rounded-full bg-muted/40 animate-pulse" />
+              <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
             </div>
-          )}
-          <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none">
-            <span className="text-[10px] uppercase tracking-[0.25em] text-white/30 font-semibold select-none">Упаковка</span>
+          }>
+            <WatchBoxScene
+              config={boxConfig as any}
+              boxType={(cfg as any)?.boxType ?? 'standard'}
+              open={boxOpen}
+              autoOpen
+              onToggle={() => setBoxOpen(v => !v)}
+              className="absolute inset-0 rounded-none"
+            />
+          </Suspense>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
           </div>
-        </div>
+        )}
       </div>
 
       {/* ── Right — info panel ── */}
