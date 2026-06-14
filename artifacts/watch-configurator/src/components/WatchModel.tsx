@@ -1,20 +1,14 @@
 import React, { useRef, useMemo, useEffect, Suspense } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Text } from '@react-three/drei';
+import { Text3D, Center } from '@react-three/drei';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
 
-// DejaVu Sans Bold — local font bundled in public/fonts/.
-// Constructed as an absolute URL at runtime so the Troika blob-worker can fetch it
-// (relative paths fail from blob: origin). Used as a bonus overlay when it loads;
-// canvas-drawn embossed text is always the primary renderer.
-const FONT_URL = typeof window !== 'undefined'
-  ? `${window.location.origin}/fonts/DejaVuSans-Bold.ttf`
-  : '/fonts/DejaVuSans-Bold.ttf';
-
-// Attempt to preload the font eagerly (API exists in some drei versions)
-try { (Text as unknown as { preload: (u: string) => void }).preload(FONT_URL); } catch { /* ok */ }
+// typeface.js JSON font — generated from DejaVuSans-Bold.ttf via opentype.js.
+// Full Cyrillic + Latin coverage. Loaded by FontLoader (main thread fetch),
+// not a blob WebWorker — works reliably from any origin.
+const TYPEFACE_URL = '/fonts/DejaVuSans-Bold.typeface.json';
 
 // Error boundary that renders null on error — keeps the rest of the Canvas alive
 // when the font CDN is unreachable or a text render fails.
@@ -312,47 +306,56 @@ function buildBumpTexture(
   return tex;
 }
 
-// ─── Watch face 3D text ────────────────────────────────────────────────────
-// Renders user text directly in 3D space on the watch dial.
+// ─── Watch face 3D text (Text3D — real extruded geometry) ──────────────────
+// Uses typeface.js JSON font loaded via FontLoader (main-thread fetch, not a
+// blob WebWorker).  Letters have real depth + bevelled edges + metallic glow.
 //
 // mode='center' + handsEnabled  → canvas texture handles it (returns null here)
-// mode='center' + !handsEnabled → bold text centred on face, no crystal obstruction
-// mode='circular'               → each letter placed around the bezel, always 3D,
-//                                  oriented so its base faces centre (like clock numerals)
+// mode='center' + !handsEnabled → extruded letters centred on the dial
+// mode='circular'               → each letter individually extruded around bezel
 function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled }: {
   text: string; mode: 'center' | 'circular'; handsColor: string; faceZ: number; handsEnabled: boolean;
 }) {
   const trimmed = text.trim().toUpperCase();
   if (!trimmed || trimmed.startsWith('EYE:')) return null;
 
-  // Center + hands: canvas texture already draws it — nothing to add here
+  // Center + hands: canvas draws flat 2D text — nothing 3D needed here
   if (mode === 'center' && handsEnabled) return null;
 
-  // Sits just above the face disc and below the crystal
-  const textZ = faceZ + 0.022;
+  // Letters sit just above face disc, safely below the crystal bottom bevel
+  const textZ = faceZ + 0.005;
+
+  // Shared metallic-glow material for all 3D letters
+  const matProps = {
+    color: handsColor,
+    metalness: 0.95,
+    roughness: 0.06,
+    emissive: handsColor,
+    emissiveIntensity: 0.45,
+  };
+
+  // Shared extrusion params — bevel makes edges catch light like cast metal
+  const extrudeProps = {
+    depth: 0.028,
+    bevelEnabled: true as const,
+    bevelSize: 0.009,
+    bevelThickness: 0.009,
+    bevelSegments: 5,
+  };
 
   if (mode === 'circular') {
-    // Replace spaces with · so the ring always reads cleanly.
-    // Full 360° ring for ≥5 chars; shorter text arcs across the top half only.
     const chars = Array.from(trimmed.replace(/ /g, '·'));
     const count = chars.length;
     if (count === 0) return null;
 
-    const fullRing  = count >= 5;
-    const arcSpan   = fullRing ? Math.PI * 2 : Math.min(Math.PI * 1.55, count * 0.44);
-    const circR     = 1.21;
-    const fontSize  = Math.max(0.082, Math.min(0.185, 1.05 / Math.max(count, 5)));
-
-    // Clockwise from 12 o'clock: angle decreases in math convention.
-    // For a full ring the step is evenly divided; for a partial arc we
-    // centre on 12 o'clock (π/2) and spread symmetrically.
+    const fullRing   = count >= 5;
+    const arcSpan    = fullRing ? Math.PI * 2 : Math.min(Math.PI * 1.55, count * 0.44);
+    const circR      = 1.20;
+    const fontSize   = Math.max(0.09, Math.min(0.20, 1.05 / Math.max(count, 5)));
     const startAngle = fullRing
-      ? Math.PI / 2                                // start at 12 for full ring
-      : Math.PI / 2 + arcSpan / 2 - arcSpan / count / 2; // centre arc at 12
-
-    const angleStep = fullRing
-      ? Math.PI * 2 / count
-      : arcSpan / Math.max(count - 1, 1);
+      ? Math.PI / 2
+      : Math.PI / 2 + arcSpan / 2 - arcSpan / count / 2;
+    const angleStep  = fullRing ? Math.PI * 2 / count : arcSpan / Math.max(count - 1, 1);
 
     return (
       <group position={[0, 0, textZ]}>
@@ -360,80 +363,39 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled }: {
           const angle = startAngle - i * angleStep;
           const x = circR * Math.cos(angle);
           const y = circR * Math.sin(angle);
-          // rotZ: angle − π/2 makes each letter's bottom point toward the
-          // dial centre, exactly like clock numerals facing the viewer.
           const rotZ = angle - Math.PI / 2;
           return (
             <group key={i} position={[x, y, 0]} rotation={[0, 0, rotZ]}>
-              <Text
-                font={FONT_URL}
-                fontSize={fontSize}
-                anchorX="center"
-                anchorY="middle"
-                color={handsColor}
-                material-metalness={0.72}
-                material-roughness={0.12}
-              >
-                {ch}
-              </Text>
+              <Center>
+                <Text3D font={TYPEFACE_URL} size={fontSize} {...extrudeProps}>
+                  {ch}
+                  <meshStandardMaterial {...matProps} />
+                </Text3D>
+              </Center>
             </group>
           );
         })}
-        {/* Brand mark at centre */}
-        <Text
-          font={FONT_URL}
-          fontSize={0.055}
-          anchorX="center"
-          anchorY="middle"
-          position={[0, -0.18, 0]}
-          color={handsColor}
-          material-opacity={0.30}
-          material-transparent
-        >
-          ЧЕБЛЯЧАС
-        </Text>
       </group>
     );
   }
 
-  // ── mode === 'center', no hands ─────────────────────────────────────────────
-  // Bold centred 3D text sized to fill the dial.
-  const lines = trimmed.split('\n').filter(Boolean).slice(0, 4);
-  const maxLen = Math.max(...lines.map(l => l.length), 1);
-  const fSize  = Math.min(0.32, Math.max(0.09, 0.82 / maxLen));
-  const lineH  = fSize * 1.35;
-  const totalH = (lines.length - 1) * lineH;
+  // ── mode === 'center', no hands — extruded bold text centred on dial ────────
+  const lines   = trimmed.split('\n').filter(Boolean).slice(0, 3);
+  const maxLen  = Math.max(...lines.map(l => l.length), 1);
+  const fSize   = Math.min(0.30, Math.max(0.09, 0.80 / maxLen));
+  const lineH   = fSize * 1.4;
+  const totalH  = (lines.length - 1) * lineH;
 
   return (
     <group position={[0, 0, textZ]}>
       {lines.map((line, i) => (
-        <Text
-          key={i}
-          font={FONT_URL}
-          fontSize={fSize}
-          anchorX="center"
-          anchorY="middle"
-          position={[0, totalH / 2 - i * lineH, 0]}
-          color={handsColor}
-          material-metalness={0.68}
-          material-roughness={0.14}
-        >
-          {line}
-        </Text>
+        <Center key={i} position={[0, totalH / 2 - i * lineH, 0]}>
+          <Text3D font={TYPEFACE_URL} size={fSize} {...extrudeProps}>
+            {line}
+            <meshStandardMaterial {...matProps} />
+          </Text3D>
+        </Center>
       ))}
-      {/* Subtle brand */}
-      <Text
-        font={FONT_URL}
-        fontSize={0.055}
-        anchorX="center"
-        anchorY="middle"
-        position={[0, -totalH / 2 - fSize * 0.85, 0]}
-        color={handsColor}
-        material-opacity={0.28}
-        material-transparent
-      >
-        ЧЕБЛЯЧАС
-      </Text>
     </group>
   );
 }
@@ -1010,30 +972,22 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   const handsOn  = config.handsEnabled !== false;
 
   // Determine which canvas text mode to use:
-  //   circular      → embossed letters around ring
-  //   center-flat   → flat 2D under hands (hands are on)
-  //   center-raised → embossed letters in center (no hands)
-  //   none          → no text
+  // Text3D handles circular and center-raised — canvas draws NO letters for
+  // those modes (only the flat center-flat case uses canvas text).
+  // 'none' is passed so buildFaceTexture only draws dial background + markers.
   const canvasTextMode: 'none' | 'circular' | 'center-flat' | 'center-raised' = !hasText
     ? 'none'
     : textMode === 'circular'
-    ? 'circular'
+    ? 'none'          // 3D letters handled by Text3D
     : handsOn
-    ? 'center-flat'
-    : 'center-raised';
+    ? 'center-flat'   // flat 2D under hands
+    : 'none';         // 3D letters handled by Text3D
 
-  const isCircular = canvasTextMode === 'circular';
+  const isCircular = hasText && textMode === 'circular';
 
   const faceTexture = useMemo(
     () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceGeometry, canvasTextMode, config.watchfaceText),
     [config.watchfaceColor, config.handsColor, config.watchfaceGeometry, canvasTextMode, config.watchfaceText]
-  );
-
-  // Bump map: white-on-black silhouette of the letters so the scene lights
-  // physically respond to the letter faces → genuine raised-letter look.
-  const bumpTexture = useMemo(
-    () => buildBumpTexture(config.watchfaceGeometry, canvasTextMode, config.watchfaceText),
-    [config.watchfaceGeometry, canvasTextMode, config.watchfaceText]
   );
 
   const isMetal = config.watchfaceMaterial === 'metal';
@@ -1067,16 +1021,10 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         serial={config.serialNumber || undefined}
       />
 
-      {/* Face disc — bumpMap makes letter silhouettes physically respond to light */}
+      {/* Face disc */}
       <mesh position={[0, 0, faceZ]}>
         <primitive object={discGeo} />
-        <meshStandardMaterial
-          map={faceTexture}
-          bumpMap={bumpTexture ?? undefined}
-          bumpScale={bumpTexture ? 0.18 : 0}
-          roughness={0.18}
-          metalness={bumpTexture ? 0.22 : 0.05}
-        />
+        <meshStandardMaterial map={faceTexture} roughness={0.25} metalness={0.05} />
       </mesh>
 
       {/* 3D face text — rendered between dial and crystal.
