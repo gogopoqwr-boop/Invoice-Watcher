@@ -273,6 +273,7 @@ export default function PresetViewer() {
   return (
     <div
       className="fixed inset-0 z-0 flex flex-col md:flex-row overflow-hidden bg-background"
+      data-theme="dark"
       style={{ clipPath, opacity, transform: `scale(${scale})`, transition, transformOrigin }}
     >
       {/* ── 3D Canvas pane ── */}

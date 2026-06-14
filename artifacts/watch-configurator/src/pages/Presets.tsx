@@ -61,7 +61,7 @@ export default function Presets() {
                 className="liquid-glass rounded-2xl overflow-hidden text-left group hover:scale-[1.02] hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
                 {/* Mini SVG watch preview */}
-                <div className="h-44 bg-gradient-to-br from-slate-50 to-blue-50/60 flex items-center justify-center overflow-hidden p-4">
+                <div className="h-44 bg-muted/50 dark:bg-slate-900/80 flex items-center justify-center overflow-hidden p-4">
                   <div className="w-28 h-44">
                     <WatchSVG
                       mini
