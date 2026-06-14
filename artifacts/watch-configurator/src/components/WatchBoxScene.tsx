@@ -78,7 +78,7 @@ const CUSH_SY   = 0.88;   // Y scale — pillow height
 const CUSH_SZ   = 1.6;    // Z scale — covers watch case + lug area
 const CUSH_HALF = CUSH_R * CUSH_SY;           // half-height in world units
 const CUSH_Y    = FLOOR_Y + CUSH_HALF + 0.04; // center so bottom touches floor
-const WATCH_Y   = CUSH_Y + CUSH_HALF + 0.06;  // watch back of case sits just above cushion top
+const WATCH_Y   = CUSH_Y + CUSH_HALF + 0.20;  // sits on cushion top (accounts for MiniWatch case half-depth at scale 0.62)
 
 // ─── Box geometry ───────────────────────────────────────────────────────────
 
@@ -86,8 +86,8 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
   const s = BOX_STYLES[boxType as keyof typeof BOX_STYLES] ?? BOX_STYLES.standard;
 
   const { lidAngle } = useSpring({
-    lidAngle: open ? -Math.PI * 0.56 : 0,
-    config: { mass: 1.4, tension: 48, friction: 20 },
+    lidAngle: open ? -Math.PI * 0.63 : 0,
+    config: { mass: 1.4, tension: 44, friction: 18 },
   });
   const lidRef = useRef<THREE.Group>(null);
   useFrame(() => {
@@ -254,7 +254,7 @@ function WatchInBox({ config, visible }: { config: ExtendedConfigState; visible:
       <group
         ref={watchRef}
         position={[0, WATCH_Y, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
+        rotation={[-Math.PI / 2 + 0.28, 0, 0]}
       >
         <MiniWatch
           watchfaceGeometry={config.watchfaceGeometry ?? 'circle'}
@@ -344,15 +344,42 @@ function GiftRibbon({ visible }: { visible: boolean }) {
 function Scene({ config, boxType, giftWrap, open }: { config: ExtendedConfigState; boxType: string; giftWrap: boolean; open: boolean }) {
   return (
     <>
-      <ambientLight intensity={0.60} />
-      <spotLight position={[5, 9, 5]} angle={0.22} penumbra={0.65} intensity={3.2} castShadow shadow-mapSize={[1024, 1024]} />
-      <directionalLight position={[-3, 5, 4]} intensity={0.80} color="#c4d4f0" />
-      <pointLight position={[0, 4, 1]} intensity={0.70} color="#f0eaff" />
-      <pointLight position={[3, 0, 4]} intensity={0.35} color="#ffffff" />
-      {/* Extra fill from inside the box when open */}
-      {open && <pointLight position={[0, -0.1, 0]} intensity={0.55} color="#e8d8ff" distance={3} decay={2} />}
-      <Environment preset="city" />
-      <group rotation={[0, -0.42, 0]}>
+      {/* Low ambient so shadows have depth */}
+      <ambientLight intensity={0.38} />
+      {/* Key light — high-front-right, sharp shadows */}
+      <spotLight
+        position={[4, 11, 7]}
+        angle={0.18}
+        penumbra={0.72}
+        intensity={4.8}
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        shadow-bias={-0.0005}
+      />
+      {/* Cool fill from upper-left */}
+      <directionalLight position={[-5, 7, 3]} intensity={0.60} color="#c8d4f8" />
+      {/* Soft purple rim from behind — separates box from bg */}
+      <pointLight position={[0, 4, -7]} intensity={0.30} color="#9080ff" />
+      {/* Front-low fill so box front face isn't lost in shadow */}
+      <pointLight position={[0, -1, 8]} intensity={0.28} color="#ffffff" />
+      {/* Interior warm fill — only when box is open; highlights the watch */}
+      {open && (
+        <pointLight
+          position={[0, 0.3, 0.6]}
+          intensity={1.8}
+          color="#ffeedd"
+          distance={4.5}
+          decay={2.2}
+        />
+      )}
+      {/* Transparent shadow catcher — grounds the box */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -H / 2 - 0.02, 0]} receiveShadow>
+        <planeGeometry args={[24, 24]} />
+        <shadowMaterial opacity={0.32} />
+      </mesh>
+      <Environment preset="apartment" />
+      {/* Slight X-tilt so camera naturally looks down into the open box */}
+      <group rotation={[0.06, -0.30, 0]}>
         <Box3D boxType={boxType} open={open} />
         <WatchInBox config={config} visible={open} />
         {giftWrap && <GiftRibbon visible={!open} />}

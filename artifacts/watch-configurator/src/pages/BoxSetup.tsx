@@ -151,14 +151,43 @@ export default function BoxSetup() {
           />
         </Suspense>
 
-        {/* Bottom overlay — box name */}
+        {/* Top-right — watch name badge */}
+        {config.presetName && (
+          <div className="pointer-events-none absolute top-3 right-3 z-10">
+            <div
+              className="px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wider backdrop-blur-md border"
+              style={{
+                background: `${boxOption.accentColor}22`,
+                borderColor: `${boxOption.accentColor}55`,
+                color: boxOption.textColor,
+              }}
+            >
+              {config.presetName}
+            </div>
+          </div>
+        )}
+
+        {/* Bottom overlay — box type + interactive hint */}
         <div className="pointer-events-none absolute bottom-4 left-0 right-0 flex flex-col items-center gap-2">
-          <p
-            className="text-[11px] uppercase tracking-[0.22em] font-semibold transition-colors duration-300"
-            style={{ color: boxOption.textColor, opacity: 0.7 }}
-          >
-            {boxOption.label} · {boxOption.sublabel}
-          </p>
+          <div className="flex items-center gap-2">
+            {/* Pulse ring hint */}
+            <span className="relative flex h-2 w-2">
+              <span
+                className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60"
+                style={{ background: boxOption.accentColor }}
+              />
+              <span
+                className="relative inline-flex rounded-full h-2 w-2"
+                style={{ background: boxOption.accentColor }}
+              />
+            </span>
+            <p
+              className="text-[11px] uppercase tracking-[0.22em] font-semibold"
+              style={{ color: boxOption.textColor, opacity: 0.80 }}
+            >
+              {boxOption.label} · {boxOption.sublabel}
+            </p>
+          </div>
         </div>
       </div>
 
