@@ -323,10 +323,9 @@ function GiftRibbon({ visible }: { visible: boolean }) {
 // ─── Scene ─────────────────────────────────────────────────────────────────
 
 function Scene({ config, boxType, giftWrap, open }: { config: ExtendedConfigState; boxType: string; giftWrap: boolean; open: boolean }) {
-  const s = BOX_STYLES[boxType as keyof typeof BOX_STYLES] ?? BOX_STYLES.standard;
   return (
     <>
-      <color attach="background" args={[s.bodyColor]} />
+      <color attach="background" args={['#0d1117']} />
       <ambientLight intensity={0.55} />
       <spotLight position={[6, 8, 5]} angle={0.24} penumbra={0.6} intensity={2.8} castShadow shadow-mapSize={[1024, 1024]} />
       <directionalLight position={[-3, 5, 4]} intensity={0.7} color="#c4d4f0" />
