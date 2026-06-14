@@ -81,7 +81,7 @@ function buildMiniTexture(
         const y = S / 2 - circR * Math.sin(angle);
         ctx.save();
         ctx.translate(x, y);
-        ctx.rotate(Math.PI / 2 - angle);  // baseline faces centre
+        ctx.rotate(angle - Math.PI / 2);  // baseline faces centre (accounts for canvas flipY)
         ctx.fillText(ch, 0, 0);
         ctx.restore();
       });
