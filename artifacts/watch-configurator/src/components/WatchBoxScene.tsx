@@ -6,7 +6,7 @@ import { useSpring } from '@react-spring/three';
 import WatchModel from '@/components/WatchModel';
 import type { ExtendedConfigState } from '@/hooks/use-watch-config';
 
-// ─── WebGL check ───────────────────────────────────────────────────────────
+// ─── WebGL check ────────────────────────────────────────────────────────────
 
 function checkWebGL(): boolean {
   if (typeof document === 'undefined') return false;
@@ -17,14 +17,14 @@ function checkWebGL(): boolean {
 }
 const WEB_GL_OK = checkWebGL();
 
-// ─── Box style presets ─────────────────────────────────────────────────────
+// ─── Box style presets ──────────────────────────────────────────────────────
 
 const BOX_STYLES = {
   standard: {
     bodyColor:     '#1e293b',
     lidColor:      '#253347',
     interiorColor: '#0f172a',
-    cushionColor:  '#2c4a72',   // visible blue-grey vs dark interior
+    cushionColor:  '#2c4a72',
     accentColor:   '#475569',
     rimColor:      '#334155',
     metalness: 0.22,
@@ -36,7 +36,7 @@ const BOX_STYLES = {
     bodyColor:     '#100800',
     lidColor:      '#1c0d00',
     interiorColor: '#1a0820',
-    cushionColor:  '#6b2060',   // rich velvet purple, visible vs dark interior
+    cushionColor:  '#6b2060',
     accentColor:   '#c9970a',
     rimColor:      '#b8860b',
     metalness: 0.55,
@@ -48,7 +48,7 @@ const BOX_STYLES = {
     bodyColor:     '#5c3d1e',
     lidColor:      '#7c5228',
     interiorColor: '#0e1e10',
-    cushionColor:  '#1e4a30',   // forest green satin, contrasts against dark
+    cushionColor:  '#1e4a30',
     accentColor:   '#c9970a',
     rimColor:      '#a07030',
     metalness: 0.10,
@@ -58,19 +58,35 @@ const BOX_STYLES = {
   },
 };
 
-// ─── Box geometry ──────────────────────────────────────────────────────────
+// ─── Box geometry constants ─────────────────────────────────────────────────
+// Watch-specific proportions: narrow width (across face), long depth (along strap)
 
-const W = 4.3;   // width
-const D = 2.9;   // depth
-const H = 1.35;  // body height
-const T = 0.13;  // wall thickness
+const W     = 3.2;   // width — across the watch face
+const D     = 5.0;   // depth — along the strap (needs to fit strap arms)
+const H     = 1.4;   // body height
+const T     = 0.13;  // wall thickness
 const LID_T = 0.13;
+
+// Interior floor surface
+const FLOOR_Y = -H / 2 + T;
+
+// Oval cushion — pillow for the watch case.
+// Uses a scaled sphere: scaleX wide enough for watch face, scaleZ for watch case depth.
+const CUSH_R    = 0.34;   // sphere radius before scaling
+const CUSH_SX   = 2.3;    // X scale — covers watch face width
+const CUSH_SY   = 0.88;   // Y scale — pillow height
+const CUSH_SZ   = 1.6;    // Z scale — covers watch case + lug area
+const CUSH_HALF = CUSH_R * CUSH_SY;           // half-height in world units
+const CUSH_Y    = FLOOR_Y + CUSH_HALF + 0.04; // center so bottom touches floor
+const WATCH_Y   = CUSH_Y + CUSH_HALF + 0.06;  // watch back of case sits just above cushion top
+
+// ─── Box geometry ───────────────────────────────────────────────────────────
 
 function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
   const s = BOX_STYLES[boxType as keyof typeof BOX_STYLES] ?? BOX_STYLES.standard;
 
   const { lidAngle } = useSpring({
-    lidAngle: open ? -Math.PI * 0.54 : 0.02,
+    lidAngle: open ? -Math.PI * 0.56 : 0.02,
     config: { mass: 1.4, tension: 48, friction: 20 },
   });
   const lidRef = useRef<THREE.Group>(null);
@@ -78,65 +94,60 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
     if (lidRef.current) lidRef.current.rotation.x = lidAngle.get();
   });
 
-  const bodyMat  = { color: s.bodyColor,  metalness: s.metalness,    roughness: s.roughness    };
-  const lidMat   = { color: s.lidColor,   metalness: s.lidMetalness,  roughness: s.lidRoughness };
-  const rimMat   = { color: s.rimColor,   metalness: 0.75,            roughness: 0.22           };
-  const accentMat= { color: s.accentColor,metalness: 0.88,            roughness: 0.12           };
-  const intMat   = { color: s.interiorColor, metalness: 0, roughness: 0.96 };
-  const cushMat  = { color: s.cushionColor,  metalness: 0, roughness: 0.92 };
+  const bodyMat   = { color: s.bodyColor,     metalness: s.metalness,    roughness: s.roughness    };
+  const lidMat    = { color: s.lidColor,      metalness: s.lidMetalness, roughness: s.lidRoughness };
+  const rimMat    = { color: s.rimColor,      metalness: 0.75,           roughness: 0.22           };
+  const accentMat = { color: s.accentColor,   metalness: 0.88,           roughness: 0.12           };
+  const intMat    = { color: s.interiorColor, metalness: 0,              roughness: 0.96           };
+  const cushMat   = { color: s.cushionColor,  metalness: 0,              roughness: 0.90           };
 
-  const isPremium  = boxType === 'premium';
-  const isCollector= boxType === 'collector';
+  const isPremium   = boxType === 'premium';
+  const isCollector = boxType === 'collector';
 
   return (
     <group>
       {/* ── Box body: bottom + 4 walls ── */}
-      {/* Bottom */}
       <mesh position={[0, -H/2 + T/2, 0]} receiveShadow>
         <boxGeometry args={[W, T, D]} />
         <meshStandardMaterial {...bodyMat} />
       </mesh>
-      {/* Back wall */}
       <mesh position={[0, 0, -D/2 + T/2]}>
         <boxGeometry args={[W, H, T]} />
         <meshStandardMaterial {...bodyMat} />
       </mesh>
-      {/* Front wall */}
       <mesh position={[0, 0, D/2 - T/2]}>
         <boxGeometry args={[W, H, T]} />
         <meshStandardMaterial {...bodyMat} />
       </mesh>
-      {/* Left wall */}
       <mesh position={[-W/2 + T/2, 0, 0]}>
         <boxGeometry args={[T, H, D]} />
         <meshStandardMaterial {...bodyMat} />
       </mesh>
-      {/* Right wall */}
       <mesh position={[W/2 - T/2, 0, 0]}>
         <boxGeometry args={[T, H, D]} />
         <meshStandardMaterial {...bodyMat} />
       </mesh>
 
       {/* ── Interior floor ── */}
-      <mesh position={[0, -H/2 + T + 0.04, 0]}>
-        <boxGeometry args={[W - T*2 - 0.06, 0.05, D - T*2 - 0.06]} />
+      <mesh position={[0, FLOOR_Y + 0.04, 0]}>
+        <boxGeometry args={[W - T*2 - 0.06, 0.04, D - T*2 - 0.06]} />
         <meshStandardMaterial {...intMat} />
       </mesh>
 
-      {/* ── Watch cushion (oval) ── */}
-      <mesh position={[0, -H/2 + T + 0.19, 0]} rotation={[0, 0, 0]}>
-        <cylinderGeometry args={[1.06, 1.0, 0.24, 40]} />
+      {/* ── Watch cushion — elongated pill pillow ── */}
+      <mesh position={[0, CUSH_Y, 0]} scale={[CUSH_SX, CUSH_SY, CUSH_SZ]} castShadow>
+        <sphereGeometry args={[CUSH_R, 36, 20]} />
         <meshStandardMaterial {...cushMat} />
       </mesh>
-      {/* Cushion dip (inner) */}
-      <mesh position={[0, -H/2 + T + 0.30, 0]}>
-        <cylinderGeometry args={[0.44, 0.44, 0.06, 32]} />
-        <meshStandardMaterial color={s.cushionColor} roughness={0.98} metalness={0} />
+      {/* Cushion top highlight strip (fabric sheen) */}
+      <mesh position={[0, CUSH_Y + CUSH_HALF - 0.01, 0]} scale={[CUSH_SX * 0.70, 1, CUSH_SZ * 0.55]}>
+        <sphereGeometry args={[CUSH_R * 0.98, 24, 12]} />
+        <meshStandardMaterial color={s.cushionColor} metalness={0.06} roughness={0.82} transparent opacity={0.45} />
       </mesh>
 
       {/* ── Rim / edge trim ── */}
       <mesh position={[0, H/2 - T*0.3, 0]}>
-        <boxGeometry args={[W + 0.04, T * 0.35, D + 0.04]} />
+        <boxGeometry args={[W + 0.04, T * 0.32, D + 0.04]} />
         <meshStandardMaterial {...rimMat} />
       </mesh>
 
@@ -145,8 +156,8 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
         <>
           {([-W/2 + T*0.5, W/2 - T*0.5] as number[]).flatMap(x =>
             ([-D/2 + T*0.5, D/2 - T*0.5] as number[]).map(z => (
-              <mesh key={`c${x}_${z}`} position={[x, -H/2 + T + 0.01, z]} castShadow>
-                <boxGeometry args={[0.28, 0.06, 0.28]} />
+              <mesh key={`c${x}_${z}`} position={[x, -H/2 + T + 0.01, z]}>
+                <boxGeometry args={[0.22, 0.06, 0.22]} />
                 <meshStandardMaterial {...accentMat} />
               </mesh>
             ))
@@ -155,57 +166,58 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
       )}
 
       {/* ── Hinge cylinders ── */}
-      {[-W/2 + 0.55, 0, W/2 - 0.55].map(x => (
+      {([-W/2 + 0.45, 0, W/2 - 0.45] as number[]).map(x => (
         <mesh key={`h${x}`} position={[x, H/2 + 0.02, -D/2 + T/2]} rotation={[0, 0, Math.PI/2]}>
-          <cylinderGeometry args={[0.07, 0.07, 0.24, 12]} />
+          <cylinderGeometry args={[0.07, 0.07, 0.22, 12]} />
           <meshStandardMaterial {...rimMat} />
         </mesh>
       ))}
 
-      {/* ── Wood grain lines for collector ── */}
-      {isCollector && ([0.3, 0.6, 0.9, -0.3, -0.6, -0.9] as number[]).map(z => (
+      {/* ── Wood grain for collector ── */}
+      {isCollector && ([0.4, 0.8, 1.2, -0.4, -0.8, -1.2, 1.6, -1.6] as number[]).map(z => (
         <mesh key={`w${z}`} position={[0, -H/2 + T*0.6, z]}>
-          <boxGeometry args={[W - T*2, 0.008, 0.018]} />
+          <boxGeometry args={[W - T*2, 0.008, 0.016]} />
           <meshStandardMaterial color="#3a2208" metalness={0} roughness={1} />
         </mesh>
       ))}
 
       {/* ── Lid (pivots at back-top edge) ── */}
-      {/* Pivot group placed at the top-back edge of box */}
       <group ref={lidRef} position={[0, H/2 - T*0.1, -D/2 + T]}>
-        {/* Lid panel: offset so back edge is at pivot */}
         <mesh position={[0, LID_T/2, D/2 - T/2]} castShadow>
           <boxGeometry args={[W, LID_T, D]} />
           <meshStandardMaterial {...lidMat} />
         </mesh>
-        {/* Lid interior face */}
         <mesh position={[0, -LID_T * 0.2, D/2 - T/2]}>
           <boxGeometry args={[W - T*2, 0.04, D - T*2]} />
           <meshStandardMaterial {...intMat} />
         </mesh>
+        {/* Interior satin lining on lid — matches cushion color */}
+        <mesh position={[0, -LID_T * 0.1 + 0.012, D/2 - T/2]}>
+          <boxGeometry args={[W - T*2 - 0.08, 0.025, D - T*2 - 0.08]} />
+          <meshStandardMaterial color={s.cushionColor} metalness={0} roughness={0.94} />
+        </mesh>
         {/* Brand plate on lid exterior */}
         {(isPremium || isCollector) && (
           <mesh position={[0, LID_T/2 + 0.008, D/2 - T/2]}>
-            <boxGeometry args={[1.3, 0.025, 0.34]} />
+            <boxGeometry args={[1.1, 0.022, 0.28]} />
             <meshStandardMaterial {...accentMat} />
           </mesh>
         )}
-        {/* Standard brand deboss rectangle */}
         {!isPremium && !isCollector && (
           <mesh position={[0, LID_T/2 + 0.004, D/2 - T/2]}>
-            <boxGeometry args={[1.1, 0.015, 0.26]} />
+            <boxGeometry args={[0.90, 0.014, 0.22]} />
             <meshStandardMaterial color="#334155" metalness={0.1} roughness={0.85} />
           </mesh>
         )}
-        {/* Lid rim strip — front free edge (opposite the hinge) */}
+        {/* Lid free-edge rim strip */}
         <mesh position={[0, LID_T/2, D - T/2 - 0.05]}>
-          <boxGeometry args={[W + 0.04, LID_T * 0.35, 0.1]} />
+          <boxGeometry args={[W + 0.04, LID_T * 0.32, 0.1]} />
           <meshStandardMaterial {...rimMat} />
         </mesh>
         {/* Collector wood grain on lid */}
-        {isCollector && ([0.2, 0.5, 0.8, -0.2, -0.5, -0.8] as number[]).map(z => (
+        {isCollector && ([0.3, 0.7, 1.1, -0.3, -0.7, -1.1, 1.5, -1.5] as number[]).map(z => (
           <mesh key={`lw${z}`} position={[0, LID_T/2 + 0.005, D/2 - T/2 + z]}>
-            <boxGeometry args={[W - T*2, 0.01, 0.02]} />
+            <boxGeometry args={[W - T*2, 0.01, 0.018]} />
             <meshStandardMaterial color="#3a2208" metalness={0} roughness={1} />
           </mesh>
         ))}
@@ -214,40 +226,46 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
   );
 }
 
-// ─── Real watch inside the box ─────────────────────────────────────────────
-// Uses the same WatchModel as the Configure page — all customisations visible.
+// ─── Watch inside the box ───────────────────────────────────────────────────
+// paused=true freezes all WatchModel animation (no auto-rotate, no hand springs).
+// The watch sits face-up on the cushion, perfectly still.
 
 function WatchInBox({ config, visible }: { config: ExtendedConfigState; visible: boolean }) {
   const { sc } = useSpring({
     from: { sc: 0.001 },
     sc: visible ? 1 : 0.001,
     config: { mass: 0.8, tension: 140, friction: 20 },
-    delay: visible ? 180 : 0,
+    delay: visible ? 200 : 0,
   });
   const watchRef = useRef<THREE.Group>(null);
   useFrame(() => {
-    if (watchRef.current) watchRef.current.scale.setScalar(sc.get() * 0.42);
+    if (watchRef.current) watchRef.current.scale.setScalar(sc.get() * 0.46);
   });
 
   return (
     <group visible={visible}>
-      {/* Rotated flat (face-up), scaled to fit inside the box walls */}
+      {/*
+        Rotation: face-up (face normal points +Y = up).
+        The WatchModel local frame: face normal = +Z, strap = ±Y.
+        Rotating -π/2 around X maps: +Z → +Y, +Y → -Z, -X → -X.
+        So face looks up, strap extends along ±Z (box depth direction). ✓
+      */}
       <group
         ref={watchRef}
-        position={[0, -0.30, 0]}
+        position={[0, WATCH_Y, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
       >
         <Suspense fallback={null}>
-          <WatchModel configOverride={config} />
+          <WatchModel configOverride={config} paused />
         </Suspense>
       </group>
     </group>
   );
 }
 
-// ─── Gift Ribbon ────────────────────────────────────────────────────────────
+// ─── Gift Ribbon ─────────────────────────────────────────────────────────────
 
-const RIBBON_Y_LID = H / 2 + LID_T + 0.018;  // just above the closed lid top
+const RIBBON_Y_LID = H / 2 + LID_T + 0.018;
 
 const RIBBON_COLOR = '#d63370';
 const RIBBON_M = { color: RIBBON_COLOR, metalness: 0.18, roughness: 0.52 } as const;
@@ -257,10 +275,6 @@ function GiftRibbon({ visible }: { visible: boolean }) {
     sc: visible ? 1 : 0,
     config: { mass: 0.8, tension: 180, friction: 22 },
   });
-
-  // THREE.js scale=0 creates a singular matrix → garbage rendering.
-  // The outer <group visible={…}> tells Three.js to skip the subtree entirely
-  // when hidden; the inner group's scale is driven imperatively via useFrame.
   const ribbonRef = useRef<THREE.Group>(null);
   useFrame(() => {
     if (ribbonRef.current) ribbonRef.current.scale.setScalar(sc.get());
@@ -269,50 +283,46 @@ function GiftRibbon({ visible }: { visible: boolean }) {
   return (
     <group visible={visible}>
       <group ref={ribbonRef}>
-        {/* ── Cross-strips on lid top ── */}
+        {/* Cross-strips on lid top */}
         <mesh position={[0, RIBBON_Y_LID, 0]}>
-          <boxGeometry args={[0.22, 0.022, D + 0.05]} />
+          <boxGeometry args={[0.20, 0.022, D + 0.05]} />
           <meshStandardMaterial {...RIBBON_M} />
         </mesh>
         <mesh position={[0, RIBBON_Y_LID + 0.012, 0]}>
-          <boxGeometry args={[W + 0.05, 0.022, 0.22]} />
+          <boxGeometry args={[W + 0.05, 0.022, 0.20]} />
           <meshStandardMaterial {...RIBBON_M} />
         </mesh>
-
-        {/* ── Ribbon strip on front face ── */}
+        {/* Ribbon strip on front face */}
         <mesh position={[0, 0, D / 2 + 0.018]}>
-          <boxGeometry args={[0.22, H + LID_T + 0.04, 0.018]} />
+          <boxGeometry args={[0.20, H + LID_T + 0.04, 0.018]} />
           <meshStandardMaterial {...RIBBON_M} />
         </mesh>
-        {/* ── Ribbon strip on right face ── */}
+        {/* Ribbon strip on right face */}
         <mesh position={[W / 2 + 0.018, 0, 0]}>
-          <boxGeometry args={[0.018, H + LID_T + 0.04, 0.22]} />
+          <boxGeometry args={[0.018, H + LID_T + 0.04, 0.20]} />
           <meshStandardMaterial {...RIBBON_M} />
         </mesh>
-
-        {/* ── Bow loops ── */}
-        <mesh position={[-0.27, RIBBON_Y_LID + 0.06, 0]} rotation={[Math.PI / 2, 0, 0.22]} scale={[1, 0.36, 1]}>
-          <torusGeometry args={[0.22, 0.068, 4, 28]} />
+        {/* Bow loops */}
+        <mesh position={[-0.24, RIBBON_Y_LID + 0.055, 0]} rotation={[Math.PI / 2, 0, 0.22]} scale={[1, 0.34, 1]}>
+          <torusGeometry args={[0.20, 0.064, 4, 28]} />
           <meshStandardMaterial {...RIBBON_M} side={THREE.DoubleSide} />
         </mesh>
-        <mesh position={[0.27, RIBBON_Y_LID + 0.06, 0]} rotation={[Math.PI / 2, 0, -0.22]} scale={[1, 0.36, 1]}>
-          <torusGeometry args={[0.22, 0.068, 4, 28]} />
+        <mesh position={[0.24, RIBBON_Y_LID + 0.055, 0]} rotation={[Math.PI / 2, 0, -0.22]} scale={[1, 0.34, 1]}>
+          <torusGeometry args={[0.20, 0.064, 4, 28]} />
           <meshStandardMaterial {...RIBBON_M} side={THREE.DoubleSide} />
         </mesh>
-
-        {/* ── Bow tails ── */}
-        <mesh position={[-0.16, RIBBON_Y_LID + 0.01, 0.04]} rotation={[0.12, 0, 0.28]}>
-          <boxGeometry args={[0.26, 0.022, 0.18]} />
+        {/* Bow tails */}
+        <mesh position={[-0.14, RIBBON_Y_LID + 0.008, 0.04]} rotation={[0.12, 0, 0.28]}>
+          <boxGeometry args={[0.24, 0.022, 0.16]} />
           <meshStandardMaterial {...RIBBON_M} />
         </mesh>
-        <mesh position={[0.16, RIBBON_Y_LID + 0.01, 0.04]} rotation={[0.12, 0, -0.28]}>
-          <boxGeometry args={[0.26, 0.022, 0.18]} />
+        <mesh position={[0.14, RIBBON_Y_LID + 0.008, 0.04]} rotation={[0.12, 0, -0.28]}>
+          <boxGeometry args={[0.24, 0.022, 0.16]} />
           <meshStandardMaterial {...RIBBON_M} />
         </mesh>
-
-        {/* ── Knot ── */}
-        <mesh position={[0, RIBBON_Y_LID + 0.09, 0]}>
-          <sphereGeometry args={[0.10, 14, 10]} />
+        {/* Knot */}
+        <mesh position={[0, RIBBON_Y_LID + 0.082, 0]}>
+          <sphereGeometry args={[0.09, 14, 10]} />
           <meshStandardMaterial {...RIBBON_M} roughness={0.38} />
         </mesh>
       </group>
@@ -320,18 +330,20 @@ function GiftRibbon({ visible }: { visible: boolean }) {
   );
 }
 
-// ─── Scene ─────────────────────────────────────────────────────────────────
+// ─── Scene ───────────────────────────────────────────────────────────────────
 
 function Scene({ config, boxType, giftWrap, open }: { config: ExtendedConfigState; boxType: string; giftWrap: boolean; open: boolean }) {
   return (
     <>
-      <ambientLight intensity={0.55} />
-      <spotLight position={[6, 8, 5]} angle={0.24} penumbra={0.6} intensity={2.8} castShadow shadow-mapSize={[1024, 1024]} />
-      <directionalLight position={[-3, 5, 4]} intensity={0.7} color="#c4d4f0" />
-      <pointLight position={[0, 6, -2]} intensity={0.5} color="#f0eaff" />
-      <pointLight position={[4, 0, 5]} intensity={0.4} color="#ffffff" />
+      <ambientLight intensity={0.60} />
+      <spotLight position={[5, 9, 5]} angle={0.22} penumbra={0.65} intensity={3.2} castShadow shadow-mapSize={[1024, 1024]} />
+      <directionalLight position={[-3, 5, 4]} intensity={0.80} color="#c4d4f0" />
+      <pointLight position={[0, 4, 1]} intensity={0.70} color="#f0eaff" />
+      <pointLight position={[3, 0, 4]} intensity={0.35} color="#ffffff" />
+      {/* Extra fill from inside the box when open */}
+      {open && <pointLight position={[0, -0.1, 0]} intensity={0.55} color="#e8d8ff" distance={3} decay={2} />}
       <Environment preset="city" />
-      <group rotation={[0, -0.46, 0]}>
+      <group rotation={[0, -0.42, 0]}>
         <Box3D boxType={boxType} open={open} />
         <WatchInBox config={config} visible={open} />
         {giftWrap && <GiftRibbon visible={!open} />}
@@ -340,19 +352,15 @@ function Scene({ config, boxType, giftWrap, open }: { config: ExtendedConfigStat
   );
 }
 
-// ─── Public component ──────────────────────────────────────────────────────
+// ─── Public component ─────────────────────────────────────────────────────────
 
 export interface WatchBoxSceneProps {
   config: ExtendedConfigState;
   boxType?: string;
-  /** Controlled open/close state */
   open?: boolean;
-  /** Auto-open the box after mount (used on the Payment page) */
   autoOpen?: boolean;
   giftWrap?: boolean;
-  /** height class e.g. "h-72" */
   className?: string;
-  /** Called when the user taps/clicks anywhere on the box scene */
   onToggle?: () => void;
 }
 
@@ -363,26 +371,21 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
     const t = setTimeout(() => setAutoOpened(true), 800);
     return () => clearTimeout(t);
   }, [autoOpen]);
-  // autoOpened is only the initial trigger; once the user taps,
-  // the parent's `open` prop takes full control.
+
   const isOpen = open || autoOpened;
+
+  // ── SVG fallback (no WebGL) ──────────────────────────────────────────────
   if (!WEB_GL_OK) {
     const s = BOX_STYLES[boxType as keyof typeof BOX_STYLES] ?? BOX_STYLES.standard;
-    const faceCol   = config.watchfaceColor  ?? '#C0C0C0';
-    const strapCol  = config.braceletColor   ?? '#888888';
-    // Isometric projection: iso(x,y,z) with cx=54,cy=50,s=7,cos30=0.866,sin30=0.5
-    // Visible corners of box (W=4.3, H=1.35, D=2.9):
-    //  E(0,H,0)=(54,37.6)  F(W,H,0)=(80.1,52.7)  H(W,H,D)=(62.5,62.9)  G(0,H,D)=(36.4,47.8)
-    //  A(0,0,0)=(54,47)    B(W,0,0)=(80.1,62.1)   D(W,0,D)=(62.5,72.3)
-    // Open lid top edge (lid pivots at G-H, stands ~90° up):
-    //  G'=(36.4,29.8)  H'=(62.5,44.9)
+    const faceCol  = config.watchfaceColor ?? '#C0C0C0';
+    const strapCol = config.braceletColor  ?? '#888888';
     return (
       <div
         className={`relative flex items-center justify-center overflow-hidden ${className?.includes('rounded') ? '' : 'rounded-2xl'} ${className ?? 'h-64'}${onToggle ? ' cursor-pointer select-none' : ''}`}
         style={{ background: `radial-gradient(ellipse at 50% 55%, ${s.bodyColor}ee 0%, ${s.bodyColor}66 55%, transparent 100%)` }}
         onClick={onToggle}
       >
-        <svg viewBox="28 24 58 54" className="w-full max-w-xs" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="18 24 70 56" className="w-full max-w-xs" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="iso-lid" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={s.lidColor} />
@@ -398,47 +401,36 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
             </linearGradient>
           </defs>
 
-          {/* ── Open lid — standing upright behind the box ── */}
-          <polygon points="36.4,47.8 62.5,62.9 62.5,44.9 36.4,29.8" fill="url(#iso-lid)" />
-          {/* Lid rim strip (hinge edge) */}
-          <line x1="36.4" y1="47.8" x2="62.5" y2="62.9" stroke={s.rimColor} strokeWidth="1.2" opacity="0.8" />
-          {/* Brand accent plate on lid */}
+          {/* Open lid — standing upright behind the box */}
+          <polygon points="30,47.5 64,62.5 64,40.5 30,25.5" fill="url(#iso-lid)" />
+          <line x1="30" y1="47.5" x2="64" y2="62.5" stroke={s.rimColor} strokeWidth="1.2" opacity="0.8" />
           {(boxType === 'premium' || boxType === 'collector') && (
-            <polygon points="42.5,44.8 56.5,39.4 56.5,35.4 42.5,40.8" fill={s.accentColor} opacity="0.9" />
+            <polygon points="38,41.5 56,36.5 56,32.5 38,37.5" fill={s.accentColor} opacity="0.9" />
           )}
-          {/* Lid highlight */}
-          <polygon points="36.4,47.8 62.5,62.9 62.5,44.9 36.4,29.8" fill="rgba(255,255,255,0.06)" />
-          {/* Lid top edge */}
-          <line x1="36.4" y1="29.8" x2="62.5" y2="44.9" stroke={s.rimColor} strokeWidth="0.6" opacity="0.5" />
+          <line x1="30" y1="25.5" x2="64" y2="40.5" stroke={s.rimColor} strokeWidth="0.6" opacity="0.5" />
 
-          {/* ── Box front face  A→B→F→E ── */}
-          <polygon points="54,47 80.1,62.1 80.1,52.7 54,37.6" fill="url(#iso-front)" />
+          {/* Box front face */}
+          <polygon points="47,47.5 77,62.5 77,54.0 47,39.0" fill="url(#iso-front)" />
+          {/* Box right face */}
+          <polygon points="77,62.5 64,72.5 64,62.5 77,52.5" fill="url(#iso-right)" />
+          {/* Box top/interior */}
+          <polygon points="47,39.0 77,54.0 64,62.5 30,47.5" fill={s.interiorColor} />
 
-          {/* ── Box right face  B→D→H→F ── */}
-          <polygon points="80.1,62.1 62.5,72.3 62.5,62.9 80.1,52.7" fill="url(#iso-right)" />
+          {/* Interior cushion — elongated oval */}
+          <ellipse cx="55.5" cy="52.5" rx="10" ry="5.5" fill={s.cushionColor} opacity="0.80" />
 
-          {/* ── Box top / interior face  E→F→H→G ── */}
-          <polygon points="54,37.6 80.1,52.7 62.5,62.9 36.4,47.8" fill={s.interiorColor} />
+          {/* Watch silhouette — face on cushion, strap along long axis */}
+          <line x1="55.5" y1="57.5" x2="55.5" y2="64.5" stroke={strapCol} strokeWidth="4" strokeLinecap="round" opacity="0.70" />
+          <line x1="55.5" y1="47.5" x2="55.5" y2="40.5" stroke={strapCol} strokeWidth="4" strokeLinecap="round" opacity="0.70" />
+          <ellipse cx="55.5" cy="52.5" rx="5.5" ry="5.5" fill={faceCol} opacity="0.92" />
+          <ellipse cx="53.8" cy="50.8" rx="1.9" ry="1.9" fill="rgba(255,255,255,0.22)" />
 
-          {/* Interior cushion */}
-          <polygon points="57.5,40.4 77.2,51.5 61.8,60.1 42.2,49.1" fill={s.cushionColor} opacity="0.75" />
-
-          {/* ── Watch silhouette inside the box ── */}
-          {/* Strap bottom (toward back/+z in iso: left-down direction) */}
-          <line x1="54.2" y1="52.4" x2="50.2" y2="55.0" stroke={strapCol} strokeWidth="3.5" strokeLinecap="round" opacity="0.72" />
-          {/* Strap top (toward front/-z in iso: right-up direction) */}
-          <line x1="65.2" y1="48.8" x2="69.2" y2="46.2" stroke={strapCol} strokeWidth="3.5" strokeLinecap="round" opacity="0.72" />
-          {/* Watch face oval */}
-          <ellipse cx="59.7" cy="50.5" rx="10" ry="5.8" fill={faceCol} opacity="0.90" />
-          {/* Watch face shine */}
-          <ellipse cx="57.8" cy="49.0" rx="3.5" ry="2.0" fill="rgba(255,255,255,0.22)" />
-
-          {/* ── Edge highlights ── */}
-          <line x1="54" y1="37.6" x2="80.1" y2="52.7" stroke={s.rimColor} strokeWidth="0.9" opacity="0.7" />
-          <line x1="54" y1="37.6" x2="36.4" y2="47.8" stroke={s.rimColor} strokeWidth="0.7" opacity="0.5" />
-          <line x1="80.1" y1="62.1" x2="80.1" y2="52.7" stroke={s.rimColor} strokeWidth="0.5" opacity="0.4" />
-          <line x1="54" y1="47" x2="54" y2="37.6" stroke={s.rimColor} strokeWidth="0.5" opacity="0.35" />
-          <line x1="80.1" y1="62.1" x2="62.5" y2="72.3" stroke={s.rimColor} strokeWidth="0.4" opacity="0.3" />
+          {/* Edge highlights */}
+          <line x1="47" y1="39.0" x2="77" y2="54.0" stroke={s.rimColor} strokeWidth="0.9" opacity="0.7" />
+          <line x1="47" y1="39.0" x2="30" y2="47.5" stroke={s.rimColor} strokeWidth="0.7" opacity="0.5" />
+          <line x1="77" y1="62.5" x2="77" y2="52.5" stroke={s.rimColor} strokeWidth="0.5" opacity="0.4" />
+          <line x1="47" y1="47.5" x2="47" y2="39.0" stroke={s.rimColor} strokeWidth="0.5" opacity="0.35" />
+          <line x1="77" y1="62.5" x2="64" y2="72.5" stroke={s.rimColor} strokeWidth="0.4" opacity="0.3" />
         </svg>
 
         {onToggle && (
@@ -463,9 +455,6 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
     const dx = e.clientX - pointerDown.current.x;
     const dy = e.clientY - pointerDown.current.y;
     if (Math.sqrt(dx * dx + dy * dy) < 6) {
-      // Once user taps, clear autoOpened so the parent's `open` prop is the
-      // sole source of truth — otherwise `isOpen = open || autoOpened` keeps
-      // the box stuck open even when the parent sets open=false.
       setAutoOpened(false);
       onToggle();
     }
@@ -479,7 +468,7 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
       onPointerUp={onToggle ? handlePointerUp : undefined}
     >
       <Canvas
-        camera={{ position: [1.6, 2.4, 8.2], fov: 36 }}
+        camera={{ position: [1.2, 2.8, 7.5], fov: 40 }}
         gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
         style={{ background: 'transparent' }}
         shadows
@@ -487,15 +476,14 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
         <Scene config={config} boxType={boxType} giftWrap={giftWrap} open={isOpen} />
         <OrbitControls
           enablePan={false}
-          minDistance={4}
-          maxDistance={18}
+          minDistance={3.5}
+          maxDistance={16}
           minPolarAngle={0.1}
           maxPolarAngle={Math.PI * 0.85}
           target={[0, 0, 0]}
         />
       </Canvas>
 
-      {/* Tap hint — only shown when tapping is wired up */}
       {onToggle && (
         <div className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-sm text-white/60 text-[10px] font-medium select-none">
           <span>{isOpen ? '📦' : '🎁'}</span>

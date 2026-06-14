@@ -802,6 +802,9 @@ export interface WatchModelProps {
   step?: number;
   lastInteractionRef?: React.RefObject<number>;
   showWrist?: boolean;
+  /** When true, all animation (auto-rotate, hand springs) is frozen.
+   *  Use when embedding the watch inside a static display (e.g. the gift box). */
+  paused?: boolean;
   /** When provided, overrides the global WatchConfigContext for this instance. */
   configOverride?: ExtendedConfigState;
 }
@@ -882,7 +885,7 @@ const LUG_TIP_Y  = 1.85;  // |y| of spring bar / strap attachment (top of lug ar
 const LUG_ARM_Z  = 0.10;  // Z center for lug body, spring bar, and strap — single source of truth
 // STRAP_HALF removed — strap length now expressed as WRAP_SEGS × SEG_LEN in the StrapJoint chain
 
-export default function WatchModel({ step = 0, lastInteractionRef, showWrist = false, configOverride }: WatchModelProps) {
+export default function WatchModel({ step = 0, lastInteractionRef, showWrist = false, paused = false, configOverride }: WatchModelProps) {
   const { config: ctxConfig } = useWatchConfig();
   const config: ExtendedConfigState = configOverride ?? ctxConfig;
   const groupRef = useRef<THREE.Group>(null);
@@ -920,9 +923,10 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   }, [step]);
 
   // Tilt + wrist-snap Z position (watch moves forward/into wrist when wrist shown)
+  // When paused (e.g. inside the gift box) hold perfectly flat at 0 rotation.
   const { tiltX, watchZ } = useSpring({
-    tiltX: step === 2 ? 0.52 : -0.32,
-    watchZ: showWrist ? 0.2 : 0,
+    tiltX: paused ? 0 : (step === 2 ? 0.52 : -0.32),
+    watchZ: paused ? 0 : (showWrist ? 0.2 : 0),
     config: { mass: 1, tension: 110, friction: 22 },
   });
 
@@ -941,6 +945,8 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
 
   useFrame(({ camera }, delta) => {
     if (!groupRef.current) return;
+    // Frozen display mode — no animation at all (used inside the gift box)
+    if (paused) return;
 
     // ── Болванки hands: spring-damper "loose pin" physics ───────────────────
     // Each hand has a mechanical target (rigid gear-ratio drive from camera azimuth)
