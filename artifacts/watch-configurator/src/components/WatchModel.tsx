@@ -1,6 +1,6 @@
 import React, { useRef, useMemo, useEffect, Suspense } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Text3D, Center, Billboard } from '@react-three/drei';
+import { Text3D, Center } from '@react-three/drei';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
@@ -368,14 +368,14 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
         {chars.map((ch, i) => {
           const { x, y } = letterPositions[i];
           return (
-            <Billboard key={i} position={[x, y, 0]}>
+            <group key={i} position={[x, y, 0]}>
               <Center>
                 <Text3D font={TYPEFACE_URL} size={fontSize} {...extrudeFor(fontSize)}>
                   {ch}
                   <meshStandardMaterial {...matProps} />
                 </Text3D>
               </Center>
-            </Billboard>
+            </group>
           );
         })}
       </group>
@@ -408,9 +408,7 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
   );
 }
 
-/** Camera-facing text block for center mode.
- *  Copies the camera quaternion every frame — avoids the <Billboard>+<Center>
- *  incompatibility where Billboard's rotation distorts Center's bbox offset. */
+/** Static text block for center mode — lies flat on the watch face facing +Z. */
 function CameraFacingText({ lines, fontSize, lineH, totalH, textZ, matProps, extrudeFor }: {
   lines: string[];
   fontSize: number;
@@ -420,17 +418,8 @@ function CameraFacingText({ lines, fontSize, lineH, totalH, textZ, matProps, ext
   matProps: object;
   extrudeFor: (sz: number) => object;
 }) {
-  const groupRef = useRef<THREE.Group>(null);
-  const { camera } = useThree();
-
-  useFrame(() => {
-    if (groupRef.current) {
-      groupRef.current.quaternion.copy(camera.quaternion);
-    }
-  });
-
   return (
-    <group ref={groupRef} position={[0, 0, textZ]}>
+    <group position={[0, 0, textZ]}>
       {lines.map((line, i) => (
         <group key={i} position={[0, totalH / 2 - i * lineH, 0]}>
           <Center>

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 import { Environment, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import WatchSVG from './WatchSVG';
@@ -142,11 +142,6 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
   const isMetal = braceletMaterial === 'metal_solid' || braceletMaterial === 'metal_segmented';
   const isResin = braceletMaterial === 'resin';
 
-  useFrame((state) => {
-    if (!groupRef.current) return;
-    const t = state.clock.elapsedTime;
-    groupRef.current.rotation.y = Math.sin(t * 0.45) * 0.38;
-  });
 
   return (
     <group ref={groupRef} rotation-x={-0.28}>
