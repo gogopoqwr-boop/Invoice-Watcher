@@ -177,46 +177,54 @@ export default function BoxSetup() {
           <div>
             <h2 className="text-base font-bold mb-3">Тип коробки</h2>
             <div className="space-y-2.5">
-              {BOX_OPTIONS.map(opt => (
-                <button
-                  key={opt.id}
-                  onClick={() => setSelectedBox(opt.id)}
-                  className={cn(
-                    'w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all duration-150',
-                    selectedBox === opt.id
-                      ? 'ring-2 bg-card/80 shadow-sm'
-                      : 'border border-border/60 bg-card/40 hover:bg-card/60',
-                  )}
-                  style={selectedBox === opt.id ? { '--tw-ring-color': opt.accentColor } as React.CSSProperties : {}}
-                >
-                  {/* Color swatch */}
-                  <div
-                    className="w-10 h-10 rounded-xl shrink-0 shadow-sm border border-white/10"
-                    style={{ backgroundColor: opt.accentColor }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2">
-                      <span className={cn(
-                        'text-sm font-bold',
-                        selectedBox === opt.id ? '' : 'text-foreground'
-                      )}
-                        style={selectedBox === opt.id ? { color: opt.textColor } : {}}
-                      >
-                        {opt.label}
-                      </span>
-                      <span className="text-xs text-muted-foreground">{opt.sublabel}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{opt.desc}</p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    {opt.surcharge === 0 ? (
-                      <span className="text-xs text-muted-foreground">бесплатно</span>
-                    ) : (
-                      <span className="text-sm font-bold text-primary flex items-center gap-0.5">+{opt.surcharge} <TgStar size={13} /></span>
+              {BOX_OPTIONS.map(opt => {
+                const isSelected = selectedBox === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => setSelectedBox(opt.id)}
+                    className={cn(
+                      'w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all duration-150',
+                      isSelected
+                        ? 'bg-card shadow-sm'
+                        : 'border border-border/60 bg-card/40 hover:bg-card/60',
                     )}
-                  </div>
-                </button>
-              ))}
+                    style={isSelected ? {
+                      outline: `2px solid ${opt.accentColor}`,
+                      outlineOffset: '-2px',
+                    } : {}}
+                  >
+                    {/* Color swatch — gradient from body to accent to give depth */}
+                    <div
+                      className="w-10 h-10 rounded-xl shrink-0 shadow-sm border border-border/30 flex-none"
+                      style={{
+                        background: `linear-gradient(135deg, ${opt.accentColor}cc 0%, ${opt.accentColor} 100%)`,
+                        boxShadow: isSelected ? `0 0 0 2px ${opt.accentColor}44, 0 2px 6px ${opt.accentColor}33` : undefined,
+                      }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        {/* Label uses accentColor (dark enough in both themes) — textColor is for canvas overlays only */}
+                        <span
+                          className="text-sm font-bold text-foreground"
+                          style={isSelected ? { color: opt.accentColor } : {}}
+                        >
+                          {opt.label}
+                        </span>
+                        <span className="text-xs text-muted-foreground">{opt.sublabel}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{opt.desc}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      {opt.surcharge === 0 ? (
+                        <span className="text-xs text-muted-foreground">бесплатно</span>
+                      ) : (
+                        <span className="text-sm font-bold flex items-center gap-0.5" style={{ color: opt.accentColor }}>+{opt.surcharge} <TgStar size={13} /></span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
