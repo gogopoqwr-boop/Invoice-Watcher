@@ -10,14 +10,6 @@ const WatchBoxScene = lazy(() => import('@/components/WatchBoxScene'));
 
 interface BreakdownItem { label: string; stars: number }
 
-const GEOM_PRICES: Record<string, number> = { circle: 0, rounded: 0, square: 1 };
-const GEOM_LABELS: Record<string, string> = {
-  circle: 'Круглая форма', rounded: 'Скруглённая форма', square: 'Квадратная форма',
-};
-const MAT_PRICES: Record<string, number> = { plastic: 0, metal: 3 };
-const MAT_LABELS: Record<string, string> = {
-  plastic: 'Пластиковый корпус', metal: 'Металлический корпус',
-};
 const BRACELET_PRICES: Record<string, number> = {
   plastic_solid: 0, plastic_segmented: 1, metal_solid: 3, metal_segmented: 4,
   resin: 2, leather: 3, cotton_fabric: 1,
@@ -33,22 +25,30 @@ const BOX_LABELS: Record<string, string> = {
 };
 
 function buildBreakdown(cfg: any): { breakdown: BreakdownItem[]; total: number } {
-  const items: BreakdownItem[] = [{ label: 'Базовая цена', stars: 5 }];
+  const items: BreakdownItem[] = [];
 
-  const geom = cfg.watchfaceGeometry ?? 'circle';
-  const geomPrice = GEOM_PRICES[geom] ?? 0;
-  if (geomPrice > 0) items.push({ label: GEOM_LABELS[geom] ?? geom, stars: geomPrice });
+  if (cfg.presetPriceStars != null) {
+    const label = cfg.presetName ? `Часы «${cfg.presetName}»` : 'Корпус часов';
+    items.push({ label, stars: cfg.presetPriceStars });
 
-  const mat = cfg.watchfaceMaterial ?? 'metal';
-  const matPrice = MAT_PRICES[mat] ?? 0;
-  if (matPrice > 0) items.push({ label: MAT_LABELS[mat] ?? mat, stars: matPrice });
-
-  const bracelet = cfg.braceletMaterial ?? 'metal_solid';
-  const braceletPrice = BRACELET_PRICES[bracelet] ?? 0;
-  if (braceletPrice > 0) items.push({ label: BRACELET_LABELS[bracelet] ?? bracelet, stars: braceletPrice });
+    const origBracelet = cfg.presetBraceletMaterial ?? cfg.braceletMaterial ?? 'metal_solid';
+    const curBracelet  = cfg.braceletMaterial ?? origBracelet;
+    const delta = (BRACELET_PRICES[curBracelet] ?? 0) - (BRACELET_PRICES[origBracelet] ?? 0);
+    if (delta !== 0) {
+      items.push({
+        label: `Замена: ${BRACELET_LABELS[curBracelet] ?? curBracelet}`,
+        stars: delta,
+      });
+    }
+  } else {
+    items.push({ label: 'Базовая цена', stars: 5 });
+    const bracelet = cfg.braceletMaterial ?? 'metal_solid';
+    const braceletPrice = BRACELET_PRICES[bracelet] ?? 0;
+    if (braceletPrice > 0) items.push({ label: BRACELET_LABELS[bracelet] ?? bracelet, stars: braceletPrice });
+  }
 
   if (cfg.handsEnabled === false) items.push({ label: 'Без стрелок', stars: -1 });
-  if (cfg.watchfaceText) items.push({ label: `Надпись: "${cfg.watchfaceText}"`, stars: 1 });
+  if (cfg.watchfaceText) items.push({ label: `Гравировка: "${cfg.watchfaceText}"`, stars: 1 });
   if (cfg.customWatchfaceUrl) items.push({ label: 'Кастомный циферблат', stars: 1 });
   if (cfg.skinFullUrl) items.push({ label: 'Скин на корпус', stars: 1 });
   if (cfg.skinStripeUrl) items.push({ label: 'Скин на ремешок', stars: 1 });
@@ -56,6 +56,8 @@ function buildBreakdown(cfg: any): { breakdown: BreakdownItem[]; total: number }
   const box = cfg.boxType ?? 'standard';
   const boxPrice = BOX_PRICES[box] ?? 0;
   if (boxPrice > 0) items.push({ label: BOX_LABELS[box] ?? `Коробка: ${box}`, stars: boxPrice });
+
+  if (cfg.giftWrap) items.push({ label: 'Атласная лента с бантом', stars: 2 });
 
   const total = Math.min(50, Math.max(1, items.reduce((s, i) => s + i.stars, 0)));
   return { breakdown: items, total };
@@ -172,7 +174,7 @@ function ReceiptBody({
               <tr key={i} className="border-b border-border/20 last:border-0">
                 <td className="py-1 px-2.5 text-muted-foreground">{item.label}</td>
                 <td className="py-1 px-2.5 text-right font-mono font-bold tabular-nums whitespace-nowrap">
-                  {item.label === 'Базовая цена'
+                  {i === 0
                     ? <span className="text-foreground flex items-center gap-0.5">{item.stars} <TgStar size={11} /></span>
                     : item.stars > 0
                       ? <span className="text-emerald-600 flex items-center gap-0.5">+{item.stars} <TgStar size={11} /></span>
@@ -196,11 +198,14 @@ function ReceiptBody({
               <span className="text-muted-foreground">{item.label}</span>
               <span className={cn(
                 'font-bold tabular-nums font-mono whitespace-nowrap',
-                item.label === 'Базовая цена' ? 'text-foreground'
+                i === 0 ? 'text-foreground'
                   : item.stars > 0 ? 'text-emerald-600'
                   : 'text-blue-500'
               )}>
-                <span className="flex items-center gap-0.5">{item.label === 'Базовая цена' ? item.stars : item.stars > 0 ? `+${item.stars}` : item.stars} <TgStar size={11} /></span>
+                <span className="flex items-center gap-0.5">
+                  {i === 0 ? item.stars : item.stars > 0 ? `+${item.stars}` : item.stars}
+                  <TgStar size={11} />
+                </span>
               </span>
             </div>
           ))}

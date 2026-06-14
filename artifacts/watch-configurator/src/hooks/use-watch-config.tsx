@@ -33,6 +33,8 @@ export type ExtendedConfigState = ApiConfigState & {
   priceStars?: number;
   // Original bracelet material of the preset — used to compute price delta on /configure
   presetBraceletMaterial?: string;
+  // Human-readable preset name — shown in receipt
+  presetName?: string;
 };
 
 const defaultState: ExtendedConfigState = {

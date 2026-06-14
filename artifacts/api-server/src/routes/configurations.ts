@@ -33,6 +33,9 @@ router.post("/configurations", async (req, res) => {
       boxColor: body.boxColor ?? "#1A1A1A",
       watchfaceText: body.watchfaceText ?? null,
       giftWrap: body.giftWrap ?? false,
+      presetPriceStars: body.presetPriceStars ?? null,
+      presetBraceletMaterial: body.presetBraceletMaterial ?? null,
+      presetName: body.presetName ?? null,
     }).returning();
     res.status(201).json(config);
   } catch (err) {

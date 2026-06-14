@@ -1,16 +1,17 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { useLocation, Link } from 'wouter';
 import { useWatchConfig, BoxType } from '@/hooks/use-watch-config';
-import {
-  useCreateConfiguration,
-  useCreateOrder,
-  useCalculatePrice,
-} from '@workspace/api-client-react';
+import { useCreateConfiguration, useCreateOrder } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
 import { Ribbon } from 'lucide-react';
 import { TgStar } from '@/components/TgStar';
 
 const WatchBoxScene = lazy(() => import('@/components/WatchBoxScene'));
+
+const BRACELET_PRICES: Record<string, number> = {
+  plastic_solid: 0, plastic_segmented: 1, metal_solid: 3, metal_segmented: 4,
+  resin: 2, leather: 3, cotton_fabric: 1,
+};
 
 
 // ─── Box options data ────────────────────────────────────────────────────────
@@ -65,30 +66,24 @@ export default function BoxSetup() {
   const [boxOpen, setBoxOpen] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
-  const [basePrice, setBasePrice] = useState<number | null>(null);
 
   const createConfig = useCreateConfiguration();
   const createOrder = useCreateOrder();
-  const calcPrice = useCalculatePrice();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      calcPrice.mutateAsync({
-        data: {
-          watchfaceGeometry: config.watchfaceGeometry,
-          watchfaceMaterial: config.watchfaceMaterial,
-          braceletMaterial: config.braceletMaterial,
-          handsEnabled: config.handsEnabled,
-          watchfaceText: config.watchfaceText || undefined,
-        },
-      }).then(r => setBasePrice(r.totalStars)).catch(() => {});
-    }, 200);
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const boxOption = BOX_OPTIONS.find(b => b.id === selectedBox)!;
-  const totalStars = (basePrice ?? 0) + boxOption.surcharge + (giftWrap ? 2 : 0); // UI estimate; server recalculates on submit
+
+  // Client-side price: preset base + bracelet delta + text/hands + box + ribbon
+  const totalStars = useMemo(() => {
+    const base = config.priceStars ?? 0;
+    const origBracelet = config.presetBraceletMaterial ?? config.braceletMaterial ?? 'metal_solid';
+    const curBracelet  = config.braceletMaterial ?? origBracelet;
+    const braceletDelta = (BRACELET_PRICES[curBracelet] ?? 0) - (BRACELET_PRICES[origBracelet] ?? 0);
+    const textCharge   = config.watchfaceText ? 1 : 0;
+    const handsDiscount = config.handsEnabled === false ? -1 : 0;
+    const raw = base + braceletDelta + textCharge + handsDiscount + boxOption.surcharge + (giftWrap ? 2 : 0);
+    return Math.min(50, Math.max(1, raw));
+  }, [config.priceStars, config.presetBraceletMaterial, config.braceletMaterial,
+      config.watchfaceText, config.handsEnabled, boxOption.surcharge, giftWrap]);
 
   const handleOrder = async () => {
     setSubmitting(true);
@@ -111,22 +106,13 @@ export default function BoxSetup() {
           sessionId,
           boxType: selectedBox,
           giftWrap,
-        },
+          presetPriceStars: config.priceStars ?? undefined,
+          presetBraceletMaterial: config.presetBraceletMaterial ?? undefined,
+          presetName: config.presetName ?? undefined,
+        } as any,
       });
-      const priceResult = await calcPrice.mutateAsync({
-        data: {
-          watchfaceGeometry: config.watchfaceGeometry,
-          watchfaceMaterial: config.watchfaceMaterial,
-          braceletMaterial: config.braceletMaterial,
-          handsEnabled: config.handsEnabled,
-          watchfaceText: config.watchfaceText || undefined,
-          boxType: selectedBox,
-          giftWrap,
-        },
-      });
-      const finalStars = priceResult.totalStars;
       const order = await createOrder.mutateAsync({
-        data: { configId: cfg.id, sessionId, totalStars: finalStars },
+        data: { configId: cfg.id, sessionId, totalStars },
       });
       setLocation(`/payment/${order.id}`);
     } catch (e) {

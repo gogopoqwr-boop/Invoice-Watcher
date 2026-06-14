@@ -3,19 +3,6 @@ export interface BreakdownItem {
   stars: number;
 }
 
-const GEOM_PRICES: Record<string, number> = { circle: 0, rounded: 0, square: 1 };
-const GEOM_LABELS: Record<string, string> = {
-  circle: 'Круглая форма',
-  rounded: 'Скруглённая форма',
-  square: 'Квадратная форма',
-};
-
-const MAT_PRICES: Record<string, number> = { plastic: 0, metal: 3 };
-const MAT_LABELS: Record<string, string> = {
-  plastic: 'Пластиковый корпус',
-  metal: 'Металлический корпус',
-};
-
 const BRACELET_PRICES: Record<string, number> = {
   plastic_solid: 0,
   plastic_segmented: 1,
@@ -52,27 +39,38 @@ export interface ConfigForReceipt {
   skinStripeUrl?: string | null;
   boxType?: string | null;
   giftWrap?: boolean | null;
+  presetPriceStars?: number | null;
+  presetBraceletMaterial?: string | null;
+  presetName?: string | null;
 }
 
 export function buildBreakdown(config: ConfigForReceipt): { breakdown: BreakdownItem[]; total: number } {
   const items: BreakdownItem[] = [];
 
-  items.push({ label: 'Базовая цена', stars: 5 });
+  if (config.presetPriceStars != null) {
+    const label = config.presetName ? `Часы «${config.presetName}»` : 'Корпус часов';
+    items.push({ label, stars: config.presetPriceStars });
 
-  const geom = config.watchfaceGeometry ?? 'circle';
-  const geomPrice = GEOM_PRICES[geom] ?? 0;
-  if (geomPrice > 0) items.push({ label: GEOM_LABELS[geom] ?? geom, stars: geomPrice });
-
-  const mat = config.watchfaceMaterial ?? 'metal';
-  const matPrice = MAT_PRICES[mat] ?? 0;
-  if (matPrice > 0) items.push({ label: MAT_LABELS[mat] ?? mat, stars: matPrice });
-
-  const bracelet = config.braceletMaterial ?? 'metal_solid';
-  const braceletPrice = BRACELET_PRICES[bracelet] ?? 0;
-  if (braceletPrice > 0) items.push({ label: BRACELET_LABELS[bracelet] ?? bracelet, stars: braceletPrice });
+    const origBracelet = config.presetBraceletMaterial ?? config.braceletMaterial ?? 'metal_solid';
+    const curBracelet  = config.braceletMaterial ?? origBracelet;
+    const delta = (BRACELET_PRICES[curBracelet] ?? 0) - (BRACELET_PRICES[origBracelet] ?? 0);
+    if (delta !== 0) {
+      items.push({
+        label: delta > 0
+          ? `Замена: ${BRACELET_LABELS[curBracelet] ?? curBracelet}`
+          : `Замена: ${BRACELET_LABELS[curBracelet] ?? curBracelet}`,
+        stars: delta,
+      });
+    }
+  } else {
+    items.push({ label: 'Базовая цена', stars: 5 });
+    const bracelet = config.braceletMaterial ?? 'metal_solid';
+    const braceletPrice = BRACELET_PRICES[bracelet] ?? 0;
+    if (braceletPrice > 0) items.push({ label: BRACELET_LABELS[bracelet] ?? bracelet, stars: braceletPrice });
+  }
 
   if (config.handsEnabled === false) items.push({ label: 'Без стрелок', stars: -1 });
-  if (config.watchfaceText) items.push({ label: `Надпись: "${config.watchfaceText}"`, stars: 1 });
+  if (config.watchfaceText) items.push({ label: `Гравировка: "${config.watchfaceText}"`, stars: 1 });
   if (config.customWatchfaceUrl) items.push({ label: 'Кастомный циферблат', stars: 1 });
   if (config.skinFullUrl) items.push({ label: 'Скин на корпус', stars: 1 });
   if (config.skinStripeUrl) items.push({ label: 'Скин на ремешок', stars: 1 });
@@ -89,9 +87,9 @@ export function buildBreakdown(config: ConfigForReceipt): { breakdown: Breakdown
 
 export function formatReceiptText(breakdown: BreakdownItem[], total: number): string {
   const lines = breakdown.map(item => {
-    const sign = item.stars > 0 ? `+${item.stars}` : `${item.stars}`;
-    const isBase = item.label === 'Базовая цена';
-    return `  ${item.label}: ${isBase ? item.stars : sign} ⭐`;
+    const isBase = item.stars > 0 && breakdown.indexOf(item) === 0;
+    const sign = isBase ? `${item.stars}` : item.stars > 0 ? `+${item.stars}` : `${item.stars}`;
+    return `  ${item.label}: ${sign} ⭐`;
   });
   return lines.join('\n') + '\n  ─────────────────\n' + `  *Итого: ${total} ⭐*`;
 }

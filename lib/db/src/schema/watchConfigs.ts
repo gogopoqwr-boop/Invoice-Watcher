@@ -28,6 +28,9 @@ export const watchConfigsTable = pgTable("watch_configs", {
   boxColor: text("box_color").default("#1A1A1A"),
   watchfaceText: text("watchface_text"),
   giftWrap: boolean("gift_wrap").default(false),
+  presetPriceStars: integer("preset_price_stars"),
+  presetBraceletMaterial: text("preset_bracelet_material"),
+  presetName: text("preset_name"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
