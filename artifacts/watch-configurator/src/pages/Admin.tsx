@@ -503,9 +503,9 @@ export default function Admin() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {([
                     { label:"Всего заказов", value:String((analytics as any).totalOrders??0), icon:<ClipboardList size={18} className="text-muted-foreground"/> },
-                    { label:"В обработке", value:String((analytics as any).processingOrders??0), icon:<Settings2 size={18} className="text-blue-400"/> },
-                    { label:"Звёзд получено", value:`${(analytics as any).totalStarsEarned??0}`, icon:<Sparkles size={18} className="text-yellow-400"/> },
-                    { label:"Конверсия", value:(analytics as any).totalOrders>0?`${Math.round(((analytics as any).paidOrders??0)/((analytics as any).totalOrders)*100)}%`:"—", icon:<TrendingUp size={18} className="text-emerald-400"/> },
+                    { label:"Оплачено", value:String((analytics as any).paidOrders??0), icon:<Settings2 size={18} className="text-blue-400"/> },
+                    { label:"Звёзд получено", value:`${(analytics as any).totalRevenue??0}`, icon:<Sparkles size={18} className="text-yellow-400"/> },
+                    { label:"Конверсия", value:(analytics as any).checkoutStarts>0?`${(analytics as any).conversionRate??0}%`:"—", icon:<TrendingUp size={18} className="text-emerald-400"/> },
                   ] as any[]).map((stat,i)=>(
                     <div key={i} className="liquid-glass rounded-2xl p-4">
                       <div className="flex items-center gap-2 mb-2">{stat.icon}<p className="text-xs text-muted-foreground">{stat.label}</p></div>
