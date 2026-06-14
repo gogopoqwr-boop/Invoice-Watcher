@@ -1,9 +1,9 @@
-import React, { useEffect, useState, useRef, Suspense } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { useSpring } from '@react-spring/three';
-import WatchModel from '@/components/WatchModel';
+import { MiniWatch } from '@/components/WatchMiniCanvas';
 import type { ExtendedConfigState } from '@/hooks/use-watch-config';
 
 // ─── WebGL check ────────────────────────────────────────────────────────────
@@ -241,25 +241,32 @@ function WatchInBox({ config, visible }: { config: ExtendedConfigState; visible:
   });
   const watchRef = useRef<THREE.Group>(null);
   useFrame(() => {
-    if (watchRef.current) watchRef.current.scale.setScalar(sc.get() * 0.46);
+    if (watchRef.current) watchRef.current.scale.setScalar(sc.get() * 0.62);
   });
 
   return (
     <group visible={visible}>
       {/*
-        Rotation: face-up (face normal points +Y = up).
-        The WatchModel local frame: face normal = +Z, strap = ±Y.
-        Rotating -π/2 around X maps: +Z → +Y, +Y → -Z, -X → -X.
-        So face looks up, strap extends along ±Z (box depth direction). ✓
+        Face-up orientation: MiniWatch local frame has face normal = +Z, strap = ±Y.
+        Rotating -π/2 around X maps: +Z → +Y (face points up), +Y → -Z (strap along box depth). ✓
+        MiniWatch uses pure Three.js geometry — no context dependency, reliable in any Canvas.
       */}
       <group
         ref={watchRef}
         position={[0, WATCH_Y, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
       >
-        <Suspense fallback={null}>
-          <WatchModel configOverride={config} paused />
-        </Suspense>
+        <MiniWatch
+          watchfaceGeometry={config.watchfaceGeometry ?? 'circle'}
+          watchfaceColor={config.watchfaceColor ?? '#C0C0C0'}
+          braceletColor={config.braceletColor ?? '#888888'}
+          braceletMaterial={config.braceletMaterial ?? 'leather'}
+          handsColor={config.handsColor ?? '#ffffff'}
+          handsEnabled={config.handsEnabled ?? true}
+          watchfaceText={config.watchfaceText ?? ''}
+          watchfaceTextMode={config.watchfaceTextMode ?? 'circular'}
+          paused
+        />
       </group>
     </group>
   );
@@ -470,7 +477,7 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
       onPointerUp={onToggle ? handlePointerUp : undefined}
     >
       <Canvas
-        camera={{ position: [1.2, 2.8, 7.5], fov: 40 }}
+        camera={{ position: [1.5, 4.5, 12.5], fov: 42 }}
         gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
         style={{ background: 'transparent' }}
         shadows

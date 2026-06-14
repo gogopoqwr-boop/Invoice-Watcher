@@ -143,7 +143,7 @@ export function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, br
   const isResin = braceletMaterial === 'resin';
 
   useFrame((state) => {
-    if (!groupRef.current) return;
+    if (!groupRef.current || paused) return;
     const t = state.clock.elapsedTime;
     groupRef.current.rotation.y = Math.sin(t * 0.45) * 0.38;
   });
