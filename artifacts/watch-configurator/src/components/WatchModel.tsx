@@ -132,25 +132,6 @@ function buildFaceTexture(
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, S, S);
 
-  const markerR = S * 0.33;
-  for (let i = 0; i < 12; i++) {
-    const a = (i * Math.PI * 2) / 12 - Math.PI / 2;
-    const x = S / 2 + markerR * Math.cos(a);
-    const y = S / 2 + markerR * Math.sin(a);
-    ctx.beginPath();
-    const dotR = isCircular ? (i % 3 === 0 ? 4 : 2) : (i % 3 === 0 ? 8 : 4);
-    ctx.arc(x, y, dotR, 0, Math.PI * 2);
-    ctx.fillStyle = handsColor;
-    ctx.globalAlpha = isCircular ? 0.35 : 0.8;
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  ctx.beginPath();
-  ctx.arc(S / 2, S / 2, 7, 0, Math.PI * 2);
-  ctx.fillStyle = handsColor;
-  ctx.fill();
-
   const rawText = text?.trim().toUpperCase() ?? '';
   const hasText  = rawText.length > 0 && !rawText.startsWith('EYE:');
 
