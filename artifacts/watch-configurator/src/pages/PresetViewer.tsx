@@ -413,22 +413,6 @@ export default function PresetViewer() {
 
         <div className="px-6 pb-6 pt-4 flex flex-col gap-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <button
-            onClick={handleBuy}
-            disabled={!preset}
-            className="w-full py-3.5 rounded-2xl font-black text-sm tracking-widest uppercase transition-all active:scale-[0.98] disabled:opacity-40"
-            style={{
-              background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
-              color: '#fff',
-              boxShadow: '0 4px 24px rgba(99,102,241,0.35)',
-            }}
-          >
-            {preset ? (
-            <span className="flex items-center justify-center gap-2">
-              Заказать — {preset.priceStars} <TgStar size={16} />
-            </span>
-          ) : '…'}
-          </button>
-          <button
             onClick={handleConfigure}
             disabled={!preset}
             className="w-full py-3 rounded-2xl text-sm font-bold tracking-wide text-white/55 hover:text-white/85 transition-colors disabled:opacity-40"
