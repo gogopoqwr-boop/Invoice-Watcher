@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>НА_УТРАХ_4 — [DRAFT] Конфигуратор</title>
+    <!-- Telegram Mini App SDK — ОБЯЗАТЕЛЬНО первым -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Montserrat:ital,wght@0,400;0,700;1,900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #f4f4f5;
+            color: #09090b;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        /* ===== DARK MODE ===== */
+        body.dark { background-color: #09090b; color: #f4f4f5; }
+        body.dark header { background-color: rgba(9,9,11,0.92) !important; border-color: #3f3f46 !important; }
+        body.dark footer { background-color: #09090b !important; border-color: #3f3f46 !important; }
+        body.dark .bg-white { background-color: #18181b !important; }
+        body.dark .bg-white\/90 { background-color: rgba(9,9,11,0.92) !important; }
+        body.dark .bg-zinc-50, body.dark .bg-neutral-50 { background-color: #27272a !important; }
+        body.dark .bg-neutral-100 { background-color: #27272a !important; }
+        body.dark .bg-neutral-200 { background-color: #3f3f46 !important; }
+        body.dark .text-black { color: #f4f4f5 !important; }
+        body.dark .text-neutral-500 { color: #a1a1aa !important; }
+        body.dark .text-neutral-400 { color: #71717a !important; }
+        body.dark .text-neutral-600 { color: #a1a1aa !important; }
+        body.dark .text-neutral-700 { color: #d4d4d8 !important; }
+        body.dark .text-neutral-800 { color: #e4e4e7 !important; }
+        body.dark .border-black { border-color: #e4e4e7 !important; }
+        body.dark .border-neutral-300 { border-color: #3f3f46 !important; }
+        body.dark .border-neutral-200 { border-color: #27272a !important; }
+        body.dark .border-dashed { border-color: #52525b !important; }
+        body.dark .no-hover-card { box-shadow: 8px 8px 0px #3f3f46 !important; }
+        body.dark .bg-black { background-color: #e4e4e7 !important; color: #09090b !important; }
+        body.dark .text-white { color: #09090b !important; }
+        body.dark button.bg-black { background-color: #e4e4e7 !important; color: #09090b !important; border-color: #e4e4e7 !important; }
+        body.dark button.bg-white { background-color: #18181b !important; color: #d4d4d8 !important; }
+        body.dark .bg-yellow-100 { background-color: #422006 !important; border-color: #92400e !important; }
+        body.dark .text-yellow-800 { color: #fbbf24 !important; }
+        body.dark .bg-red-100 { background-color: #450a0a !important; border-color: #991b1b !important; }
+        body.dark .text-red-500 { color: #f87171 !important; }
+        body.dark .text-red-800 { color: #fca5a5 !important; }
+        body.dark .figma-grid {
+            background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+        }
+        body.dark input[type="text"] { background-color: #18181b !important; color: #f4f4f5 !important; border-color: #e4e4e7 !important; }
+        body.dark input[type="text"]::placeholder { color: #52525b !important; }
+        body.dark #checkout-modal > div { background-color: #18181b !important; border-color: #e4e4e7 !important; }
+        body.dark #success-toast { background-color: #18181b !important; border-color: #e4e4e7 !important; }
+
+        /* Свитчер тёмной темы */
+        .dark-toggle { position: relative; width: 44px; height: 24px; cursor: pointer; flex-shrink: 0; }
+        .dark-toggle input { display: none; }
+        .dark-toggle-track { width: 44px; height: 24px; background: #d4d4d8; border: 2px solid #000; display: flex; align-items: center; padding: 2px; transition: background 0.2s; }
+        body.dark .dark-toggle-track { background: #3f3f46; border-color: #e4e4e7; }
+        .dark-toggle-thumb { width: 16px; height: 16px; background: #000; transition: transform 0.2s; display: flex; align-items: center; justify-content: center; font-size: 10px; line-height: 1; }
+        body.dark .dark-toggle-thumb { transform: translateX(20px); background: #e4e4e7; }
+
+        /* Экстремально наклонный логотип Чеблячас в монохроме */
+        .cheblyachas-logo {
+            font-family: 'Unbounded', sans-serif;
+            font-weight: 900;
+            transform: rotate(-4deg) skewX(-12deg);
+            letter-spacing: -0.05em;
+            text-shadow: 4px 4px 0px #999999;
+            display: inline-block;
+        }
+        /* Карточки без hover-эффектов по ТЗ + эффект недоделанного чертежа */
+        .no-hover-card {
+            transition: none !important;
+            transform: none !important;
+            box-shadow: 8px 8px 0px #000000 !important;
+        }
+        /* Вспомогательные сетки как в Figma */
+        .figma-grid {
+            background-size: 20px 20px;
+            background-image: linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden antialiased figma-grid">
+
+    <!-- Хедер сайта с пометкой дебага -->
+    <header class="border-b-2 border-black py-6 px-4 bg-white/90 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 relative">
+            
+            <!-- Фирменный экстремально наклонный чб логотип -->
+            <div class="flex items-center gap-4">
+                <span class="text-3xl sm:text-4xl text-black cheblyachas-logo">НА_УТРАХ_4</span>
+                <span class="bg-black text-white text-[9px] font-mono px-2 py-0.5 uppercase tracking-widest animate-pulse">
+                    [BRANCH: fix-deadlines-v3]
+                </span>
+            </div>
+
+            <!-- Комментарий дизайнера прямо на верстке -->
+            <div class="absolute -bottom-16 left-4 bg-yellow-100 border border-yellow-400 text-yellow-800 text-[10px] font-mono p-1.5 shadow-sm max-w-[280px] z-20 transform -rotate-1 hidden sm:block">
+                📌 <strong>Тимлид:</strong> Гриша, логотип наклонили, как ты просил. Но верстка поехала. ПОтоМ доделаем дод).
+            </div>
+
+            <div class="flex items-center gap-3">
+                <p class="text-neutral-500 text-xs font-mono uppercase tracking-widest text-center sm:text-right">
+                    Draft: 0.9.4-beta // Сборка №11111
+                </p>
+                <!-- Свитчер тёмной темы -->
+                <label class="dark-toggle" title="Тёмная тема" onclick="toggleDarkMode()">
+                    <div class="dark-toggle-track">
+                        <div class="dark-toggle-thumb" id="dark-thumb">☀️</div>
+                    </div>
+                </label>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-6xl mx-auto px-4 py-8 mt-6">
+
+        <!-- ГЛАВНЫЙ ИНТЕРАКТИВНЫЙ КОНФИГУРАТОР В ВИДЕ ЧЕРТЕЖА -->
+        <section class="mb-16 bg-white border-4 border-black p-6 md:p-8 shadow-[10px_10px_0px_#000000] relative">
+            
+            <!-- Технические метки на рамке макета -->
+            <div class="absolute -top-3.5 left-4 bg-black text-white text-[9px] font-mono px-2 py-0.5 uppercase">
+                &lt;div class="interactive-sandbox"&gt;
+            </div>
+            <div class="absolute -right-3.5 top-1/2 -translate-y-1/2 bg-neutral-300 text-neutral-700 text-[9px] font-mono py-2 px-0.5 uppercase tracking-widest [writing-mode:vertical-lr] hidden md:block">
+                width: 100% | max-width: 1152px
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                
+                <!-- Левая колонка: Рендер часов с векторной разметкой -->
+                <div class="lg:col-span-5 flex flex-col items-center justify-center bg-zinc-50 border-2 border-dashed border-neutral-400 p-6 relative">
+                    
+                    <!-- Figma-стиль прицел/координаты -->
+                    <div class="absolute top-2 left-2 text-[9px] font-mono text-neutral-400">X: 420 | Y: 1080</div>
+                    <div class="absolute bottom-2 right-2 text-[9px] font-mono text-neutral-400">W: 320px | H: 320px</div>
+
+                    <!-- SVG-сцена часов -->
+                    <svg id="watch-svg-canvas" class="w-72 h-72 sm:w-80 sm:h-80" viewBox="0 0 200 200">
+                        <defs>
+                            <!-- Металлическая текстура -->
+                            <linearGradient id="metal-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#ffffff" />
+                                <stop offset="30%" stop-color="#cccccc" />
+                                <stop offset="70%" stop-color="#777777" />
+                                <stop offset="100%" stop-color="#333333" />
+                            </linearGradient>
+                            
+                            <!-- Матовый пластик -->
+                            <linearGradient id="plastic-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#444444" />
+                                <stop offset="50%" stop-color="#222222" />
+                                <stop offset="100%" stop-color="#111111" />
+                            </linearGradient>
+
+                            <!-- Тканевая текстура -->
+                            <pattern id="fabric-pattern" width="6" height="6" patternUnits="userSpaceOnUse">
+                                <rect width="6" height="6" fill="#888888" />
+                                <line x1="0" y1="0" x2="6" y2="6" stroke="#444444" stroke-width="1.5" />
+                                <line x1="6" y1="0" x2="0" y2="6" stroke="#222222" stroke-width="1" />
+                            </pattern>
+
+                            <!-- Хромированный ремешок -->
+                            <linearGradient id="metal-strap-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#666666" />
+                                <stop offset="25%" stop-color="#dddddd" />
+                                <stop offset="50%" stop-color="#999999" />
+                                <stop offset="75%" stop-color="#eeeeee" />
+                                <stop offset="100%" stop-color="#444444" />
+                            </linearGradient>
+                        </defs>
+
+                        <!-- Динамический ремешок -->
+                        <g id="svg-strap-group"></g>
+
+                        <!-- Корпус часов -->
+                        <g id="svg-case-group"></g>
+
+                        <!-- Циферблат -->
+                        <g id="svg-dial-group">
+                            <circle cx="100" cy="100" r="46" fill="#ffffff" stroke="#000" stroke-width="1.5" />
+                            <g id="dial-text-elements"></g>
+                        </g>
+
+                        <!-- Гравировка серийника -->
+                        <text x="100" y="162" id="svg-serial-engraving" font-family="monospace" font-weight="bold" font-size="6" fill="#444" text-anchor="middle" letter-spacing="1">SER. 11111</text>
+                    </svg>
+
+                    <!-- Ограничительная рамка выделения Figma (синяя тонкая рамка вокруг превью) -->
+                    <div class="absolute inset-0 border border-blue-500 pointer-events-none opacity-40"></div>
+                    <div class="absolute -top-1.5 -left-1.5 w-3 h-3 border border-blue-500 bg-white pointer-events-none opacity-40"></div>
+                    <div class="absolute -top-1.5 -right-1.5 w-3 h-3 border border-blue-500 bg-white pointer-events-none opacity-40"></div>
+                    <div class="absolute -bottom-1.5 -left-1.5 w-3 h-3 border border-blue-500 bg-white pointer-events-none opacity-40"></div>
+                    <div class="absolute -bottom-1.5 -right-1.5 w-3 h-3 border border-blue-500 bg-white pointer-events-none opacity-40"></div>
+
+                    <!-- Интерактивный калькулятор цены под спайсом -->
+                    <div class="mt-4 text-center">
+                        <span class="text-neutral-400 font-mono text-[10px] uppercase block">[!] Расчет цены (под спайсом):</span>
+                        <div class="flex items-center justify-center gap-2">
+                            <span id="configurator-price-display" class="text-3xl font-black text-black">11 111 ₽</span>
+                            <span id="custom-text-badge" class="hidden bg-black text-white text-[9px] font-mono px-1.5 py-0.5 uppercase tracking-widest">+6048 ⭐ ЗА КАСТОМ</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Правая колонка: Пульт управления опциями -->
+                <div class="lg:col-span-7 space-y-6">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-2xl font-black uppercase text-black">Инженерный пульт</h2>
+                        <span class="text-[10px] font-mono text-neutral-400">v0.9.6</span>
+                    </div>
+
+                    <!-- 1. Выбор Формы и Материала Корпуса -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Материал корпуса -->
+                        <div>
+                            <label class="block text-xs font-mono text-neutral-500 uppercase mb-2">
+                                🔌 Срез материала:
+                            </label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="setCaseMaterial('plastic')" id="opt-mat-plastic" class="py-2 px-3 text-xs font-mono font-bold uppercase border-2 border-black bg-black text-white">
+                                    Пластик
+                                </button>
+                                <button onclick="setCaseMaterial('metal')" id="opt-mat-metal" class="py-2 px-3 text-xs font-mono font-bold uppercase border border-neutral-300 text-neutral-400 bg-white">
+                                    Металл
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Форма корпуса -->
+                        <div>
+                            <label class="block text-xs font-mono text-neutral-500 uppercase mb-2">
+                                🛠 Геометрия:
+                            </label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="setCaseShape('round')" id="opt-shape-round" class="py-2 px-3 text-xs font-mono font-bold uppercase border-2 border-black bg-black text-white">
+                                    Круглые
+                                </button>
+                                <button onclick="setCaseShape('square')" id="opt-shape-square" class="py-2 px-3 text-xs font-mono font-bold uppercase border border-neutral-300 text-neutral-400 bg-white">
+                                    Квадратные
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+<!-- Блок управления стрелками -->
+<div class="my-4 p-3 border border-neutral-200 bg-white flex items-center justify-between">
+    <label class="text-xs font-mono text-neutral-700 uppercase font-bold flex items-center gap-2">
+        <input type="checkbox" checked onchange="setHandsVisibility(this.checked)" class="accent-black w-4 h-4">
+        Стрелки-болванки
+    </label>
+</div>
+
+                    <!-- НОВЫЙ ВЫБОР: Спецтехника серии "Рабочий класс" в один клик -->
+                    <div class="border-2 border-dashed border-neutral-400 p-3 bg-neutral-50">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-xs font-mono text-neutral-700 uppercase font-bold">
+                                🚜 Серия «Рабочий класс»:
+                            </label>
+                            <span class="text-[9px] font-mono bg-neutral-200 px-1 py-0.5">В один клик</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="applyWorkClass('трактор')" id="opt-wc-tractor" class="py-1.5 px-2 text-[10px] font-mono font-bold uppercase border border-neutral-300 bg-white hover:bg-neutral-100">
+                                Трактор
+                            </button>
+                            <button onclick="applyWorkClass('комбайн')" id="opt-wc-harvester" class="py-1.5 px-2 text-[10px] font-mono font-bold uppercase border border-neutral-300 bg-white hover:bg-neutral-100">
+                                Комбайн
+                            </button>
+                            <button onclick="applyWorkClass('машина')" id="opt-wc-car" class="py-1.5 px-2 text-[10px] font-mono font-bold uppercase border border-neutral-300 bg-white hover:bg-neutral-100">
+                                Машина
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 2. Выбор Серийного номера из разрешенного списка -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-xs font-mono text-neutral-500 uppercase">
+                                🆔 Базовая цена / Серийник:
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <span id="serial-lock-badge" class="hidden text-[9px] font-mono text-white bg-black px-1.5 py-0.5 uppercase tracking-widest">🔒 LOCKED</span>
+                                <button id="serial-unlock-btn" onclick="unlockSerial()" class="hidden text-[9px] font-mono border border-neutral-400 text-neutral-500 bg-white px-1.5 py-0.5 uppercase hover:bg-neutral-100">UNLOCK</button>
+                                <span class="text-[9px] font-mono text-red-500">[!] Цена в Telegram Stars ⭐</span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 sm:grid-cols-6 gap-2" id="serial-buttons-group">
+                            <button onclick="setSerialCode('6043')" id="opt-serial-6043" class="py-2 px-1 text-xs font-mono font-bold border border-neutral-300 text-neutral-400 bg-white">⭐ 6043</button>
+                            <button onclick="setSerialCode('6401')" id="opt-serial-6401" class="py-2 px-1 text-xs font-mono font-bold border border-neutral-300 text-neutral-400 bg-white">⭐ 6401</button>
+                            <button onclick="setSerialCode('8080')" id="opt-serial-8080" class="py-2 px-1 text-xs font-mono font-bold border border-neutral-300 text-neutral-400 bg-white">⭐ 8080</button>
+                            <button onclick="setSerialCode('8407')" id="opt-serial-8407" class="py-2 px-1 text-xs font-mono font-bold border border-neutral-300 text-neutral-400 bg-white">⭐ 8407</button>
+                            <button onclick="setSerialCode('10101')" id="opt-serial-10101" class="py-2 px-1 text-xs font-mono font-bold border border-neutral-300 text-neutral-400 bg-white">⭐ 10101</button>
+                            <button onclick="setSerialCode('11111')" id="opt-serial-11111" class="py-2 px-1 text-xs font-mono font-bold border-2 border-black bg-black text-white">⭐ 11111</button>
+                        </div>
+                    </div>
+
+                    <!-- 3. Выбор типа ремешка -->
+                    <div>
+                        <label class="block text-xs font-mono text-neutral-500 uppercase mb-2">
+                            ⛓ Крепление и узел:
+                        </label>
+                        <div class="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                            <button onclick="setStrapType('fabric')" id="opt-strap-fabric" class="py-2 px-1 text-[10px] font-mono font-bold uppercase border border-neutral-300 text-neutral-400 bg-white">
+                                Ткань
+                            </button>
+                            <button onclick="setStrapType('plastic-solid')" id="opt-strap-plastic-solid" class="py-2 px-1 text-[10px] font-mono font-bold uppercase border-2 border-black bg-black text-white">
+                                Пласт Sol
+                            </button>
+                            <button onclick="setStrapType('plastic-segmented')" id="opt-strap-plastic-segmented" class="py-2 px-1 text-[10px] font-mono font-bold uppercase border border-neutral-300 text-neutral-400 bg-white">
+                                Пласт Seg
+                            </button>
+                            <button onclick="setStrapType('metal-solid')" id="opt-strap-metal-solid" class="py-2 px-1 text-[10px] font-mono font-bold uppercase border border-neutral-300 text-neutral-400 bg-white">
+                                Мет Sol
+                            </button>
+                            <button onclick="setStrapType('metal-segmented')" id="opt-strap-metal-segmented" class="py-2 px-1 text-[10px] font-mono font-bold uppercase border border-neutral-300 text-neutral-400 bg-white">
+                                Мет Seg
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 4. Свое слово на циферблате с доплатой -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-xs font-mono text-neutral-500 uppercase font-bold">
+                                ✍️ Свой текст на циферблате (+6048 ⭐ доплаты):
+                            </label>
+                            <span class="text-[9px] font-mono text-black font-bold uppercase bg-yellow-200 px-1">Доплата 6048 ⭐</span>
+                        </div>
+                        <div class="flex gap-2 relative">
+                            <input type="text" id="configurator-text-input" oninput="updateConfiguratorDialText(this.value)" placeholder="Пиши дичь..." maxlength="20" class="flex-grow bg-white border-2 border-black p-3 text-sm rounded-none text-black focus:outline-none focus:ring-1 focus:ring-black font-mono uppercase">
+                            <button onclick="resetDialTextToDefault()" class="bg-neutral-200 hover:bg-neutral-300 text-black font-mono px-4 text-xs uppercase border border-black">
+                                DEL
+                            </button>
+                        </div>
+
+                        <!-- Расположение текста -->
+                        <div class="flex items-center gap-2 mt-2">
+                            <span class="text-[10px] font-mono text-neutral-500 uppercase">Расположение:</span>
+                            <button id="layout-center-btn" onclick="setTextLayout('center')"
+                                class="py-1 px-2 text-[10px] font-mono font-bold uppercase border-2 border-black bg-black text-white">
+                                ⊙ По центру
+                            </button>
+                            <button id="layout-circle-btn" onclick="setTextLayout('circle')"
+                                class="py-1 px-2 text-[10px] font-mono font-bold uppercase border border-neutral-300 bg-white text-neutral-500">
+                                ◎ По кругу
+                            </button>
+                        </div>
+
+                        <span class="text-[9px] font-mono text-red-500 mt-1 block">
+                            ⚠️ [TODO] Добавить цензуру мата (Тимлид: "Да забей, пусть пишут че хотят")
+                        </span>
+                    </div>
+
+                    <!-- Кнопка купить текущую конфигурацию -->
+                    <div class="pt-2 relative">
+                        <button onclick="openConfiguratorCheckout()" class="w-full bg-white text-black font-black uppercase py-4 border-4 border-black tracking-wider text-base shadow-[5px_5px_0px_#000000] hover:bg-black hover:text-white transition-colors">
+                            ОТПРАВИТЬ СБОРКУ В СДЭК_v2.0
+                        </button>
+                        
+                        <!-- Figma комент возле кнопки -->
+                        <div class="absolute -right-6 -bottom-12 bg-red-100 border border-red-400 text-red-800 text-[10px] font-mono p-1 shadow-sm max-w-[200px] z-20 rotate-3 hidden md:block">
+                            ❌ Оплаты картой нет. Эквайринг упал. Менеджер напишет в ТГ и скинет карту Сбера.
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ПИРАМИДАЛЬНЫЙ КАТАЛОГ (СТРОГО БЕЗ HOVER REACTION ПО ТЗ, ЧЕРТЕЖНЫЙ ВИД) -->
+        <div class="text-center mb-8">
+            <span class="text-[10px] font-mono text-neutral-400 block tracking-widest">&lt;!-- START OF PRODUCT_PYRAMID --&gt;</span>
+            <h2 class="text-2xl font-black uppercase text-black mt-1">ОБРАЗЦЫ ИЗ РЕПОЗИТОРИЯ</h2>
+        </div>
+
+        <div class="space-y-8 mb-20 relative">
+            
+            <!-- УРОВЕНЬ 1 (Вершина пирамиды: 1 Карта) -->
+            <div class="flex justify-center">
+                <div class="w-full max-w-md bg-white border-2 border-dashed border-black p-6 rounded-none no-hover-card text-black relative">
+                    
+                    <div class="absolute -top-3 left-4 bg-black text-white text-[9px] font-mono px-1.5 py-0.5">
+                        &lt;div class="node-root"&gt;
+                    </div>
+
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="bg-neutral-200 text-black text-[9px] font-mono px-3 py-1 uppercase tracking-wider">
+                            DRAFT_TOP
+                        </span>
+                        <span class="text-neutral-500 font-mono text-xs">SER. #11111</span>
+                    </div>
+                    
+                    <div class="flex justify-center my-4 relative">
+                        <svg class="w-40 h-40" viewBox="0 0 200 200">
+                            <rect x="85" y="10" width="30" height="180" fill="#e4e4e7" rx="4" stroke="#000" stroke-width="1"/>
+                            <circle cx="100" cy="100" r="58" fill="#ffffff" stroke="#000000" stroke-width="4" />
+                            <circle cx="100" cy="100" r="48" fill="#ffffff" />
+                            <text x="100" y="70" font-family="'Unbounded', sans-serif" font-weight="900" font-size="13" fill="#000000" text-anchor="middle">Д</text>
+                            <text x="125" y="80" font-family="'Unbounded', sans-serif" font-weight="900" font-size="13" fill="#000000" text-anchor="middle">О</text>
+                            <text x="135" y="110" font-family="'Unbounded', sans-serif" font-weight="900" font-size="13" fill="#000000" text-anchor="middle">Х</text>
+                            <text x="120" y="135" font-family="'Unbounded', sans-serif" font-weight="900" font-size="13" fill="#000000" text-anchor="middle">У</text>
+                            <text x="100" y="145" font-family="'Unbounded', sans-serif" font-weight="900" font-size="13" fill="#000000" text-anchor="middle">И</text>
+                            <text x="75" y="130" font-family="'Unbounded', sans-serif" font-weight="900" font-size="13" fill="#000000" text-anchor="middle">Щ</text>
+                            <text x="75" y="95" font-family="'Unbounded', sans-serif" font-weight="900" font-size="13" fill="#000000" text-anchor="middle">А</text>
+                        </svg>
+                        <div class="absolute inset-0 border border-blue-400 pointer-events-none opacity-20"></div>
+                    </div>
+
+                    <h3 class="text-xl font-black mb-1 uppercase">«АДОХУИЩЩ» DRAFT</h3>
+                    <p class="text-neutral-500 text-xs mb-4">Lorem Ipsum, тут должен быть красивый продающий текст про вечные ценности и пластиковый корпус, но копирайтер уволился.</p>
+                    
+                    <button onclick="loadPreset('plastic', 'round', '11111', 'plastic-solid', 'АДОХУИЩЩ')" class="w-full bg-white text-black font-mono font-bold uppercase text-[10px] py-2 border-2 border-black tracking-wider shadow-[3px_3px_0px_#000] active:translate-x-0.5 active:translate-y-0.5">
+                        PUSH_TO_SANDBOX
+                    </button>
+                </div>
+            </div>
+
+            <!-- УРОВЕНЬ 2 (Середина пирамиды: 2 Карты) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                
+                <!-- Карта: Без пяти шесть утров -->
+                <div class="bg-white border-2 border-dashed border-black p-6 rounded-none no-hover-card text-black flex flex-col justify-between relative">
+                    
+                    <div class="absolute -top-3 left-4 bg-black text-white text-[9px] font-mono px-1.5 py-0.5">
+                        &lt;div class="node-mid-1"&gt;
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="bg-neutral-200 text-black text-[9px] font-mono px-3 py-1 uppercase tracking-wider">
+                                LEVEL_2_A
+                            </span>
+                            <span class="text-neutral-500 font-mono text-xs">SER. #6043</span>
+                        </div>
+                        
+                        <div class="flex justify-center my-4">
+                            <svg class="w-36 h-36" viewBox="0 0 200 200">
+                                <rect x="85" y="10" width="30" height="180" fill="#d4d4d8" rx="4" stroke="#000" stroke-width="1"/>
+                                <rect x="42" y="42" width="116" height="116" rx="20" fill="#ffffff" stroke="#000000" stroke-width="4" />
+                                <rect x="52" y="52" width="96" height="96" rx="12" fill="#ffffff" />
+                                <text x="100" y="88" font-family="'Unbounded', sans-serif" font-weight="900" font-size="11" fill="#000000" text-anchor="middle">БЕЗ ПЯТИ</text>
+                                <text x="100" y="110" font-family="'Unbounded', sans-serif" font-weight="900" font-size="10" fill="#000000" text-anchor="middle">ШЕСТЬ</text>
+                                <text x="100" y="126" font-family="'Unbounded', sans-serif" font-weight="900" font-size="10" fill="#000000" text-anchor="middle">УТРОВ</text>
+                            </svg>
+                        </div>
+
+                        <h3 class="text-lg font-black mb-1 uppercase">«БЕЗ ПЯТИ ШЕСТЬ УТРОВ»</h3>
+                        <p class="text-neutral-500 text-xs mb-4">Брутальный квадратный макет. Идеален для тех, у кого дедлайны горят синим пламенем.</p>
+                    </div>
+                    
+                    <button onclick="loadPreset('metal', 'square', '6043', 'metal-segmented', 'БЕЗ ПЯТИ ШЕСТЬ УТРОВ')" class="w-full bg-white text-black font-mono font-bold uppercase text-[10px] py-2 border-2 border-black tracking-wider shadow-[3px_3px_0px_#000]">
+                        PUSH_TO_SANDBOX
+                    </button>
+                </div>
+
+                <!-- Карта: Много -->
+                <div class="bg-white border-2 border-dashed border-black p-6 rounded-none no-hover-card text-black flex flex-col justify-between relative">
+                    
+                    <div class="absolute -top-3 left-4 bg-black text-white text-[9px] font-mono px-1.5 py-0.5">
+                        &lt;div class="node-mid-2"&gt;
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="bg-neutral-200 text-black text-[9px] font-mono px-3 py-1 uppercase tracking-wider">
+                                LEVEL_2_B
+                            </span>
+                            <span class="text-neutral-500 font-mono text-xs">SER. #8407</span>
+                        </div>
+                        
+                        <div class="flex justify-center my-4">
+                            <svg class="w-36 h-36" viewBox="0 0 200 200">
+                                <rect x="85" y="10" width="30" height="180" fill="url(#fabric-pattern)" rx="4" stroke="#000" stroke-width="1"/>
+                                <circle cx="100" cy="100" r="58" fill="#ffffff" stroke="#000000" stroke-width="4" />
+                                <circle cx="100" cy="100" r="48" fill="#ffffff" />
+                                <text x="100" y="107" font-family="'Unbounded', sans-serif" font-weight="900" font-size="15" fill="#000000" text-anchor="middle">МНОГО</text>
+                            </svg>
+                        </div>
+
+                        <h3 class="text-lg font-black mb-1 uppercase">«МНОГО» DRAFT</h3>
+                        <p class="text-neutral-500 text-xs mb-4">Сколько у нас осталось времени до релиза этого сайта? Много. Так что не паникуйте.</p>
+                    </div>
+                    
+                    <button onclick="loadPreset('plastic', 'round', '8407', 'fabric', 'МНОГО')" class="w-full bg-white text-black font-mono font-bold uppercase text-[10px] py-2 border-2 border-black tracking-wider shadow-[3px_3px_0px_#000]">
+                        PUSH_TO_SANDBOX
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- УРОВЕНЬ 3 (Основание пирамиды: 3 Карты) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                
+                <!-- Карта: Але -->
+                <div class="bg-white border-2 border-dashed border-black p-5 rounded-none no-hover-card text-black flex flex-col justify-between relative">
+                    <div class="absolute -top-3 left-4 bg-black text-white text-[9px] font-mono px-1.5 py-0.5">
+                        &lt;div class="node-base-1"&gt;
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="bg-neutral-200 text-black text-[9px] font-mono px-2 py-0.5 uppercase">L_3_A</span>
+                            <span class="text-neutral-500 font-mono text-xs">SER. #10101</span>
+                        </div>
+                        
+                        <div class="flex justify-center my-3">
+                            <svg class="w-32 h-32" viewBox="0 0 200 200">
+                                <rect x="85" y="10" width="30" height="180" fill="#a1a1aa" rx="4" stroke="#000" stroke-width="1"/>
+                                <circle cx="100" cy="100" r="58" fill="#ffffff" stroke="#000000" stroke-width="4" />
+                                <circle cx="100" cy="100" r="48" fill="#ffffff" />
+                                <text x="100" y="109" font-family="'Unbounded', sans-serif" font-weight="900" font-size="20" fill="#000000" text-anchor="middle" letter-spacing="1">АЛЕ</text>
+                            </svg>
+                        </div>
+
+                        <h3 class="text-base font-black mb-1 uppercase">«АЛЕ» MOCK</h3>
+                        <p class="text-neutral-500 text-[11px] mb-4">Быстрый ответ на звонки менеджеров в нерабочее время.</p>
+                    </div>
+                    
+                    <button onclick="loadPreset('plastic', 'round', '10101', 'plastic-segmented', 'АЛЕ')" class="w-full bg-white text-black font-mono font-bold uppercase text-[9px] py-2 border-2 border-black tracking-wider shadow-[2px_2px_0px_#000]">
+                        LOAD_DRAFT
+                    </button>
+                </div>
+
+                <!-- Карта: Сельхозтехника (Трактор) -->
+                <div class="bg-white border-2 border-dashed border-black p-5 rounded-none no-hover-card text-black flex flex-col justify-between relative">
+                    <div class="absolute -top-3 left-4 bg-black text-white text-[9px] font-mono px-1.5 py-0.5">
+                        &lt;div class="node-base-2"&gt;
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="bg-neutral-200 text-black text-[9px] font-mono px-2 py-0.5 uppercase">L_3_B</span>
+                            <span class="text-neutral-500 font-mono text-xs">SER. #11111</span>
+                        </div>
+                        
+                        <div class="flex justify-center my-3">
+                            <svg class="w-32 h-32" viewBox="0 0 200 200">
+                                <rect x="85" y="10" width="30" height="180" fill="#e4e4e7" rx="4" stroke="#000" stroke-width="1"/>
+                                <rect x="42" y="42" width="116" height="116" rx="20" fill="#ffffff" stroke="#000000" stroke-width="4" />
+                                <rect x="52" y="52" width="96" height="96" rx="12" fill="#ffffff" />
+                                <text x="100" y="93" font-family="'Unbounded', sans-serif" font-weight="900" font-size="12" fill="#000000" text-anchor="middle">ТРАК-</text>
+                                <text x="100" y="117" font-family="'Unbounded', sans-serif" font-weight="900" font-size="12" fill="#000000" text-anchor="middle">ТОР</text>
+                            </svg>
+                        </div>
+
+                        <h3 class="text-base font-black mb-1 uppercase">«ТРАКТОР» MOCK</h3>
+                        <p class="text-neutral-500 text-[11px] mb-4">Тяжелый индустриальный дизайн для настоящих тружеников кода.</p>
+                    </div>
+                    
+                    <button onclick="applyWorkClass('трактор')" class="w-full bg-white text-black font-mono font-bold uppercase text-[9px] py-2 border-2 border-black tracking-wider shadow-[2px_2px_0px_#000]">
+                        LOAD_DRAFT
+                    </button>
+                </div>
+
+                <!-- Карта: Комбайн -->
+                <div class="bg-white border-2 border-dashed border-black p-5 rounded-none no-hover-card text-black flex flex-col justify-between relative">
+                    <div class="absolute -top-3 left-4 bg-black text-white text-[9px] font-mono px-1.5 py-0.5">
+                        &lt;div class="node-base-3"&gt;
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="bg-neutral-200 text-black text-[9px] font-mono px-2 py-0.5 uppercase">L_3_C</span>
+                            <span class="text-neutral-500 font-mono text-xs">SER. #8407</span>
+                        </div>
+                        
+                        <div class="flex justify-center my-3">
+                            <svg class="w-32 h-32" viewBox="0 0 200 200">
+                                <rect x="85" y="10" width="30" height="180" fill="url(#metal-strap-grad)" rx="4" stroke="#000" stroke-width="1"/>
+                                <circle cx="100" cy="100" r="58" fill="#ffffff" stroke="#000000" stroke-width="4" />
+                                <circle cx="100" cy="100" r="48" fill="#ffffff" />
+                                <text x="100" y="94" font-family="'Unbounded', sans-serif" font-weight="900" font-size="11" fill="#000000" text-anchor="middle">КОМБА-</text>
+                                <text x="100" y="118" font-family="'Unbounded', sans-serif" font-weight="900" font-size="11" fill="#000000" text-anchor="middle">ЙН</text>
+                            </svg>
+                        </div>
+
+                        <h3 class="text-base font-black mb-1 uppercase">«КОМБАЙН» MOCK</h3>
+                        <p class="text-neutral-500 text-[11px] mb-4">Чертеж круглого стального корпуса. Все деления выполнены вручную.</p>
+                    </div>
+                    
+                    <button onclick="applyWorkClass('комбайн')" class="w-full bg-white text-black font-mono font-bold uppercase text-[9px] py-2 border-2 border-black tracking-wider shadow-[2px_2px_0px_#000]">
+                        LOAD_DRAFT
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Модальное окно оформления предзаказа -->
+    <div id="checkout-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white border-4 border-black p-6 max-w-md w-full rounded-none shadow-[10px_10px_0px_#000000] relative">
+            
+            <div class="absolute -top-3.5 left-4 bg-black text-white text-[9px] font-mono px-2 py-0.5">
+                &lt;form name="order-request"&gt;
+            </div>
+
+            <div class="flex justify-between items-start mb-6">
+                <h3 class="text-2xl font-black uppercase text-black">ЗАЯВКА НА СБОРКУ</h3>
+                <button onclick="closeCheckout()" class="text-neutral-400 hover:text-black text-2xl font-black">&times;</button>
+            </div>
+            
+            <div class="mb-4 p-3 bg-neutral-50 border-2 border-dashed border-neutral-300">
+                <p class="text-[9px] font-mono text-neutral-400 uppercase">[DEBUG_METADATA]:</p>
+                <p class="text-lg font-black text-black" id="modal-model-name">КАСТОМНАЯ СБОРКА</p>
+                <div class="text-xs text-neutral-600 mt-2 space-y-0.5 font-mono" id="modal-model-details"></div>
+            </div>
+
+            <!-- Mini App: нативная кнопка через MainButton, но и резервная здесь -->
+            <div class="space-y-2">
+                <button type="button" onclick="submitMiniAppOrder()" id="tma-order-btn"
+                    class="w-full bg-black text-white font-mono font-black uppercase py-3 border-2 border-black tracking-wider text-sm hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248-1.97 9.289c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.48 14.449l-2.95-.924c-.64-.203-.654-.64.136-.953l11.57-4.461c.537-.194 1.006.131.326.137z"/></svg>
+                    ⭐ ОФОРМИТЬ ЗАКАЗ
+                </button>
+                <p class="text-[9px] text-neutral-400 text-center font-mono" id="tma-hint">
+                    [!] Данные отправятся боту — он сгенерит чек и выставит счёт звёздами
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Всплывающий Тост об успехе -->
+    <div id="success-toast" class="fixed bottom-6 right-6 bg-white border-4 border-black p-4 max-w-sm z-50 hidden shadow-[5px_5px_0px_#000000]">
+        <h4 class="font-black uppercase text-black text-sm mb-1">[REDIRECT → TG]</h4>
+        <p class="text-xs text-neutral-600 font-mono">Открываем бота. Он сгенерит картинку и выставит счёт звёздами ⭐</p>
+    </div>
+
+    <!-- Футер в виде конфликта слияния Git -->
+    <footer class="border-t-2 border-black py-12 px-4 bg-white text-center mt-20 relative">
+        <div class="max-w-4xl mx-auto font-mono text-xs text-left max-w-md mx-auto bg-neutral-100 p-4 border border-neutral-300">
+            <span class="text-red-500 font-bold block mb-1">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>
+            <p class="text-neutral-800 pl-4 font-bold">Чеблячас все у права мои и меня пон?</p>
+            <span class="text-neutral-400 block my-1">=======</span>
+            <p class="text-neutral-500 pl-4">Чеблячас © 2026. Сборка приостановлена из-за тотального дзена.</p>
+            <span class="text-red-500 font-bold block mt-1">&gt;&gt;&gt;&gt;&gt;&gt;&gt; main</span>
+        </div>
+    </footer>
+
+    <!-- JS Логика интерактивного кастомизатора -->
+    <script>
+        // Состояние конфигуратора Чеблячас
+        const currentConfig = {
+            material: 'plastic',    
+            shape: 'round',         
+            serial: '11111', // Начальный серийник
+            strap: 'plastic-solid', 
+            dialText: 'АДОХУИЩЩ'   
+        };
+
+        // Заготовки предустановленного текста для Спецтехники
+        const workClassPresets = {
+            'трактор': {
+                dialText: 'ТРАКТОР',
+                material: 'metal',
+                shape: 'square',
+                serial: '11111',
+                strap: 'metal-solid'
+            },
+            'комбайн': {
+                dialText: 'КОМБАЙН',
+                material: 'metal',
+                shape: 'round',
+                serial: '8407',
+                strap: 'metal-segmented'
+            },
+            'машина': {
+                dialText: 'МАШИНА',
+                material: 'plastic',
+                shape: 'round',
+                serial: '6401',
+                strap: 'plastic-segmented'
+            }
+        };
+
+        window.onload = function() {
+            renderConfiguredWatch();
+        }
+
+        // Логика ценника, привязанного к серийникам + доплата 6048 руб
+        function calculateAndRenderPrice() {
+            // Базовый ценник теперь строго завязан на серийный номер из списка
+            let basePrice = parseInt(currentConfig.serial);
+            
+            // Если выбран Свой текст (не равен стандартным пресетам), добавляем 6048 рублей доплаты
+            const standardTexts = ['АДОХУИЩЩ', 'БЕЗ ПЯТИ ШЕСТЬ УТРОВ', 'МНОГО', 'АЛЕ', 'ТРАКТОР', 'КОМБАЙН', 'МАШИНА'];
+            const userText = currentConfig.dialText.trim().toUpperCase();
+            const isCustom = userText && !standardTexts.includes(userText);
+            
+            if (isCustom) {
+                basePrice += 6048;
+                document.getElementById('custom-text-badge').classList.remove('hidden');
+            } else {
+                document.getElementById('custom-text-badge').classList.add('hidden');
+            }
+
+            // Минимальные шуточные наценки за материалы
+            if (currentConfig.material === 'metal') {
+                basePrice += 42; // Сталь
+            }
+            if (currentConfig.strap.includes('segmented')) {
+                basePrice += 9; // Звенья
+            }
+
+            document.getElementById('configurator-price-display').innerText = '⭐ ' + basePrice.toLocaleString('ru-RU');
+            return basePrice;
+        }
+
+        function renderConfiguredWatch() {
+            renderStrap();
+            renderCase();
+            renderDial();
+            renderSerial();
+            calculateAndRenderPrice();
+        }
+
+        // 1. Рендеринг ремешка
+        function renderStrap() {
+            const group = document.getElementById('svg-strap-group');
+            group.innerHTML = ''; 
+
+            let fillAttr = '';
+
+            if (currentConfig.strap === 'fabric') {
+                fillAttr = 'url(#fabric-pattern)';
+            } else if (currentConfig.strap.startsWith('plastic')) {
+                fillAttr = '#333333'; 
+            } else if (currentConfig.strap.startsWith('metal')) {
+                fillAttr = 'url(#metal-strap-grad)'; 
+            }
+
+            const baseStrap = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            baseStrap.setAttribute('x', '84');
+            baseStrap.setAttribute('y', '10');
+            baseStrap.setAttribute('width', '32');
+            baseStrap.setAttribute('height', '180');
+            baseStrap.setAttribute('fill', fillAttr);
+            baseStrap.setAttribute('rx', '2');
+            baseStrap.setAttribute('stroke', '#000000');
+            baseStrap.setAttribute('stroke-width', '1.5');
+            group.appendChild(baseStrap);
+
+            if (currentConfig.strap.includes('segmented')) {
+                const step = 15;
+                for (let y = 15; y < 70; y += step) {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', '84');
+                    line.setAttribute('y1', y);
+                    line.setAttribute('x2', '116');
+                    line.setAttribute('y2', y);
+                    line.setAttribute('stroke', '#000000');
+                    line.setAttribute('stroke-width', '1.5');
+                    group.appendChild(line);
+                }
+                for (let y = 130; y < 190; y += step) {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', '84');
+                    line.setAttribute('y1', y);
+                    line.setAttribute('x2', '116');
+                    line.setAttribute('y2', y);
+                    line.setAttribute('stroke', '#000000');
+                    line.setAttribute('stroke-width', '1.5');
+                    group.appendChild(line);
+                }
+            }
+        }
+
+        // 2. Рендеринг корпуса
+        function renderCase() {
+            const group = document.getElementById('svg-case-group');
+            group.innerHTML = ''; 
+
+            let caseFill = currentConfig.material === 'metal' ? 'url(#metal-grad)' : 'url(#plastic-grad)';
+            let strokeColor = '#000000';
+            let strokeWidth = '3.5';
+
+            if (currentConfig.shape === 'round') {
+                const mainCase = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                mainCase.setAttribute('cx', '100');
+                mainCase.setAttribute('cy', '100');
+                mainCase.setAttribute('r', '58');
+                mainCase.setAttribute('fill', caseFill);
+                mainCase.setAttribute('stroke', strokeColor);
+                mainCase.setAttribute('stroke-width', strokeWidth);
+                group.appendChild(mainCase);
+
+                const crown = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                crown.setAttribute('x', '158');
+                crown.setAttribute('y', '95');
+                crown.setAttribute('width', '5');
+                crown.setAttribute('height', '10');
+                crown.setAttribute('fill', caseFill);
+                crown.setAttribute('stroke', '#000000');
+                crown.setAttribute('stroke-width', '1.5');
+                group.appendChild(crown);
+            } else {
+                const mainCase = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                mainCase.setAttribute('x', '42');
+                mainCase.setAttribute('y', '42');
+                mainCase.setAttribute('width', '116');
+                mainCase.setAttribute('height', '116');
+                mainCase.setAttribute('rx', '15'); 
+                mainCase.setAttribute('fill', caseFill);
+                mainCase.setAttribute('stroke', strokeColor);
+                mainCase.setAttribute('stroke-width', strokeWidth);
+                group.appendChild(mainCase);
+
+                const screws = [
+                    { x: 52, y: 52 }, { x: 148, y: 52 },
+                    { x: 52, y: 148 }, { x: 148, y: 148 }
+                ];
+                screws.forEach(pos => {
+                    const screw = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    screw.setAttribute('cx', pos.x);
+                    screw.setAttribute('cy', pos.y);
+                    screw.setAttribute('r', '2.5');
+                    screw.setAttribute('fill', '#000000');
+                    group.appendChild(screw);
+                });
+
+                const crown = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                crown.setAttribute('x', '158');
+                crown.setAttribute('y', '95');
+                crown.setAttribute('width', '4');
+                crown.setAttribute('height', '10');
+                crown.setAttribute('fill', caseFill);
+                crown.setAttribute('stroke', '#000000');
+                crown.setAttribute('stroke-width', '1.5');
+                group.appendChild(crown);
+            }
+        }
+
+        // 3. Рендеринг циферблата (с учетом переносов слогов спецтехники по ТЗ)
+        function renderDial() {
+            const dialGroup = document.getElementById('svg-dial-group');
+            dialGroup.innerHTML = ''; 
+
+            let dialFace;
+            if (currentConfig.shape === 'round') {
+                dialFace = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                dialFace.setAttribute('cx', '100');
+                dialFace.setAttribute('cy', '100');
+                dialFace.setAttribute('r', '47');
+            } else {
+                dialFace = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                dialFace.setAttribute('x', '52');
+                dialFace.setAttribute('y', '52');
+                dialFace.setAttribute('width', '96');
+                dialFace.setAttribute('height', '96');
+                dialFace.setAttribute('rx', '8');
+            }
+            dialFace.setAttribute('fill', '#ffffff');
+            dialFace.setAttribute('stroke', '#000000');
+            dialFace.setAttribute('stroke-width', '1.5');
+            dialGroup.appendChild(dialFace);
+
+            const textGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            const userText = currentConfig.dialText.trim().toUpperCase();
+
+            // Функция рисования букв по кругу
+            function drawCircleText(text) {
+                const letters = [...text]; // поддержка Unicode
+                const r = 34;
+                letters.forEach((letter, i) => {
+                    const angle = (i / letters.length) * 2 * Math.PI - Math.PI / 2;
+                    const x = Math.round(100 + r * Math.cos(angle));
+                    const y = Math.round(100 + r * Math.sin(angle)) + 5;
+                    const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    txt.setAttribute('x', x);
+                    txt.setAttribute('y', y);
+                    txt.setAttribute('font-family', "'Unbounded', sans-serif");
+                    txt.setAttribute('font-weight', '900');
+                    txt.setAttribute('font-size', '13');
+                    txt.setAttribute('fill', '#000000');
+                    txt.setAttribute('text-anchor', 'middle');
+                    txt.textContent = letter;
+                    textGroup.appendChild(txt);
+                });
+            }
+
+            if (textLayout === 'circle' && userText && userText !== 'АДОХУИЩЩ') {
+                // Пользователь выбрал «по кругу» для своего текста
+                drawCircleText(userText);
+            } else if (userText === 'АДОХУИЩЩ') {
+                // АДОХУИЩЩ — всегда по кругу если layout не override на center
+                if (textLayout === 'center') {
+                    // Принудительно по центру
+                    const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    txt.setAttribute('x', '100'); txt.setAttribute('y', '107');
+                    txt.setAttribute('font-family', "'Unbounded', sans-serif");
+                    txt.setAttribute('font-weight', '900');
+                    txt.setAttribute('font-size', '10');
+                    txt.setAttribute('fill', '#000000');
+                    txt.setAttribute('text-anchor', 'middle');
+                    txt.textContent = userText;
+                    textGroup.appendChild(txt);
+                } else {
+                    drawCircleText('АДОХУИЩЩ');
+                }
+            } else if (userText.includes('БЕЗ ПЯТИ')) {
+                const lines = ['БЕЗ ПЯТИ', 'ШЕСТЬ', 'УТРОВ'];
+                lines.forEach((line, index) => {
+                    const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    txt.setAttribute('x', '100');
+                    txt.setAttribute('y', 90 + (index * 19));
+                    txt.setAttribute('font-family', "'Unbounded', sans-serif");
+                    txt.setAttribute('font-weight', '900');
+                    txt.setAttribute('font-size', index === 0 ? '11' : '10');
+                    txt.setAttribute('fill', '#000000');
+                    txt.setAttribute('text-anchor', 'middle');
+                    txt.textContent = line;
+                    textGroup.appendChild(txt);
+                });
+            } else if (userText === 'ТРАКТОР') {
+                // Отрисовка переноса как в файле "Screenshot 2026-06-07 at 16.56.34.png"
+                drawSplitText(textGroup, 'ТРАК-', 'ТОР');
+            } else if (userText === 'КОМБАЙН') {
+                // Отрисовка переноса как в файле "Screenshot 2026-06-07 at 16.56.34.png"
+                drawSplitText(textGroup, 'КОМБА-', 'ЙН');
+            } else if (userText === 'МАШИНА') {
+                // Отрисовка переноса как в файле "Screenshot 2026-06-07 at 16.56.34.png"
+                drawSplitText(textGroup, 'МАШИ-', 'НА');
+            } else {
+                if (userText.length > 8) {
+                    const mid = Math.ceil(userText.length / 2);
+                    const line1 = userText.slice(0, mid) + (userText.charAt(mid-1) !== '-' ? '-' : '');
+                    const line2 = userText.slice(mid);
+                    drawSplitText(textGroup, line1, line2);
+                } else {
+                    const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    txt.setAttribute('x', '100');
+                    txt.setAttribute('y', '107');
+                    txt.setAttribute('font-family', "'Unbounded', sans-serif");
+                    txt.setAttribute('font-weight', '900');
+                    txt.setAttribute('font-size', userText.length > 6 ? '13' : '17');
+                    txt.setAttribute('fill', '#000000');
+                    txt.setAttribute('text-anchor', 'middle');
+                    txt.textContent = userText;
+                    textGroup.appendChild(txt);
+                }
+            }
+            dialGroup.appendChild(textGroup);
+
+            // Стрелки часов (только если включены)
+            if (handsVisible) {
+                const arrow1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                arrow1.setAttribute('x1', '100');
+                arrow1.setAttribute('y1', '100');
+                arrow1.setAttribute('x2', '100');
+                arrow1.setAttribute('y2', '76');
+                arrow1.setAttribute('stroke', '#000000');
+                arrow1.setAttribute('stroke-width', '4');
+                arrow1.setAttribute('stroke-linecap', 'round');
+                dialGroup.appendChild(arrow1);
+
+                const arrow2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                arrow2.setAttribute('x1', '100');
+                arrow2.setAttribute('y1', '100');
+                arrow2.setAttribute('x2', '116');
+                arrow2.setAttribute('y2', '104');
+                arrow2.setAttribute('stroke', '#000000');
+                arrow2.setAttribute('stroke-width', '4');
+                arrow2.setAttribute('stroke-linecap', 'round');
+                dialGroup.appendChild(arrow2);
+
+                const centerCap = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                centerCap.setAttribute('cx', '100');
+                centerCap.setAttribute('cy', '100');
+                centerCap.setAttribute('r', '6');
+                centerCap.setAttribute('fill', '#000000');
+                dialGroup.appendChild(centerCap);
+            }
+        }
+
+        // Вспомогательная функция рисования текста в 2 строки
+        function drawSplitText(g, l1, l2) {
+            const txt1 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            txt1.setAttribute('x', '100');
+            txt1.setAttribute('y', '94');
+            txt1.setAttribute('font-family', "'Unbounded', sans-serif");
+            txt1.setAttribute('font-weight', '900');
+            txt1.setAttribute('font-size', '12');
+            txt1.setAttribute('fill', '#000000');
+            txt1.setAttribute('text-anchor', 'middle');
+            txt1.textContent = l1;
+            g.appendChild(txt1);
+
+            const txt2 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            txt2.setAttribute('x', '100');
+            txt2.setAttribute('y', '118');
+            txt2.setAttribute('font-family', "'Unbounded', sans-serif");
+            txt2.setAttribute('font-weight', '900');
+            txt2.setAttribute('font-size', '12');
+            txt2.setAttribute('fill', '#000000');
+            txt2.setAttribute('text-anchor', 'middle');
+            txt2.textContent = l2;
+            g.appendChild(txt2);
+        }
+
+        // Видимость стрелок
+        let handsVisible = true;
+        function setHandsVisibility(visible) {
+            handsVisible = visible;
+            renderDial();
+        }
+
+        // Расположение текста
+        let textLayout = 'center'; // 'center' | 'circle'
+        function setTextLayout(mode) {
+            textLayout = mode;
+            document.getElementById('layout-center-btn').className = mode === 'center'
+                ? 'py-1 px-2 text-[10px] font-mono font-bold uppercase border-2 border-black bg-black text-white'
+                : 'py-1 px-2 text-[10px] font-mono font-bold uppercase border border-neutral-300 bg-white text-neutral-500';
+            document.getElementById('layout-circle-btn').className = mode === 'circle'
+                ? 'py-1 px-2 text-[10px] font-mono font-bold uppercase border-2 border-black bg-black text-white'
+                : 'py-1 px-2 text-[10px] font-mono font-bold uppercase border border-neutral-300 bg-white text-neutral-500';
+            renderDial();
+        }
+
+        function renderSerial() {
+            const el = document.getElementById('svg-serial-engraving');
+            el.textContent = `SER. ${currentConfig.serial}`;
+            el.setAttribute('y', currentConfig.shape === 'square' ? '168' : '163');
+        }
+
+        // КОНСТРУКТОР
+
+        function setCaseMaterial(mat) {
+            currentConfig.material = mat;
+            document.getElementById('opt-mat-plastic').className = mat === 'plastic' 
+                ? "py-2 px-3 text-xs font-mono font-bold uppercase border-2 border-black bg-black text-white"
+                : "py-2 px-3 text-xs font-mono font-bold uppercase border border-neutral-300 text-neutral-400 bg-white";
+            document.getElementById('opt-mat-metal').className = mat === 'metal' 
+                ? "py-2 px-3 text-xs font-mono font-bold uppercase border-2 border-black bg-black text-white"
+                : "py-2 px-3 text-xs font-mono font-bold uppercase border border-neutral-300 text-neutral-400 bg-white";
+            renderConfiguredWatch();
+        }
+
+        function setCaseShape(shape) {
+            currentConfig.shape = shape;
+            document.getElementById('opt-shape-round').className = shape === 'round' 
+                ? "py-2 px-3 text-xs font-mono font-bold uppercase border-2 border-black bg-black text-white"
+                : "py-2 px-3 text-xs font-mono font-bold uppercase border border-neutral-300 text-neutral-400 bg-white";
+            document.getElementById('opt-shape-square').className = shape === 'square' 
+                ? "py-2 px-3 text-xs font-mono font-bold uppercase border-2 border-black bg-black text-white"
+                : "py-2 px-3 text-xs font-mono font-bold uppercase border border-neutral-300 text-neutral-400 bg-white";
+            renderConfiguredWatch();
+        }
+
+        let serialLocked = false;
+
+        function setSerialCode(ser) {
+            if (serialLocked) return;
+            currentConfig.serial = ser;
+            const serials = ['6043', '6401', '8080', '8407', '10101', '11111'];
+            serials.forEach(s => {
+                const btn = document.getElementById(`opt-serial-${s}`);
+                btn.className = s === ser 
+                    ? `py-2 px-1 text-xs font-mono font-bold border-2 border-black bg-black text-white`
+                    : `py-2 px-1 text-xs font-mono font-bold border border-neutral-300 text-neutral-400 bg-white`;
+            });
+            // Блокируем остальные кнопки
+            serialLocked = true;
+            serials.forEach(s => {
+                const btn = document.getElementById(`opt-serial-${s}`);
+                if (s !== ser) {
+                    btn.disabled = true;
+                    btn.className = `py-2 px-1 text-xs font-mono font-bold border border-neutral-200 text-neutral-300 bg-neutral-100 cursor-not-allowed`;
+                }
+            });
+            document.getElementById('serial-lock-badge').classList.remove('hidden');
+            document.getElementById('serial-unlock-btn').classList.remove('hidden');
+            renderConfiguredWatch();
+        }
+
+        function unlockSerial() {
+            serialLocked = false;
+            const serials = ['6043', '6401', '8080', '8407', '10101', '11111'];
+            serials.forEach(s => {
+                const btn = document.getElementById(`opt-serial-${s}`);
+                btn.disabled = false;
+                btn.className = s === currentConfig.serial
+                    ? `py-2 px-1 text-xs font-mono font-bold border-2 border-black bg-black text-white`
+                    : `py-2 px-1 text-xs font-mono font-bold border border-neutral-300 text-neutral-400 bg-white`;
+            });
+            document.getElementById('serial-lock-badge').classList.add('hidden');
+            document.getElementById('serial-unlock-btn').classList.add('hidden');
+        }
+
+        function setStrapType(type) {
+            currentConfig.strap = type;
+            const straps = ['fabric', 'plastic-solid', 'plastic-segmented', 'metal-solid', 'metal-segmented'];
+            straps.forEach(st => {
+                document.getElementById(`opt-strap-${st}`).className = st === type
+                    ? `py-2 px-1 text-[10px] font-mono font-bold uppercase border-2 border-black bg-black text-white`
+                    : `py-2 px-1 text-[10px] font-mono font-bold uppercase border border-neutral-300 text-neutral-400 bg-white`;
+            });
+            renderConfiguredWatch();
+        }
+
+        // Метод объединения Спецтехники "в один выбор"
+        function applyWorkClass(key) {
+            const spec = workClassPresets[key];
+            if (!spec) return;
+
+            // Сбрасываем выделение других кнопок серии
+            ['tractor', 'harvester', 'car'].forEach(k => {
+                document.getElementById(`opt-wc-${k}`).className = 
+                    "py-1.5 px-2 text-[10px] font-mono font-bold uppercase border border-neutral-300 bg-white hover:bg-neutral-100";
+            });
+
+            // Подсвечиваем активную кнопку серии
+            const activeId = key === 'трактор' ? 'opt-wc-tractor' : (key === 'комбайн' ? 'opt-wc-harvester' : 'opt-wc-car');
+            document.getElementById(activeId).className = "py-1.5 px-2 text-[10px] font-mono font-bold uppercase border-2 border-black bg-black text-white";
+
+            // Применяем предустановленные ТЗ параметры
+            unlockSerial();
+            setCaseMaterial(spec.material);
+            setCaseShape(spec.shape);
+            setSerialCode(spec.serial);
+            setStrapType(spec.strap);
+
+            document.getElementById('configurator-text-input').value = spec.dialText;
+            updateConfiguratorDialText(spec.dialText);
+        }
+
+        function updateConfiguratorDialText(text) {
+            currentConfig.dialText = text.trim() ? text : 'АДОХУИЩЩ';
+            renderDial();
+            calculateAndRenderPrice();
+        }
+
+        function resetDialTextToDefault() {
+            document.getElementById('configurator-text-input').value = '';
+            currentConfig.dialText = 'АДОХУИЩЩ';
+            renderDial();
+            calculateAndRenderPrice();
+            
+            // Сбрасываем кнопки спецтехники
+            ['tractor', 'harvester', 'car'].forEach(k => {
+                document.getElementById(`opt-wc-${k}`).className = 
+                    "py-1.5 px-2 text-[10px] font-mono font-bold uppercase border border-neutral-300 bg-white hover:bg-neutral-100";
+            });
+        }
+
+        // Загрузка классических пресетов из каталога
+        function loadPreset(material, shape, serial, strap, dialText) {
+            document.getElementById('watch-svg-canvas').scrollIntoView({ behavior: 'smooth' });
+            unlockSerial();
+            setCaseMaterial(material);
+            setCaseShape(shape);
+            setSerialCode(serial);
+            setStrapType(strap);
+            document.getElementById('configurator-text-input').value = dialText;
+            updateConfiguratorDialText(dialText);
+            renderConfiguredWatch();
+        }
+
+        // КЛИЕНТСКИЙ ОФОРМИТЕЛЬ
+
+        // ===== TELEGRAM MINI APP =====
+        const tg = window.Telegram?.WebApp;
+
+        // Инициализация
+        if (tg) {
+            tg.ready();
+            tg.expand();
+            // Тема TMA → синхронизируем с дарк модом
+            if (tg.colorScheme === 'dark') {
+                document.body.classList.add('dark');
+                const thumb = document.getElementById('dark-thumb');
+                if (thumb) thumb.textContent = '🌙';
+            }
+        }
+
+        // Имя бота — для фолбэка вне TMA
+        const TG_BOT_USERNAME = 'cheblyachas_bot';
+
+        function buildPayload(price) {
+            return JSON.stringify({
+                mat:   currentConfig.material,
+                shape: currentConfig.shape,
+                ser:   currentConfig.serial,
+                strap: currentConfig.strap,
+                text:  currentConfig.dialText.trim().toUpperCase(),
+                stars: price,
+            });
+        }
+
+        function openConfiguratorCheckout() {
+            const price = calculateAndRenderPrice();
+            document.getElementById('modal-model-name').innerText = currentConfig.dialText.toUpperCase();
+
+            const matMap   = { metal: 'Сталь 316L', plastic: 'SLA-фотополимер' };
+            const shapeMap = { round: 'Круглый', square: 'Квадратный' };
+            const strapMap = {
+                'fabric':           'Тканевый NATO',
+                'plastic-solid':    'Пластик Solid',
+                'plastic-segmented':'Пластик Segmented',
+                'metal-solid':      'Металл Solid',
+                'metal-segmented':  'Металл Segmented',
+            };
+
+            document.getElementById('modal-model-details').innerHTML = `
+                <div>• <strong>Материал:</strong> ${matMap[currentConfig.material] || currentConfig.material}</div>
+                <div>• <strong>Форма:</strong> ${shapeMap[currentConfig.shape] || currentConfig.shape}</div>
+                <div>• <strong>Ремешок:</strong> ${strapMap[currentConfig.strap] || currentConfig.strap}</div>
+                <div>• <strong>Серийник:</strong> SER. ${currentConfig.serial}</div>
+                <div class="mt-2 text-black font-mono text-sm border-t border-dashed border-neutral-400 pt-2 font-bold">
+                    Итого: ⭐ ${price.toLocaleString('ru-RU')} Telegram Stars
+                </div>
+            `;
+
+            // Показываем нативную MainButton если внутри TMA
+            document.getElementById('checkout-modal').classList.remove('hidden');
+        }
+
+        function submitMiniAppOrder() {
+            const price = calculateAndRenderPrice();
+            // Короткие ключи: m=material, s=shape, n=serial, r=strap, t=text, p=price
+            const short = [
+                'm:' + currentConfig.material[0],
+                's:' + currentConfig.shape[0],
+                'n:' + currentConfig.serial,
+                'r:' + currentConfig.strap.replace('plastic','pl').replace('metal','me').replace('fabric','fa').replace('-solid','s').replace('-segmented','g'),
+                't:' + currentConfig.dialText.trim().toUpperCase(),
+                'p:' + price,
+                'h:' + (handsVisible ? '1' : '0'),
+                'c:' + (textLayout === 'circle' ? '1' : '0')
+            ].join('|');
+
+            const b64 = btoa(unescape(encodeURIComponent(short)))
+                .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+            window.open(`https://t.me/${TG_BOT_USERNAME}?start=${b64}`, '_blank');
+            closeCheckout();
+
+            const toast = document.getElementById('success-toast');
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 4000);
+        }
+
+        function closeCheckout() {
+            document.getElementById('checkout-modal').classList.add('hidden');
+            if (tg?.MainButton) {
+                tg.MainButton.hide();
+                tg.MainButton.offClick(submitMiniAppOrder);
+                document.getElementById('tma-order-btn').classList.remove('hidden');
+            }
+        }
+        // ===== DARK MODE =====
+        function toggleDarkMode() {
+            const isDark = document.body.classList.toggle('dark');
+            const thumb = document.getElementById('dark-thumb');
+            thumb.textContent = isDark ? '🌙' : '☀️';
+            localStorage.setItem('cheblyachas-theme', isDark ? 'dark' : 'light');
+        }
+
+        // Восстанавливаем тему из localStorage
+        (function() {
+            if (localStorage.getItem('cheblyachas-theme') === 'dark') {
+                document.body.classList.add('dark');
+                document.addEventListener('DOMContentLoaded', () => {
+                    const thumb = document.getElementById('dark-thumb');
+                    if (thumb) thumb.textContent = '🌙';
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

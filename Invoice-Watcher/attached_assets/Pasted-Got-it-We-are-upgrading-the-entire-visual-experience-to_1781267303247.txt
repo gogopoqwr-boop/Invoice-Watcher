@@ -1,0 +1,26 @@
+Got it. We are upgrading the entire visual experience to a proper 3D showcase, fixing the disconnected meshes, and locking down the user flow to exactly what you need.
+
+Here is the exact programmatic hit list to implement these 3D upgrades and UI/UX fixes:
+
+### 1. 3D Collection Cards & Animations
+
+* **Live 3D Grid:** Strip out all flat 2D images/SVGs from the Collection cards. Initialize individual, lightweight Three.js/WebGL canvas contexts inside each card so the watches are fully 3D and slowly rotating by default.
+* **Fullscreen Transition (`onTap`):** Code a seamless camera interpolation script. When a user taps a card, the 3D canvas should break out of the grid and animate into a fullscreen immersive view, acting as the primary realistic preview.
+* **Responsive Details Panel:** Implement a media-query-driven layout for the watch details and purchasing UI:
+* **Desktop (`min-width: 768px`):** Render the details panel on the right side of the screen.
+* **Mobile (`max-width: 767px`):** Dock the details panel to the bottom half of the screen.
+
+
+
+### 2. Preset Bracelet Selection Flow
+
+* **Bypass Color Configuration:** Completely remove the user's ability to pick custom colors.
+* **Preset Selector UI:** Inject a "Выбрать ремешок" (Choose Bracelet) button into the fullscreen details panel. This button opens a simplified menu containing only strictly predefined combinations (e.g., a specific material already tied to a specific color, like "Black Leather" or "Red NATO Nylon").
+* **Instant Mesh Swapping:** Ensure that selecting a preset instantly updates the textures and geometry on the 3D model without reloading the scene.
+
+### 3. Mesh Architecture & Geometry Fixes
+
+* **Connect the Straps:** The models look like they are floating because the case lacks physical anchor points. Programmatically add lugs (the metal arms that extend from the watch case) and a spring bar mechanism to the 3D case geometries. Anchor the upper and lower strap meshes directly to these coordinates so the watch looks structurally sound.
+* **Star Model Realism:** Delete the current flat star geometry. Re-model it with extruded depth, chamfered/beveled edges, a proper metallic bezel, and realistic material shading so it looks like a machined piece of hardware.
+* **Wrist Context Preview:** Add a toggleable feature that renders a stylized, minimal 3D wrist/arm mannequin directly into the scene. This will snap the watch to the wrist, giving the user a real sense of scale and proportion.
+* **Scene Background & Lighting:** Fix the void. Inject a soft radial gradient CSS background behind the canvas, and load an HDRI environment map into the Three.js scene to provide proper global illumination, shadows, and reflections on the glass and metal materials.

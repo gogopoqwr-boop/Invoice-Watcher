@@ -1,0 +1,169 @@
+# Project "Чеблячас": Master Programmatic Development Tracker
+
+## 1. Core Setup & Collections Catalog Architecture
+
+* [ ] **Collections Pagination & Grid Engine:** Initialize the core catalog interface rendering exactly 10 collection cards on Page 1 and 10 collection cards on Page 2.
+
+
+* [ ] **Category Sorting Module:** Build a robust filtering and sorting engine handling 4 distinct collection categories: 5 phones, 5 laptops, 5 headsets, and 5 accessories.
+* [ ] **Asset Coloring Engine:** Program a dynamic material coloring framework that functions seamlessly within the 3D box preview space and synchronizes instantly when transitioned to the individual product page view.
+* [ ] **Interactive Product Discussion Thread:** Code a dynamic comment section on the collection item view pages capable of processing raw text inputs and multi-part image file attachments.
+* [ ] **Cart Session Manager:** Implement an active state array tracking item addition, quantity updates, and deletion workflows prior to checkout initialization.
+* [ ] **"Liquid Glass" Theme Layer:** Apply a global glassmorphism UI system featuring dynamic hover event listeners tracking active mouse X/Y coordinates to alter glass reflections and lighting overlays.
+
+
+* [ ] **Conditional Navigation Logic:**
+* Inject a global conditional check: `if (userOrders.length === 0)` -> completely suppress the injection of the "My Orders" button in both the configuration subviews and the main landing page (`/`).
+
+
+* Refactor the global history routing router so the "Back" button dynamically reads context history and paths the user straight back to their accurate prior module or target tab.
+
+
+
+
+* [ ] **Replit UI Override:** Deploy an explicit DOM script to target and strip the Replit identifier widget from the layout:
+```javascript
+
+```
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+const replitPill = document.getElementById("replit-pill");
+if (replitPill) replitPill.style.display = "none";
+});
+
+```
+*   [ ] **Global Branding Normalization:** Run a comprehensive string-token substitution sweep across all modules to overwrite legacy identifiers from `НА_УТРАХ_4` to the unified name `ЧЕБЛЯЧАС`[cite: 2].
+*   [ ] **Footer Assembly Resolution:** Resolve template merge conflicts by outputting both designated legal and operational strings within the scrollable tracking zone[cite: 2]:
+    ```html
+<footer>
+  <p>Чеблячас все у права мои у меня пон?</p>
+  <p>Чеблячас © 2026. Сборка приостановлена из-за полного дзена.</p>
+</footer>
+
+```
+
+---
+
+## 2. WebGL 3D Engine & Collections Pipeline
+
+* [ ] **Unified 3D Card Architecture:** Render all collection cards as individual interactive Three.js/WebGL canvas containers capable of processing full user-drag and rotation commands. Apply custom 2D drop-shadow map textures to the base card elements.
+
+
+* [ ] **On-Tap Card Amplification Routine:** Map click/tap triggers to collection cards to execute a viewport camera scaling transition animation.
+
+
+* [ ] **Configuration Bypass Enforcer:** Hardcode collection configurations to ensure that upon view amplification, all core parameters—including watchface geometry, watchface base materials, custom background skin uploads, face text configuration, and component base coloring—are strictly read-only and omitted from the interface.
+
+
+* [ ] **Permitted Watch Mutators:** Expose exactly two programmatic adjustment paths for the 3D watch models within the collection loop:
+
+
+1. **Strap/Stripe Material Selection:** Program dynamic texture swappers to alter the bracelet mesh surface (Solid Plastic, Segmented Plastic, Solid Metal, Segmented Metal, Resin, Leather, Cotton Fabric).
+
+
+2. **Closing Clasp Mechanism:** Code active rotational transforms showing the mechanical operation of the clasp closure when selected.
+
+
+
+
+* [ ] **Integrated "Watch-in-the-Box" Preview Renderer:** Implement a specialized 3D scene layer displaying the watch model nested directly inside its custom collection box asset during the active selection/configuration phases.
+
+
+* [ ] **Core 3D Geometry Bug Fixes:**
+* *Watch Hands Overhaul:* Delete glitched, fragmented 3D hand mesh artifacts. Replace them with clean, elongated, geometrically accurate watch hands anchored perfectly to the central pin pivot.
+* *Center Pivot Optimization:* Flatten the center placement pin mesh to render as a precise, minimalist drawn element rather than an extruded 3D artifact.
+* *Circular Text Distribution Algorithm:* Adjust the polar coordinate layout scripts for watchfaces containing circular text tracks (e.g., the РОФЛ sequence: `ДОХУИЩА`, `МНОГО`, `ЧЕТЫРЕ ЧАСОВ ЧАСА`, `ШЕСТЬ УТРОВ`, `АЛЕ`, `TOO MUCH`, `A LOT`). Scale up the text mesh boundaries and push the radius offset outward so the characters sit cleanly along the peripheral dot markers.
+
+
+* *Mesh Convergence:* Eliminate structural gaps between the cylindrical watch case lugs and the bracelet mounts to ensure a unified physical appearance.
+
+
+
+---
+
+## 3. Checkout Pipeline & Telegram Bot Integration
+
+* [ ] **Token Serializer & Session Mapping:** Write a checkout initialization routine that packages the user's cart or selected watch parameters, records it to the shared database, and serializes the index into an encrypted alpha-numeric token string (`CART_TOKEN` / `SOME_HASH`).
+
+
+* [ ] **Deep-Link Generation System:** Build URL formatting scripts to launch the external Telegram bot workflow via the programmatic path schema: `[https://t.me/bebebeabot?start=CART_TOKEN](https://t.me/bebebeabot?start=CART_TOKEN)`.
+
+
+* [ ] **Telegram Bot Webhook Orchestration:**
+* Initialize webhook communication structures utilizing Token `8576299379:AAGUoZiLUWDhyYqZplVjMn21pNEQ5AoLzlE` to parse incoming deep-links for the collection app checkout.
+* Maintain backup webhook connection pipelines routing collection orders via Bot Token `8576299379:AAGBEJeybVncfNS9aAV7psZAPzmqhpgCfnY` and handle administrator validation routes.
+
+
+
+
+* [ ] **Bot Interface & Direct Stars Billing Engine:**
+* Set Telegram Stars as the absolute payment currency tracking on both the web client checkout screen and the bot backend.
+
+
+* Configure the bot's parsing routine to unpack the incoming `start` parameters, match data against the unified database, present a clean checkout item summary image card, and trigger an immediate Telegram Stars payment invoice.
+
+
+
+
+* [ ] **Payment Expiration Logic:** Embed a strict 10-minute transaction countdown script into the active invoice state wrapper; auto-expire and cancel the transaction row if unpaid upon timer zero.
+
+
+
+---
+
+## 4. Transaction Automation & Post-Purchase Scripts
+
+* [ ] **Automated Payment Message Destruction:** Code a post-checkout webhook trigger that instantly deletes the payment invoice message from the Telegram chat history upon successful receipt confirmation to mitigate double-submission risks.
+
+
+* [ ] **Double-Refund Prevention Filter:** Develop a verification script that interrogates transaction state logs prior to issuing any refund event to ensure an individual order hash index has not been refunded multiple times accidentally.
+
+
+* [ ] **Unique Cryptographic Identifier Generator:** Write a backend generator compiling a matching QR code data-matrix and alpha-numeric receipt sequence code designed to be hard-etched onto both the physical box container packaging and the rear watch casing.
+
+
+* [ ] **Redirect Verification Viewport:** Route confirmed users to an interactive receipt page hosting a custom WebGL script animating the chosen 3D collection watch rotating gracefully inside its designated box casing.
+
+
+* [ ] **Multi-Channel Receipt Dispatcher:** Build automated workers to dispatch formatted HTML email summaries alongside structured Telegram bot messages that bundle a high-fidelity rotating 3D watch GIF configuration and direct deep-links targeting the host web receipt route.
+
+
+* [ ] **Client Identity Storage Hook:** Ensure automated collection and parsing rows securely store user metadata: Email strings, unique Telegram ID integers, and Telegram user account handles.
+
+
+* [ ] **Atomic Inventory Decrement Limitations:** Write strict transactional backend locking scripts limiting independent collection drops to a maximum counter of 1,000 unique rows. When the total counter evaluates to exactly 1,000, trigger an immediate state change to permanently disable and grey out the "КУПИТЬ" (BUY) interface button.
+
+
+
+---
+
+## 5. Administrative & Courier Operations Portal
+
+* [ ] **Role-Based Authentication Gateway:** Implement secure path restrictions for route `/login`, verifying administrative and courier credentials using standard cryptographical hashing protocols.
+
+
+* [ ] **Webhook Administration Suite:** Provide direct code fields in the dashboard interface to allow real-time manual updating and verification of active Telegram webhook targets by administrators.
+
+
+* [ ] **Analytics aggregation Worker:** Program telemetry scripts monitoring conversion percentages, gross revenue tracking values, unique visitor counters, checkout execution totals, valid payments, and active cancellation demands over distinct, graphable time blocks.
+
+
+* [ ] **State-Machine Synchronization Architecture:** Wire state change events to automatically push database status flag updates simultaneously to user email logs and active Telegram bot notice templates across five core states:
+
+
+* `Payment` $\rightarrow$ `Paid / Order Processing` $\rightarrow$ `Order Shipping` $\rightarrow$ `Order Arrived` $\rightarrow$ `Cancelled`.
+
+
+* [ ] **Granular Refund & Cancellation Rules:**
+* Construct user-facing cancellation buttons requiring a comprehensive text reason explanation string to fire a pending-cancellation record state.
+
+
+* Require explicit admin panel verification to confirm and fire user-requested cancellations.
+
+
+* Expose a permanent manual override Refund button inside the order dashboard, ensuring administrators can force structural refund requests across any lifecycle step—including post-delivery states.
+
+
+* Integrate a text-input comment element for manual administrative notes within the refund confirmation modal (allowing optional blank validation states).

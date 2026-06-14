@@ -1,0 +1,20 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "TqAQ-ZToeTHPh9fvHy1RW"
+uri = "file://GETTING_STARTED.md"
+type = "text"
+title = "GETTING_STARTED.md"
+
+[[outputs]]
+id = "pZ4JBAWv94-XXL4DxXoGt"
+uri = "file://RUNNING.md"
+type = "text"
+title = "RUNNING.md — How to run Чеблячас"
+
+[[outputs]]
+id = "ViXyfxrgfMr0Mq6IVCq0C"
+uri = "file://README.md"
+type = "text"
+title = "README.md"

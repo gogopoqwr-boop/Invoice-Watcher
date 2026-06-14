@@ -1,0 +1,38 @@
+Based on what is visible in **Screenshot 2026-06-12 at 12.39.43.jpg**, the 3D rendering has a few clear geometry and placement bugs.
+
+Here is a structured, clear way to explain exactly what is wrong to your AI or developer so it can be fixed systematically:
+
+---
+
+### 1. The Watch Hands are Glitched
+
+* **The Problem:** The watch hands don't look like hands at all. They look like a messy cluster of random, fragmented 3D mechanical debris (looking like a tiny bolt, angle, or broken text chunks) floating awkwardly in the upper-right quadrant.
+* **The Fix:** Rebuild the hands as clean, distinct, elongated geometric shapes (minimalist bars or arrows) that properly anchor to and rotate from the exact center axis.
+
+### 2. Letter Placement & Scale (Circular Layout)
+
+* **The Problem:** The custom letters/words on the watchface are tiny, squished together, and way too close to the center pin. They are completely unreadable and ruin the circular layout.
+* **The Fix:**
+* Increase the font/mesh size of the characters significantly.
+* Push the text radius outward so the words sit farther from the center, neatly aligning just inside the outer boundary dots.
+* Ensure they are evenly distributed along the circular path.
+
+
+
+### 3. Mesh Disconnection (The Strap/Stripe)
+
+* **The Problem:** The watch strap segments (the black rectangular blocks at the top and bottom) are physically detached from the watch case. They are floating in mid-air with a highly visible gap.
+* **The Fix:** Snap the strap meshes directly to the watch case lugs so the entire model looks like a single, solid piece.
+
+---
+
+### 📋 Ready-to-Copy Prompt for your Queue:
+
+> "Fix the 3D watch model view with these technical corrections:
+> 1. **Hands:** The current hands look like distorted 3D artifacts floating off-center. Replace them with clean, classic watch hands anchored precisely at the center point.
+> 2. **Text Layout:** Scale up the watchface letters, make them much larger, and increase their radius so they are pushed farther from the center, placing them beautifully near the outer dot markers.
+> 3. **Mesh Alignment:** Close the gaps between the watch case and the strap. The black strap blocks at the top and bottom must be perfectly connected to the circular case."
+> 
+> 
+
+Are you planning to have the text static on the watchface, or do you want the words themselves to rotate/act as the moving hands of the clock?

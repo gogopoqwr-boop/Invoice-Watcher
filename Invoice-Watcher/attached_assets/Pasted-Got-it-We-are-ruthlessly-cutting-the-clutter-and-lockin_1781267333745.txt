@@ -1,0 +1,23 @@
+Got it. We are ruthlessly cutting the clutter and locking down the pipeline. No more full customizer—users only buy from the Collections, and the only things they get to tweak are the straps and the clasp.
+
+Here is the exact, programmable feature and fix list to implement these hard constraints and clean up the UI issues shown in your screenshots.
+
+## 1. Global Routing & Configuration Lockout
+
+* **Disable Main Configurator:** Remove all programmatic routing to the "From Scratch" general configurator. The only entry point to any customization is tapping a pre-defined Collection card.
+* **Grey Out / Hide Unused Steps:** Completely disable and hide Steps 1 (Shape), 2 (Case Material), 4 (Color), and 5 (Details) from the top progress bar.
+* **Lock Watchface Mutators:** Completely remove or set to `display: none` the UI panels for "Надпись на циферблате" (Text), "Количество стрелок" (Hands quantity), "Цвет стрелок" (Hands color), and "Серийный номер" (Serial number) shown in your interface.
+* **Isolate Permitted Adjustments:** The configuration pipeline must instantly default to and *only* allow modifications for the **Strap/Stripe Material** and the **Closing Mechanism**.
+
+## 2. UX Overhaul & Clutter Removal
+
+* **Nuke the "From Scratch" / Reset Buttons:** Target and permanently hide the `Сбросить изменения` (Reset changes) text button at the bottom of the screen.
+* **Remove External Ad Pills:** Target and destroy the `Build yours free ->` floating widget overriding the navigation buttons at the bottom.
+* **Fix Theme Switcher Overlap:** Adjust the CSS positioning (`right`, `bottom`, or `margin`) and `z-index` of the Theme Switcher (sun icon) so it stops overlapping and bleeding into UI text elements.
+* **Refactor Navigation Footprint:** Ensure the "Назад" (Back) and "ДАЛЕЕ" (Next/Checkout) buttons are clean, unobstructed, and vertically aligned within the footer container.
+
+## 3. 3D WebGL Engine Updates
+
+* **Card Shadows:** Program the collection/configuration cards to render a dynamic 2D drop-shadow map directly underneath the 3D watch preview to give it depth.
+* **"Watch-in-the-Box" Renderer:** Instantiate the 3D box asset within the preview canvas. The 3D watch model must be programmatically nested and rendered *inside* the box during the final preview stage, rather than floating in an empty void.
+* **Strap Interaction Only:** Ensure that when the user changes the strap material or closing mechanism, the 3D model immediately updates these specific meshes without resetting the camera or the locked watchface components.

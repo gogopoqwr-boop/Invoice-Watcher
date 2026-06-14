@@ -1,0 +1,859 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: ЧЕБЛЯЧАС Watch Configurator API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: presets
+    description: Watch preset configurations
+  - name: configurations
+    description: User watch configurations
+  - name: orders
+    description: Order management
+  - name: analytics
+    description: Analytics and reporting
+  - name: auth
+    description: Authentication
+  - name: prices
+    description: Pricing
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /presets:
+    get:
+      operationId: listPresets
+      tags: [presets]
+      summary: List all watch presets
+      responses:
+        "200":
+          description: List of presets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WatchPreset"
+
+  /presets/{id}:
+    get:
+      operationId: getPreset
+      tags: [presets]
+      summary: Get a single preset
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Preset found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WatchPreset"
+        "404":
+          description: Not found
+
+  /configurations:
+    post:
+      operationId: createConfiguration
+      tags: [configurations]
+      summary: Create a watch configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WatchConfigInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WatchConfig"
+
+  /configurations/{id}:
+    get:
+      operationId: getConfiguration
+      tags: [configurations]
+      summary: Get a configuration by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WatchConfig"
+        "404":
+          description: Not found
+    put:
+      operationId: updateConfiguration
+      tags: [configurations]
+      summary: Update a configuration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WatchConfigUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WatchConfig"
+
+  /prices/calculate:
+    post:
+      operationId: calculatePrice
+      tags: [prices]
+      summary: Calculate price in Telegram Stars for a configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PriceRequest"
+      responses:
+        "200":
+          description: Price calculated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceResult"
+
+  /orders:
+    get:
+      operationId: listOrders
+      tags: [orders]
+      summary: List all orders (admin/courier)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [payment_pending, cancelled, processing, shipping, arrived]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Orders list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderList"
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Create an order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderInput"
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/my:
+    get:
+      operationId: getMyOrders
+      tags: [orders]
+      summary: Get orders for current user by session/telegram
+      parameters:
+        - name: sessionId
+          in: query
+          schema:
+            type: string
+        - name: telegramId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Get an order by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: Not found
+
+  /orders/{id}/status:
+    patch:
+      operationId: updateOrderStatus
+      tags: [orders]
+      summary: Update order status (admin/courier)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderStatusUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{id}/cancel:
+    post:
+      operationId: requestOrderCancel
+      tags: [orders]
+      summary: User requests order cancellation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelRequest"
+      responses:
+        "200":
+          description: Cancel requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{id}/refund:
+    post:
+      operationId: refundOrder
+      tags: [orders]
+      summary: Admin refunds an order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefundRequest"
+      responses:
+        "200":
+          description: Refunded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /analytics/summary:
+    get:
+      operationId: getAnalyticsSummary
+      tags: [analytics]
+      summary: Get analytics summary (conversion, revenue, orders, etc.)
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsSummary"
+
+  /analytics/time-series:
+    get:
+      operationId: getAnalyticsTimeSeries
+      tags: [analytics]
+      summary: Get time-series analytics data for graphs
+      parameters:
+        - name: metric
+          in: query
+          schema:
+            type: string
+            enum: [revenue, orders, visitors, conversions]
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: Time series data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimeSeriesPoint"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login as admin or courier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+        "401":
+          description: Invalid credentials
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+        "401":
+          description: Not authenticated
+
+  /couriers:
+    get:
+      operationId: listCouriers
+      tags: [auth]
+      summary: List all couriers (admin only)
+      responses:
+        "200":
+          description: Couriers list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+    post:
+      operationId: createCourier
+      tags: [auth]
+      summary: Create a courier (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CourierInput"
+      responses:
+        "201":
+          description: Courier created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    WatchPreset:
+      type: object
+      required: [id, name, watchfaceGeometry, watchfaceMaterial, watchfaceColor, braceletMaterial, braceletType, braceletColor, handsEnabled, priceStars, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        watchfaceGeometry:
+          type: string
+          enum: [circle, square, star, drawn]
+        watchfaceMaterial:
+          type: string
+          enum: [plastic, metal]
+        watchfaceColor:
+          type: string
+        watchfaceSize:
+          type: string
+        braceletMaterial:
+          type: string
+          enum: [plastic_solid, plastic_segmented, metal_solid, metal_segmented, resin, leather, cotton_fabric]
+        braceletType:
+          type: string
+          enum: [solid, segmented]
+        braceletColor:
+          type: string
+        braceletWidth:
+          type: ["string", "null"]
+        braceletLength:
+          type: ["string", "null"]
+        closingMechanism:
+          type: ["string", "null"]
+        handsStyle:
+          type: ["string", "null"]
+        handsColor:
+          type: ["string", "null"]
+        handsEnabled:
+          type: boolean
+        serialNumber:
+          type: ["string", "null"]
+        boxType:
+          type: ["string", "null"]
+        boxColor:
+          type: ["string", "null"]
+        collectionName:
+          type: ["string", "null"]
+        watchfaceText:
+          type: ["string", "null"]
+        watchfaceTextMode:
+          type: ["string", "null"]
+        maxQuantity:
+          type: ["integer", "null"]
+        priceStars:
+          type: integer
+        createdAt:
+          type: string
+
+    WatchConfig:
+      type: object
+      required: [id, sessionId, watchfaceGeometry, watchfaceMaterial, watchfaceColor, braceletMaterial, braceletType, braceletColor, handsEnabled, createdAt]
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: string
+        presetId:
+          type: ["integer", "null"]
+        watchfaceGeometry:
+          type: string
+          enum: [circle, square, star, drawn]
+        watchfaceMaterial:
+          type: string
+          enum: [plastic, metal]
+        watchfaceColor:
+          type: string
+        watchfaceSize:
+          type: ["string", "null"]
+        braceletMaterial:
+          type: string
+          enum: [plastic_solid, plastic_segmented, metal_solid, metal_segmented, resin, leather, cotton_fabric]
+        braceletType:
+          type: string
+          enum: [solid, segmented]
+        braceletColor:
+          type: string
+        braceletWidth:
+          type: ["string", "null"]
+        braceletLength:
+          type: ["string", "null"]
+        closingMechanism:
+          type: ["string", "null"]
+        handsStyle:
+          type: ["string", "null"]
+        handsColor:
+          type: ["string", "null"]
+        handsEnabled:
+          type: boolean
+        serialNumber:
+          type: ["string", "null"]
+        customWatchfaceUrl:
+          type: ["string", "null"]
+        customBackgroundUrl:
+          type: ["string", "null"]
+        skinFullUrl:
+          type: ["string", "null"]
+        skinStripeUrl:
+          type: ["string", "null"]
+        boxType:
+          type: ["string", "null"]
+        boxColor:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    WatchConfigInput:
+      type: object
+      required: [sessionId, watchfaceGeometry, watchfaceMaterial, watchfaceColor, braceletMaterial, braceletType, braceletColor, handsEnabled]
+      properties:
+        sessionId:
+          type: string
+        presetId:
+          type: ["integer", "null"]
+        watchfaceGeometry:
+          type: string
+          enum: [circle, square, star, drawn]
+        watchfaceMaterial:
+          type: string
+          enum: [plastic, metal]
+        watchfaceColor:
+          type: string
+        watchfaceSize:
+          type: string
+        braceletMaterial:
+          type: string
+          enum: [plastic_solid, plastic_segmented, metal_solid, metal_segmented, resin, leather, cotton_fabric]
+        braceletType:
+          type: string
+          enum: [solid, segmented]
+        braceletColor:
+          type: string
+        braceletWidth:
+          type: string
+        braceletLength:
+          type: string
+        closingMechanism:
+          type: string
+        handsStyle:
+          type: string
+        handsColor:
+          type: string
+        handsEnabled:
+          type: boolean
+        serialNumber:
+          type: string
+        customWatchfaceUrl:
+          type: string
+        customBackgroundUrl:
+          type: string
+        skinFullUrl:
+          type: string
+        skinStripeUrl:
+          type: string
+        boxType:
+          type: string
+        boxColor:
+          type: string
+
+    WatchConfigUpdate:
+      type: object
+      properties:
+        watchfaceGeometry:
+          type: string
+          enum: [circle, square, star, drawn]
+        watchfaceMaterial:
+          type: string
+          enum: [plastic, metal]
+        watchfaceColor:
+          type: string
+        watchfaceSize:
+          type: string
+        braceletMaterial:
+          type: string
+          enum: [plastic_solid, plastic_segmented, metal_solid, metal_segmented, resin, leather, cotton_fabric]
+        braceletType:
+          type: string
+          enum: [solid, segmented]
+        braceletColor:
+          type: string
+        braceletWidth:
+          type: string
+        braceletLength:
+          type: string
+        closingMechanism:
+          type: string
+        handsStyle:
+          type: string
+        handsColor:
+          type: string
+        handsEnabled:
+          type: boolean
+        serialNumber:
+          type: string
+        customWatchfaceUrl:
+          type: string
+        customBackgroundUrl:
+          type: string
+        skinFullUrl:
+          type: string
+        skinStripeUrl:
+          type: string
+        boxType:
+          type: string
+        boxColor:
+          type: string
+
+    PriceRequest:
+      type: object
+      required: [watchfaceMaterial, braceletMaterial, handsEnabled]
+      properties:
+        watchfaceMaterial:
+          type: string
+          enum: [plastic, metal]
+        braceletMaterial:
+          type: string
+          enum: [plastic_solid, plastic_segmented, metal_solid, metal_segmented, resin, leather, cotton_fabric]
+        handsEnabled:
+          type: boolean
+        customWatchfaceUrl:
+          type: string
+        skinFullUrl:
+          type: string
+        skinStripeUrl:
+          type: string
+        boxType:
+          type: string
+
+    PriceResult:
+      type: object
+      required: [totalStars, breakdown]
+      properties:
+        totalStars:
+          type: integer
+        breakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceLineItem"
+
+    PriceLineItem:
+      type: object
+      required: [label, stars]
+      properties:
+        label:
+          type: string
+        stars:
+          type: integer
+
+    Order:
+      type: object
+      required: [id, configId, status, totalStars, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        paymentToken:
+          type: ["string", "null"]
+        configId:
+          type: integer
+        config:
+          $ref: "#/components/schemas/WatchConfig"
+        userEmail:
+          type: ["string", "null"]
+        telegramId:
+          type: ["string", "null"]
+        telegramUsername:
+          type: ["string", "null"]
+        sessionId:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [payment_pending, cancelled, processing, shipping, arrived]
+        totalStars:
+          type: integer
+        cancelComment:
+          type: ["string", "null"]
+        refundComment:
+          type: ["string", "null"]
+        courierId:
+          type: ["integer", "null"]
+        paymentTxId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    OrderList:
+      type: object
+      required: [orders, total]
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+        total:
+          type: integer
+
+    OrderInput:
+      type: object
+      required: [configId, totalStars]
+      properties:
+        configId:
+          type: integer
+        userEmail:
+          type: string
+        telegramId:
+          type: string
+        telegramUsername:
+          type: string
+        sessionId:
+          type: string
+        totalStars:
+          type: integer
+        paymentTxId:
+          type: string
+
+    OrderStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [payment_pending, cancelled, processing, shipping, arrived]
+        courierId:
+          type: integer
+
+    CancelRequest:
+      type: object
+      required: [cancelComment]
+      properties:
+        cancelComment:
+          type: string
+
+    RefundRequest:
+      type: object
+      properties:
+        refundComment:
+          type: string
+
+    AnalyticsSummary:
+      type: object
+      required: [totalRevenue, totalOrders, paidOrders, cancelRequests, uniqueVisitors, checkoutStarts, conversionRate]
+      properties:
+        totalRevenue:
+          type: integer
+        totalOrders:
+          type: integer
+        paidOrders:
+          type: integer
+        cancelRequests:
+          type: integer
+        uniqueVisitors:
+          type: integer
+        checkoutStarts:
+          type: integer
+        conversionRate:
+          type: number
+
+    TimeSeriesPoint:
+      type: object
+      required: [date, value]
+      properties:
+        date:
+          type: string
+        value:
+          type: number
+
+    LoginInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    LoginResult:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/AdminUser"
+
+    AdminUser:
+      type: object
+      required: [id, username, role, createdAt]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        role:
+          type: string
+          enum: [admin, courier]
+        createdAt:
+          type: string
+
+    CourierInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string

@@ -1,9 +1,9 @@
-import React, { useRef, useMemo, useEffect, Suspense, useContext } from 'react';
+import React, { useRef, useMemo, useEffect, Suspense } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Text3D, Center } from '@react-three/drei';
-import { WatchConfigContext, ExtendedConfigState } from '@/hooks/use-watch-config';
+import { Text3D, Center, Billboard } from '@react-three/drei';
+import { useWatchConfig, ExtendedConfigState } from '@/hooks/use-watch-config';
 import * as THREE from 'three';
-import { useSpring } from '@react-spring/three';
+import { useSpring, animated } from '@react-spring/three';
 
 // typeface.js JSON font — generated from DejaVuSans-Bold.ttf via opentype.js.
 // Full Cyrillic + Latin coverage. Loaded by FontLoader (main thread fetch),
@@ -132,23 +132,19 @@ function buildFaceTexture(
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, S, S);
 
-  // Draw hour-marker dots only when there is no circular text — the letters replace them
-  const rawTextCheck = text?.trim().toUpperCase() ?? '';
-  const hasCircularText = isCircular && rawTextCheck.length > 0 && !rawTextCheck.startsWith('EYE:');
-  if (!hasCircularText) {
-    const markerR = S * 0.33;
-    for (let i = 0; i < 12; i++) {
-      const a = (i * Math.PI * 2) / 12 - Math.PI / 2;
-      const x = S / 2 + markerR * Math.cos(a);
-      const y = S / 2 + markerR * Math.sin(a);
-      ctx.beginPath();
-      ctx.arc(x, y, i % 3 === 0 ? 8 : 4, 0, Math.PI * 2);
-      ctx.fillStyle = handsColor;
-      ctx.globalAlpha = 0.8;
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
+  const markerR = S * 0.33;
+  for (let i = 0; i < 12; i++) {
+    const a = (i * Math.PI * 2) / 12 - Math.PI / 2;
+    const x = S / 2 + markerR * Math.cos(a);
+    const y = S / 2 + markerR * Math.sin(a);
+    ctx.beginPath();
+    const dotR = isCircular ? (i % 3 === 0 ? 4 : 2) : (i % 3 === 0 ? 8 : 4);
+    ctx.arc(x, y, dotR, 0, Math.PI * 2);
+    ctx.fillStyle = handsColor;
+    ctx.globalAlpha = isCircular ? 0.35 : 0.8;
+    ctx.fill();
   }
+  ctx.globalAlpha = 1;
 
   ctx.beginPath();
   ctx.arc(S / 2, S / 2, 7, 0, Math.PI * 2);
@@ -161,11 +157,10 @@ function buildFaceTexture(
   // ── Circular: embossed letters placed around the bezel ring ──────────────
   if (textMode === 'circular' && hasText) {
     const chars = Array.from(rawText.replace(/ /g, '·'));
-    const fullRing = chars.length >= 5;
-    if (fullRing) chars.push('·');   // closing separator between end and start
     const count = chars.length;
     if (count > 0) {
       const circR    = S * 0.355;
+      const fullRing = count >= 5;
       const arcSpan  = fullRing ? Math.PI * 2 : Math.min(Math.PI * 1.55, count * 0.44);
       const fontSize = Math.max(18, Math.min(56, Math.round(S * 1.1 / Math.max(count, 5))));
       const depth    = Math.max(2, fontSize * 0.10);
@@ -268,11 +263,10 @@ function buildBumpTexture(
 
   if (textMode === 'circular') {
     const chars = Array.from(rawText.replace(/ /g, '·'));
-    const fullRing  = chars.length >= 5;
-    if (fullRing) chars.push('·');   // closing separator between end and start
     const count = chars.length;
     if (count > 0) {
       const circR     = S * 0.355;
+      const fullRing  = count >= 5;
       const arcSpan   = fullRing ? Math.PI * 2 : Math.min(Math.PI * 1.55, count * 0.44);
       const fontSize  = Math.max(18, Math.min(56, Math.round(S * 1.1 / Math.max(count, 5))));
       const startAngle = fullRing ? Math.PI / 2 : Math.PI / 2 + arcSpan / 2;
@@ -351,7 +345,6 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
 
   if (mode === 'circular') {
     const chars = Array.from(trimmed.replace(/ /g, '·'));
-    if (chars.length >= 5) chars.push('·');   // closing separator between end and start
     const count = chars.length;
     if (count === 0) return null;
 
@@ -375,14 +368,14 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
         {chars.map((ch, i) => {
           const { x, y } = letterPositions[i];
           return (
-            <group key={i} position={[x, y, 0]}>
+            <Billboard key={i} position={[x, y, 0]}>
               <Center>
                 <Text3D font={TYPEFACE_URL} size={fontSize} {...extrudeFor(fontSize)}>
                   {ch}
                   <meshStandardMaterial {...matProps} />
                 </Text3D>
               </Center>
-            </group>
+            </Billboard>
           );
         })}
       </group>
@@ -415,7 +408,9 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
   );
 }
 
-/** Static text block for center mode — lies flat on the watch face facing +Z. */
+/** Camera-facing text block for center mode.
+ *  Copies the camera quaternion every frame — avoids the <Billboard>+<Center>
+ *  incompatibility where Billboard's rotation distorts Center's bbox offset. */
 function CameraFacingText({ lines, fontSize, lineH, totalH, textZ, matProps, extrudeFor }: {
   lines: string[];
   fontSize: number;
@@ -425,8 +420,17 @@ function CameraFacingText({ lines, fontSize, lineH, totalH, textZ, matProps, ext
   matProps: object;
   extrudeFor: (sz: number) => object;
 }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const { camera } = useThree();
+
+  useFrame(() => {
+    if (groupRef.current) {
+      groupRef.current.quaternion.copy(camera.quaternion);
+    }
+  });
+
   return (
-    <group position={[0, 0, textZ]}>
+    <group ref={groupRef} position={[0, 0, textZ]}>
       {lines.map((line, i) => (
         <group key={i} position={[0, totalH / 2 - i * lineH, 0]}>
           <Center>
@@ -512,16 +516,9 @@ function StrapJoint({ k, sign, θ, color, mat, isSegmented, isDeployant, claspCo
   const isResin = mat === 'resin';
   const isFab   = mat === 'cotton_fabric';
   const isLeath = mat === 'leather';
-  const metal   = isSegmented ? 0.92 : (mat ?? '').includes('metal') ? 0.85 : 0;
+  const metal   = isSegmented ? 0.92 : mat.includes('metal') ? 0.85 : 0;
   const rough   = isSegmented ? 0.07 : isLeath ? 0.92 : isFab ? 0.88 : isResin ? 0.06 : 0.78;
   const segW    = 1.05 * width;
-
-  // Drive rotation imperatively so we never use animated.group (avoids __r3f
-  // teardown crashes with @react-spring/three + R3F v9).
-  const jointRef = useRef<THREE.Group>(null);
-  useFrame(() => {
-    if (jointRef.current) jointRef.current.rotation.x = typeof θ?.get === 'function' ? θ.get() : (θ ?? 0);
-  });
 
   // Terminus: render clasp instead of another joint
   if (k >= WRAP_SEGS) {
@@ -529,7 +526,7 @@ function StrapJoint({ k, sign, θ, color, mat, isSegmented, isDeployant, claspCo
   }
 
   return (
-    <group ref={jointRef}>
+    <animated.group rotation-x={θ}>
       {/* Segment body */}
       {isFab ? (
         <>
@@ -561,7 +558,7 @@ function StrapJoint({ k, sign, θ, color, mat, isSegmented, isDeployant, claspCo
         <StrapJoint k={k + 1} sign={sign} θ={θ} color={color} mat={mat}
           isSegmented={isSegmented} isDeployant={isDeployant} claspColor={claspColor} width={width} />
       </group>
-    </group>
+    </animated.group>
   );
 }
 
@@ -781,9 +778,7 @@ export interface WatchModelProps {
   step?: number;
   lastInteractionRef?: React.RefObject<number>;
   showWrist?: boolean;
-  /** When provided, overrides the global WatchConfigContext for this instance.
-   *  Used by preview cards that must render a specific preset without touching
-   *  the user's in-progress configuration. */
+  /** When provided, overrides the global WatchConfigContext for this instance. */
   configOverride?: ExtendedConfigState;
 }
 
@@ -864,8 +859,8 @@ const LUG_ARM_Z  = 0.10;  // Z center for lug body, spring bar, and strap — si
 // STRAP_HALF removed — strap length now expressed as WRAP_SEGS × SEG_LEN in the StrapJoint chain
 
 export default function WatchModel({ step = 0, lastInteractionRef, showWrist = false, configOverride }: WatchModelProps) {
-  const ctx = useContext(WatchConfigContext);
-  const config: ExtendedConfigState = configOverride ?? ctx?.config ?? {} as ExtendedConfigState;
+  const { config: ctxConfig } = useWatchConfig();
+  const config: ExtendedConfigState = configOverride ?? ctxConfig;
   const groupRef = useRef<THREE.Group>(null);
   const prevStepRef = useRef(step);
   const faceSnapTargetRef = useRef<number | null>(null);
@@ -900,13 +895,10 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
     prevStepRef.current = step;
   }, [step]);
 
-  // In box / mini-preview mode (configOverride provided) disable tilt + auto-rotate
-  const isMiniPreview = !!configOverride;
-
   // Tilt + wrist-snap Z position (watch moves forward/into wrist when wrist shown)
   const { tiltX, watchZ } = useSpring({
-    tiltX: isMiniPreview ? 0 : (step === 2 ? 0.52 : -0.32),
-    watchZ: isMiniPreview ? 0 : (showWrist ? 0.2 : 0),
+    tiltX: step === 2 ? 0.52 : -0.32,
+    watchZ: showWrist ? 0.2 : 0,
     config: { mass: 1, tension: 110, friction: 22 },
   });
 
@@ -971,29 +963,23 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
     if (secHandRef.current)    secHandRef.current.rotation.z    = secActual.current;
     if (gmtHandRef.current)    gmtHandRef.current.rotation.z    = gmtActual.current;
 
-    // ── Tilt / Z + auto-rotation — full view only, not in box / mini-preview ──
-    if (!isMiniPreview) {
-      groupRef.current.rotation.x = tiltX.get();
-      groupRef.current.position.z = watchZ.get();
+    // ── Watch auto-rotation ────────────────────────────────────────────────────
+    const userActive = lastInteractionRef?.current
+      ? Date.now() - lastInteractionRef.current < INTERACTION_PAUSE_MS
+      : false;
+    if (userActive) { rotResumeStartRef.current = null; return; }
+    if (rotResumeStartRef.current === null) rotResumeStartRef.current = Date.now();
+    const speedFactor = Math.min(1, (Date.now() - rotResumeStartRef.current) / RESUME_RAMP_MS);
 
-      // ── Watch auto-rotation ──────────────────────────────────────────────────
-      const userActive = lastInteractionRef?.current
-        ? Date.now() - lastInteractionRef.current < INTERACTION_PAUSE_MS
-        : false;
-      if (userActive) { rotResumeStartRef.current = null; return; }
-      if (rotResumeStartRef.current === null) rotResumeStartRef.current = Date.now();
-      const speedFactor = Math.min(1, (Date.now() - rotResumeStartRef.current) / RESUME_RAMP_MS);
-
-      if (faceSnapTargetRef.current !== null) {
-        const target = faceSnapTargetRef.current;
-        groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, target, 0.06 * speedFactor);
-        if (Math.abs(groupRef.current.rotation.y - target) < 0.001) {
-          groupRef.current.rotation.y = target;
-          faceSnapTargetRef.current = null;
-        }
-      } else {
-        groupRef.current.rotation.y += 0.004 * speedFactor;
+    if (faceSnapTargetRef.current !== null) {
+      const target = faceSnapTargetRef.current;
+      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, target, 0.06 * speedFactor);
+      if (Math.abs(groupRef.current.rotation.y - target) < 0.001) {
+        groupRef.current.rotation.y = target;
+        faceSnapTargetRef.current = null;
       }
+    } else {
+      groupRef.current.rotation.y += 0.004 * speedFactor;
     }
   });
 
@@ -1030,15 +1016,11 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   const handsOn  = config.handsEnabled !== false;
 
   // center + hands → canvas draws flat 2D text under the hands
-  // circular in mini-preview mode → canvas draws the circular ring (Text3D looks bad at card scale)
   // all other combos → canvas stays blank, Text3D handles it
   const canvasTextMode: 'none' | 'circular' | 'center-flat' | 'center-raised' =
-    hasText && textMode === 'center' && handsOn ? 'center-flat' :
-    hasText && textMode === 'circular' && isMiniPreview ? 'circular' :
-    'none';
+    hasText && textMode === 'center' && handsOn ? 'center-flat' : 'none';
 
-  // In mini-preview mode circular text is handled by the canvas texture — skip Text3D
-  const isCircular = hasText && textMode === 'circular' && !isMiniPreview;
+  const isCircular = hasText && textMode === 'circular';
 
   const faceTexture = useMemo(
     () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceGeometry, canvasTextMode, config.watchfaceText),
@@ -1061,7 +1043,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
 
   return (
     <>
-    <group ref={groupRef} scale={config.watchfaceSize ?? 1}>
+    <animated.group ref={groupRef} rotation-x={tiltX} position-z={watchZ} scale={config.watchfaceSize ?? 1}>
 
       {/* ── Case body ── */}
       <mesh castShadow receiveShadow>
@@ -1286,7 +1268,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
       {/* Bezel ring — machined metal overlay around crystal */}
       <BezelRing geom={config.watchfaceGeometry} caseMat={caseMat} />
 
-    </group>
+    </animated.group>
 
     {/* Wrist mannequin — rendered outside watch group so it doesn't rotate with it */}
     {showWrist && <WristMannequin />}

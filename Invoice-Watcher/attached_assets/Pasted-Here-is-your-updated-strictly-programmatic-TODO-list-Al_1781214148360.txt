@@ -1,0 +1,162 @@
+Here is your updated, strictly programmatic TODO list. All marketing, physical logistics, and content creation tasks have been stripped out, and your new prototype, pagination, cart, and Telegram integration features have been added.
+
+## 1. Core Setup & Architecture
+
+* [ ] Initialize and build a prototype app framework.
+
+
+* [ ] Configure unified database logic to ensure the website and Telegram Bot share the exact same DB for IDs, usernames, and cart sessions.
+
+
+* [ ] Implement the global "Liquid Glass" design system (theme switcher, glass clickables, hover effects mapping to mouse position).
+
+
+* [ ] Globally rename the company branding in the codebase to "ЧЕБЛЯЧАС".
+
+
+* [ ] Resolve the footer Git merge conflict (`image_cd7cfb.png`) by selecting the final text for the scroll bottom.
+
+
+* [ ] Ensure responsive design constraints: watch settings lock to the bottom half on mobile, and the progress bar anchors to the bottom.
+
+
+
+## 2. Prototype App Features (New Catalog)
+
+* [ ] Implement a Cart System allowing users to add items.
+
+
+* [ ] Build global pagination logic: render 10 cards on page 1, and 10 cards on page 2.
+
+
+* [ ] Develop a sorting mechanism specifically for categories: 5 phones, 5 laptops, 5 headsets, and 5 accessories.
+
+
+* [ ] Implement coloring functionality allowing users to color items both inside the box view and when switched onto the product page.
+
+
+* [ ] Build dynamic Product Pages featuring a comment section where users can write text and upload pictures.
+
+
+
+## 3. UI/UX: Navigation & Landing Page (`/`)
+
+* [ ] Create the selection screen routing: "Че хоч? Выбор часы или мерч (coming soon)".
+
+
+* [ ] Build a paginated grid (`<` left, `>` right) prioritizing the Collections.
+
+
+* [ ] Add a global "My Orders" button (on the main screen `/` and bottom-left of configurators).
+
+
+* [ ] Display the current Star quantity near configuration features.
+
+
+* [ ] Build a robust "Back" button state manager that saves progress across all views and routes users back to their exact previous location/order tab.
+
+
+* [ ] Implement a clickable progress timeline with future/incomplete steps disabled.
+
+
+
+## 4. 3D Engine & Collection Logic
+
+* [ ] Render all collection choice buttons as 3D Model cards. Design cards to look like they are in 3D but presented as 2D shadows (reference layout in `image_cd7cde.png`).
+
+
+* [ ] Disable/Grey out the general configurator, coloring, and custom watchface uploads. Collections are the only active pathway.
+
+
+* [ ] Program the 3 independent collections (РОФЛ, ГИПЕРСЕРЬЕЗНОСТЬ, ЖИВНОСТЬ), applying circular words/direction logic for watchfaces (e.g., "ДОХУИЩА", "МНОГО", "БЕЗ ПЯТИ ШЕСТЬ УТРОВ", "АЛЕ").
+
+
+* [ ] Implement amplifying animation on tap: watch screen zooms to show price and materials minimalistically.
+
+
+* [ ] Enable full drag-and-rotate functionality for the 3D models at all times.
+
+
+* [ ] Restrict user customization strictly to strap/stripe selection. The 3D model must instantly react and animate the closing mechanism when straps are changed.
+
+
+
+## 5. Checkout & Payment Gateway Integration
+
+* [ ] Add a "КУПИТЬ" (BUY) button to every collection card.
+
+
+* [ ] Write inventory limit logic: Count serial numbers dynamically. When a collection hits exactly 1,000, grey out the BUY button.
+
+
+* [ ] Setup the payment screen: render the draggable 3D model, add a 10-minute payment countdown, and a "Back to Configuration" button.
+
+
+* [ ] **Telegram Stars Integration:**
+* Set Stars as the payment currency on the website.
+
+
+* Generate a secure token on the website upon checkout initiation.
+
+
+* Implement deep linking: route user to Telegram via `?start=CART_TOKEN`.
+
+
+* Connect the Bot using Token: `8576299379:AAGUoZiLUWDhyYqZplVjMn21pNEQ5AoLzlE`.
+
+
+* Configure the bot to display a checkout image and process instant payment in Stars using the shared DB.
+
+
+
+
+* [ ] Apply a "Liquid Glass" animation effect upon returning to the site from the payment provider.
+
+
+* [ ] Capture and store user Email, Telegram ID, and TG Nickname upon successful transaction.
+
+
+
+## 6. Post-Purchase & Backend Scripts
+
+* [ ] Automatically delete the payment message after completion to prevent accidental repays.
+
+
+* [ ] Write "Double Refund" check scripts to detect if the same order hash was paid twice accidentally.
+
+
+* [ ] Generate a unique QR code and alphanumeric receipt code mapping to the physical watch/box.
+
+
+* [ ] Redirect users to an interactive web receipt featuring the 3D watch rotating in its box.
+
+
+* [ ] Automate post-purchase messages: send a stylized email and a TG bot message containing a GIF of the rotating 3D watch and a deep-link routing exactly to their web receipt.
+
+
+
+## 7. Admin & Courier Dashboard System
+
+* [ ] Build `/login` route with password authentication for Admins and Couriers.
+
+
+* [ ] Provide webhook connection access for Admins in the panel.
+
+
+* [ ] Build analytics dashboard: graphs for conversion rate, revenue, unique visitors, checkouts started, total/paid orders, and cancel requests.
+
+
+* [ ] Develop an Order Management view: display email, TG ID/username, watch config, and dynamic status updates (Payment, Order Processing, Shipping, Arrived, Cancelled).
+
+
+* [ ] **Refund & Cancellation Logic:**
+* Implement user-facing "Cancel Order" button with a required text input for the explanation.
+
+
+* Require Admin approval for user-initiated cancellations.
+
+
+* Ensure a "Refund" button is permanently visible in the admin panel for all orders (even post-delivery).
+
+
+* Allow Admins to issue manual refunds without a user request, including an optional input field for an admin comment.

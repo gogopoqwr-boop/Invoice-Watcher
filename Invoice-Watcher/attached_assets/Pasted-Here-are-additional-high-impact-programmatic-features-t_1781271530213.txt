@@ -1,0 +1,16 @@
+Here are additional high-impact, programmatic features to push the ЧЕБЛЯЧАС engine further into a premium, hyper-immersive digital storefront. These focus on maximizing visual polish, interactive engagement, and seamless technical integration.
+1. Advanced Post-Processing & Collection-Specific Shaders
+[ ] Collection-Themed Canvas Filters: Implement custom post-processing fragment shaders (WebGLRenderer pass) that activate depending on the active Collection:
+ГИПЕРСЕРЬЕЗНОСТЬ: A subtle CRT scanline, monochrome noise, or chromatic aberration filter to make the watch screen look like a stressful corporate terminal.
+РОФЛ: A chaotic, retro "deep-fried" or slight comic-book halftoning shader that spikes in intensity when dragging the watch aggressively.
+ЖИВНОСТЬ: A pulsing, organic vignette that contracts and expands like a breathing lung around the frame of the canvas.
+[ ] Dynamic Lighting Environment Shifts: Link the custom "Liquid Glass" theme switcher directly to the Three.js scene illumination. Tapping the switcher should smoothly interpolate the active HDRI environment map from a crisp, professional studio setup (Day Mode) to a moody, cyber-punk neon contrast scheme (Night Mode).
+2. Interactive Augmented Reality (AR) Try-On Layer
+[ ] WebXR / Camera Hand Overlay: Integrate a lightweight, optional AR viewport option utilizing the device's rear/front camera.
+Use a basic computer vision or canvas masking library to detect the user's wrist boundary.
+Project the configured 3D model (retaining the locked face properties and selected preset strap) directly onto the video feed, automatically hiding the background grid to simulate a real-world try-on.
+3. Micro-Animations & Physics for the Box Contents
+[ ] Procedural Document Physics (Unboxing Phase):
+When the 3D box lid opening animation triggers on the Box Page, program the physical warranty document and cryptographic receipt sheet to slide or pop out from an inner envelope flap.
+Apply custom gravity and collision parameters so the documentation lands naturally beside the box cushion, settling with slight springy inertia.
+[ ] Particle System Sparkles: Add a faint, high-end metallic sparkle particle system (THREE.Points) that emits softly from the watch case the exact second the box lid opens, highlighting the premium glass reflections.

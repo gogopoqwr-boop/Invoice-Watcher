@@ -1,0 +1,15 @@
+2. Advanced 3D WebGL Engine & Geometry Fixes
+[ ] Verify Interactive 3D Grid Cards: Confirm that each card within the collections grid instantiates its own distinct, active Three.js/WebGL canvas context featuring low-overhead auto-rotation, rather than displaying static 2D images or SVGs.
+[ ] Verify Fullscreen Camera Interpolation: Audit the interaction logic on card tap/click. It must trigger a smooth canvas interpolation or camera transition scaling the selected watch model into a immersive fullscreen preview state.
+[ ] Verify Structural Cohesion (Wholesome Watch Mesh): Inspect the case geometry boundaries. Confirm that case lug extensions and spring pins are programmatically generated and physically lock the upper and lower strap meshes to the case, leaving absolute zero spatial gaps.
+[ ] Verify Star Watchface Model: Audit the star geometry mesh parameters. Ensure it features distinct extruded depth, clean chamfered/beveled edge arrays, a machined metal bezel overlay, and physical surface shaders.
+[ ] Verify Central Pivot & Watch Hands Geometry:
+Confirm all glitched or fragmented hand mesh fragments are deleted and replaced by uniform, realistic, elongated meshes.
+Verify the center pivot pin is a flat, minimalist drawn asset instead of a protruding, extruded 3D artifact block.
+[ ] Verify Circular Text Distribution & Alignment (РОФЛ Collection):
+Examine the ring layout math coordinates. Font mesh bounding boxes must be pushed outwards adjacent to the dial boundary dot parameters.
+Check character rotations. All text character matrices must map cleanly flush on the dial Z-axis plane and execute standard quaternion rotations where the bottom of every letter strictly faces the center axis (lookAt). Characters must never render upside down, mirrored, or inverted.
+[ ] Verify Realistic Glass Crystal Overlay: Ensure a thin, domed cylindrical physical layer is overlaid directly above the watch face dial. The material parameters must enforce realistic transparent transmission (transmission: 1.0, ior: 1.5), low surface roughness, and reflect the active environment map.
+[ ] Verify Procedural Clasp/Wrapping Animation: Verify the skeletal rigging or bone/joint sequence transforms on the strap components. Tapping the configuration loop must execute a procedural bending animation wrapping the watch straps into a realistic wrist posture and locking the clasp components together.
+[ ] Verify Wrist Proportions Preview: Check for a structural toggle option rendering a minimal, low-poly 3D wrist mannequin structure beneath the watch system to convey precise geometric scaling.
+[ ] Verify Scene Environment & Shading Void: Verify the destruction of any pitch-black default backgrounds. Ensure a smooth radial CSS backdrop gradient is active and that an active HDRI environment configuration map supplies accurate specular highlights and reflections across all metal, plastic, and glass layers.

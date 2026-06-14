@@ -1,0 +1,16 @@
+## 4. 3D Box Preview Step & Package Content Architecture
+*   [ ] **Verify Final Box Configuration Screen:** Confirm a dedicated Box Selection and Review phase sits as the absolute final viewport stage directly preceding checkout processing.
+*   [ ] **Verify Context-Aware Packaging Render:** Validate that the system reads the chosen item properties to dynamically execute a matching 3D custom box asset mesh (e.g., *РОФЛ* packaging vs *ГИПЕРСЕРЬЕЗНОСТЬ* vault vs *ЖИВНОСТЬ* living container).
+*   [ ] **Verify Nested Product Geometry Logic:** Confirm that the fully compiled 3D watch configuration mesh (complete with active customized strap and mechanical closure choices) is parented and nested inside the box mesh cavity resting on its internal cushion layer.
+*   [ ] **Verify Interactive Packaging Animation:** Audit interaction events (`onHover` or `onClick`). The box lid must execute a clean, smooth opening animation (via GSAP or Three.js keyframes), exposing the nested watch under appropriate lighting.
+*   [ ] **Verify "What's in the Box" Metadata Display:** Verify the generation of a clean panel listing exact contents matching the configured purchase parameters:
+    *   Specific Watch Collection Name and Custom Strap combination parameters.
+    *   Technical Warranty Documentation data entries.
+    *   The Physical Receipt tracking verification with assigned Unique Serial Number indexes (strictly capped under 1,000 counts per collection drop).
+    *   Specific hidden Collection Easter Eggs (e.g., Sedatives for corporate dread themes).
+*   [ ] **Verify Checkout Transaction Conversion Step:** Ensure the final bottom-right execution button text transforms on this screen to read `"ПЕРЕЙТИ К ОПЛАТЕ"` (Proceed to Payment), initializing deep-link handshakes straight to the official billing server pipelines.
+
+---
+
+### Execution Instructions:
+Examine the entire code repository against this document. If any component violates these rules, pinpoint the exact file path and code line, and construct the specific code revisions needed to fulfill these parameters flawlessly.
