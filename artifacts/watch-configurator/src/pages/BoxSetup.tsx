@@ -152,14 +152,8 @@ export default function BoxSetup() {
           />
         </Suspense>
 
-        {/* Bottom overlay — toggle button + box name */}
+        {/* Bottom overlay — box name */}
         <div className="pointer-events-none absolute bottom-4 left-0 right-0 flex flex-col items-center gap-2">
-          <button
-            onClick={() => setBoxOpen(v => !v)}
-            className="pointer-events-auto liquid-button px-5 py-2.5 text-sm font-semibold"
-          >
-            {boxOpen ? '📦 Закрыть коробку' : '🎁 Открыть коробку'}
-          </button>
           <p
             className="text-[11px] uppercase tracking-[0.22em] font-semibold transition-colors duration-300"
             style={{ color: boxOption.textColor, opacity: 0.7 }}
