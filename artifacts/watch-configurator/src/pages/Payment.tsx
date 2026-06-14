@@ -26,15 +26,18 @@ function WatchPreviewPanel({ configId }: { configId: number }) {
   } as any);
   const [open, setOpen] = useState(false);
 
+  // The container is `relative` with explicit height from the parent.
+  // WatchBoxScene is `absolute inset-0` so it fills the container exactly —
+  // same pattern BoxSetup uses to avoid h-full height-chain breakage.
   return (
-    <div className="relative w-full h-full min-h-[260px] flex items-center justify-center overflow-hidden">
+    <div className="relative w-full h-full canvas-box-bg overflow-hidden">
       {!cfg ? (
-        <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+        <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
         </div>
       ) : (
         <Suspense fallback={
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+          <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
           </div>
         }>
@@ -61,7 +64,7 @@ function WatchPreviewPanel({ configId }: { configId: number }) {
             open={open}
             autoOpen
             onToggle={() => setOpen(v => !v)}
-            className="h-full w-full"
+            className="absolute inset-0 rounded-none"
           />
         </Suspense>
       )}

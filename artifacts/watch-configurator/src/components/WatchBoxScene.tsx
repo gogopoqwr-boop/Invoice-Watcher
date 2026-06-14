@@ -465,7 +465,7 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
 
   return (
     <div
-      className={`w-full canvas-box-bg ${className ?? 'h-64'} ${className?.includes('rounded') ? '' : 'rounded-2xl'} overflow-hidden relative${onToggle ? ' cursor-pointer' : ''}`}
+      className={`${className?.includes('absolute') ? '' : 'relative w-full canvas-box-bg'} ${className ?? 'h-64'} ${className?.includes('rounded') ? '' : 'rounded-2xl'} overflow-hidden${onToggle ? ' cursor-pointer' : ''}`}
       onPointerDown={onToggle ? handlePointerDown : undefined}
       onPointerUp={onToggle ? handlePointerUp : undefined}
     >
