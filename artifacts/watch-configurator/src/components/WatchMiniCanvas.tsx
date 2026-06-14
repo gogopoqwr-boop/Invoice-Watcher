@@ -390,10 +390,14 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
   const faceColor = preset.watchfaceColor ?? '#888888';
   const strapColor = preset.braceletColor ?? '#333333';
 
-  // forceMount path — acquire context slot immediately, release when prop flips off
+  // forceMount path — acquire context slot immediately, no counter check.
+  // The caller controls exactly how many cards are visible (e.g. 6 per collection).
+  // Skipping the MAX_CONTEXTS guard here prevents AnimatePresence race conditions:
+  // exit-animating old cards and entering new cards overlap briefly, which would
+  // push _activeContexts over MAX_CONTEXTS and leave new cards permanently unmounted.
   useEffect(() => {
     if (!WEB_GL_OK || !forceMount) return;
-    if (!didMount.current && _activeContexts < MAX_CONTEXTS) {
+    if (!didMount.current) {
       didMount.current = true;
       _activeContexts++;
       setMounted(true);
