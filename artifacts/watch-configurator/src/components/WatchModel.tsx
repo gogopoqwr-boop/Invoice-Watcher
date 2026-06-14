@@ -368,14 +368,15 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
         {chars.map((ch, i) => {
           const { x, y } = letterPositions[i];
           return (
-            <Billboard key={i} position={[x, y, 0]}>
-              <Center>
-                <Text3D font={TYPEFACE_URL} size={fontSize} {...extrudeFor(fontSize)}>
-                  {ch}
-                  <meshStandardMaterial {...matProps} />
-                </Text3D>
-              </Center>
-            </Billboard>
+            <CameraFacingChar
+              key={i}
+              ch={ch}
+              x={x}
+              y={y}
+              fontSize={fontSize}
+              matProps={matProps}
+              extrudeFor={extrudeFor}
+            />
           );
         })}
       </group>
@@ -405,6 +406,29 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
       matProps={matProps}
       extrudeFor={extrudeFor}
     />
+  );
+}
+
+/** Single camera-facing character for circular bezel text.
+ *  Copies the camera quaternion every frame — avoids the <Billboard>+<Center>
+ *  incompatibility where Billboard's rotation distorts Center's bbox offset. */
+function CameraFacingChar({ ch, x, y, fontSize, matProps, extrudeFor }: {
+  ch: string; x: number; y: number; fontSize: number; matProps: object; extrudeFor: (sz: number) => object;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const { camera } = useThree();
+  useFrame(() => {
+    if (groupRef.current) groupRef.current.quaternion.copy(camera.quaternion);
+  });
+  return (
+    <group ref={groupRef} position={[x, y, 0]}>
+      <Center>
+        <Text3D font={TYPEFACE_URL} size={fontSize} {...(extrudeFor(fontSize) as any)}>
+          {ch}
+          <meshStandardMaterial {...(matProps as any)} />
+        </Text3D>
+      </Center>
+    </group>
   );
 }
 
