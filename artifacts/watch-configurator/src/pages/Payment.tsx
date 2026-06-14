@@ -35,14 +35,23 @@ function WatchPreviewPanel({ configId }: { configId: number }) {
       }>
         <WatchBoxScene
           config={{
-            watchfaceGeometry: cfg?.watchfaceGeometry,
-            watchfaceColor:    cfg?.watchfaceColor,
-            braceletMaterial:  cfg?.braceletMaterial,
-            braceletColor:     cfg?.braceletColor,
-            handsEnabled:      cfg?.handsEnabled,
-            handsColor:        cfg?.handsColor,
-            watchfaceText:     cfg?.watchfaceText ?? (cfg as any)?.handsStyle,
-          }}
+            watchfaceGeometry:    cfg?.watchfaceGeometry,
+            watchfaceMaterial:    cfg?.watchfaceMaterial,
+            watchfaceColor:       cfg?.watchfaceColor,
+            braceletMaterial:     cfg?.braceletMaterial,
+            braceletType:         cfg?.braceletType,
+            braceletColor:        cfg?.braceletColor,
+            handsEnabled:         cfg?.handsEnabled,
+            handsColor:           cfg?.handsColor,
+            handsCount:           (cfg as any)?.handsCount,
+            watchfaceText:        (cfg as any)?.watchfaceText ?? (cfg as any)?.handsStyle,
+            watchfaceTextMode:    (cfg as any)?.watchfaceTextMode,
+            watchfaceTextColor:   (cfg as any)?.watchfaceTextColor,
+            watchfaceSize:        (cfg as any)?.watchfaceSize,
+            strapWidth:           (cfg as any)?.strapWidth,
+            skinFullUrl:          (cfg as any)?.skinFullUrl,
+            skinStripeUrl:        (cfg as any)?.skinStripeUrl,
+          } as any}
           boxType={cfg?.boxType ?? 'standard'}
           open={open}
           autoOpen

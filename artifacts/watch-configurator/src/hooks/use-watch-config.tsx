@@ -63,7 +63,7 @@ type WatchConfigContextType = {
   setActivePart: (part: "watchFace" | "strap" | "clasp" | null) => void;
 };
 
-const WatchConfigContext = createContext<WatchConfigContextType | undefined>(undefined);
+export const WatchConfigContext = createContext<WatchConfigContextType | undefined>(undefined);
 
 export function WatchConfigProvider({ children }: { children: React.ReactNode }) {
   const [sessionId] = useState<string>(() => getOrCreateSessionId());

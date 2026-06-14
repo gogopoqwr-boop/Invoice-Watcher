@@ -1,8 +1,10 @@
-import React, { useRef, useMemo, useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Environment, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
+import WatchModel from '@/components/WatchModel';
+import type { ExtendedConfigState } from '@/hooks/use-watch-config';
 
 // ─── WebGL check ───────────────────────────────────────────────────────────
 
@@ -208,162 +210,29 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
   );
 }
 
-// ─── Mini watch (inside the box) ──────────────────────────────────────────
+// ─── Real watch inside the box ─────────────────────────────────────────────
+// Uses the same WatchModel as the Configure page — all customisations visible.
 
-interface WatchConfig {
-  watchfaceGeometry?: string | null;
-  watchfaceColor?: string | null;
-  braceletMaterial?: string | null;
-  braceletColor?: string | null;
-  handsEnabled?: boolean | null;
-  handsColor?: string | null;
-  watchfaceText?: string | null;
-}
-
-function buildShape(geom: string): THREE.Shape {
-  const s = new THREE.Shape();
-  if (geom === 'circle') {
-    s.absarc(0, 0, 1.5, 0, Math.PI * 2, false);
-  } else if (geom === 'square') {
-    const r = 0.28, w = 1.28;
-    s.moveTo(-w+r,-w); s.lineTo(w-r,-w); s.quadraticCurveTo(w,-w,w,-w+r);
-    s.lineTo(w,w-r); s.quadraticCurveTo(w,w,w-r,w); s.lineTo(-w+r,w);
-    s.quadraticCurveTo(-w,w,-w,w-r); s.lineTo(-w,-w+r); s.quadraticCurveTo(-w,-w,-w+r,-w);
-  } else {
-    const r = 0.65, w = 1.1;
-    s.moveTo(-w+r,-w); s.lineTo(w-r,-w); s.quadraticCurveTo(w,-w,w,-w+r);
-    s.lineTo(w,w-r); s.quadraticCurveTo(w,w,w-r,w); s.lineTo(-w+r,w);
-    s.quadraticCurveTo(-w,w,-w,w-r); s.lineTo(-w,-w+r); s.quadraticCurveTo(-w,-w,-w+r,-w);
-  }
-  return s;
-}
-
-function buildFaceTex(faceCol: string, text: string | null | undefined): THREE.CanvasTexture {
-  const S = 512;
-  const cv = document.createElement('canvas');
-  cv.width = S; cv.height = S;
-  const ctx = cv.getContext('2d')!;
-
-  ctx.fillStyle = faceCol;
-  ctx.fillRect(0, 0, S, S);
-
-  const grad = ctx.createRadialGradient(S*0.38, S*0.33, 0, S/2, S/2, S*0.52);
-  grad.addColorStop(0, 'rgba(255,255,255,0.10)');
-  grad.addColorStop(1, 'rgba(0,0,0,0.18)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, S, S);
-
-  if (text?.trim()) {
-    const t = text.trim().toUpperCase().slice(0, 12);
-    const fontSize = Math.max(24, Math.min(52, Math.floor(S * 0.095)));
-    ctx.font = `900 ${fontSize}px system-ui, -apple-system, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.letterSpacing = '0.12em';
-    ctx.globalAlpha = 0.72;
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    ctx.fillText(t, S/2, S * 0.61);
-    ctx.globalAlpha = 1;
-  }
-
-  return new THREE.CanvasTexture(cv);
-}
-
-function WatchInBox({ config, visible }: { config: WatchConfig; visible: boolean }) {
-
-  const geom    = config.watchfaceGeometry ?? 'circle';
-  const faceCol = config.watchfaceColor    ?? '#C0C0C0';
-  const strapCol= config.braceletColor     ?? '#888888';
-  const handCol = config.handsColor        ?? '#ffffff';
-  const handsOn = config.handsEnabled      !== false;
-  const mat     = config.braceletMaterial  ?? 'metal_solid';
-  const isMetal = mat === 'metal_solid' || mat === 'metal_segmented';
-  const isResin = mat === 'resin';
-  const text    = config.watchfaceText ?? null;
-
-  const bodyGeo    = useMemo(() => new THREE.ExtrudeGeometry(buildShape(geom), { depth: 0.38, bevelEnabled: true, bevelSize: 0.09, bevelThickness: 0.09, bevelSegments: 6 }), [geom]);
-  const faceGeo    = useMemo(() => new THREE.ShapeGeometry(buildShape(geom), 48), [geom]);
-  const crystalGeo = useMemo(() => new THREE.ExtrudeGeometry(buildShape(geom), { depth: 0.04, bevelEnabled: true, bevelSize: 0.035, bevelThickness: 0.035, bevelSegments: 8 }), [geom]);
-  const faceTex    = useMemo(() => buildFaceTex(faceCol, text), [faceCol, text]);
-  useEffect(() => () => { bodyGeo.dispose(); faceGeo.dispose(); crystalGeo.dispose(); faceTex.dispose(); }, [bodyGeo, faceGeo, crystalGeo, faceTex]);
-
-  // Pop-in spring when box opens.
+function WatchInBox({ config, visible }: { config: ExtendedConfigState; visible: boolean }) {
   const { sc } = useSpring({
     from: { sc: 0.001 },
-    sc: visible ? 0.44 : 0.001,
+    sc: visible ? 1 : 0.001,
     config: { mass: 0.8, tension: 140, friction: 20 },
     delay: visible ? 180 : 0,
   });
 
-  // Outer plain R3F group controls Three.js visibility (animated.group doesn't
-  // reliably forward boolean props to the underlying Object3D).
   return (
     <group visible={visible}>
-    <animated.group
-      position={[0, -0.28, 0]}
-      scale={sc}
-      rotation={[-Math.PI / 2, 0, 0]}
-    >
-        {/* Watch case */}
-        <mesh>
-          <primitive object={bodyGeo} />
-          <meshStandardMaterial color={faceCol} metalness={0.76} roughness={0.14} />
-        </mesh>
-        {/* Face dial */}
-        <mesh position={[0, 0, 0.48]}>
-          <primitive object={faceGeo} />
-          <meshStandardMaterial map={faceTex} roughness={0.26} metalness={0.05} />
-        </mesh>
-        {/* Crystal glass */}
-        <mesh position={[0, 0, 0.54]}>
-          <primitive object={crystalGeo} />
-          <meshPhysicalMaterial color="#daeeff" metalness={0} roughness={0.04} transmission={0.82} ior={1.45} thickness={0.06} clearcoat={0.8} clearcoatRoughness={0.06} />
-        </mesh>
-        {/* Lugs */}
-        {([1.60, -1.60] as number[]).map(y => (
-          <mesh key={y} position={[0, y, 0.01]}>
-            <boxGeometry args={[1.14, 0.50, 0.24]} />
-            <meshStandardMaterial color={faceCol} metalness={0.76} roughness={0.14} />
-          </mesh>
-        ))}
-        {/* Straps — shortened to fit inside box walls.
-            At scale 0.44 the tip is at ±(2.20+0.60)*0.44 = ±1.23 world units,
-            safely inside the inner wall at ±(D/2−T) = ±1.32. */}
-        {([1, -1] as number[]).map(sign => (
-          <mesh key={sign} position={[0, sign * 2.20, 0]}>
-            <boxGeometry args={[1.05, 1.20, 0.14]} />
-            <meshStandardMaterial color={strapCol} metalness={isMetal ? 0.85 : 0} roughness={isMetal ? 0.10 : 0.80} transparent={isResin} opacity={isResin ? 0.72 : 1} />
-          </mesh>
-        ))}
-        {/* Hands */}
-        {handsOn && (
-          <group position={[0, 0, 0.59]}>
-            <group rotation={[0, 0, Math.PI / 5]}>
-              <mesh position={[0, 0.26, 0]}>
-                <boxGeometry args={[0.058, 0.52, 0.018]} />
-                <meshStandardMaterial color={handCol} metalness={0.94} roughness={0.06} />
-              </mesh>
-            </group>
-            <group rotation={[0, 0, -Math.PI / 3.5]}>
-              <mesh position={[0, 0.38, 0]}>
-                <boxGeometry args={[0.040, 0.76, 0.016]} />
-                <meshStandardMaterial color={handCol} metalness={0.94} roughness={0.06} />
-              </mesh>
-            </group>
-            <group rotation={[0, 0, Math.PI * 0.75]}>
-              <mesh position={[0, 0.34, 0.002]}>
-                <boxGeometry args={[0.010, 0.68, 0.008]} />
-                <meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} />
-              </mesh>
-            </group>
-          </group>
-        )}
-        {/* Crown */}
-        <mesh position={[1.62, 0.18, 0.10]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.09, 0.085, 0.28, 14]} />
-          <meshStandardMaterial color={faceCol} metalness={0.76} roughness={0.14} />
-        </mesh>
-    </animated.group>
+      {/* Rotated flat (face-up), scaled to fit inside the box walls */}
+      <animated.group
+        position={[0, -0.28, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        scale={sc.to((s: number) => s * 0.42)}
+      >
+        <Suspense fallback={null}>
+          <WatchModel configOverride={config} />
+        </Suspense>
+      </animated.group>
     </group>
   );
 }
@@ -440,7 +309,7 @@ function GiftRibbon({ visible }: { visible: boolean }) {
 
 // ─── Scene ─────────────────────────────────────────────────────────────────
 
-function Scene({ config, boxType, giftWrap, open }: { config: WatchConfig; boxType: string; giftWrap: boolean; open: boolean }) {
+function Scene({ config, boxType, giftWrap, open }: { config: ExtendedConfigState; boxType: string; giftWrap: boolean; open: boolean }) {
   return (
     <>
       <ambientLight intensity={0.55} />
@@ -461,7 +330,7 @@ function Scene({ config, boxType, giftWrap, open }: { config: WatchConfig; boxTy
 // ─── Public component ──────────────────────────────────────────────────────
 
 export interface WatchBoxSceneProps {
-  config: WatchConfig;
+  config: ExtendedConfigState;
   boxType?: string;
   /** Controlled open/close state */
   open?: boolean;

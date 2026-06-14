@@ -1,7 +1,7 @@
-import React, { useRef, useMemo, useEffect, Suspense } from 'react';
+import React, { useRef, useMemo, useEffect, Suspense, useContext } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Text3D, Center } from '@react-three/drei';
-import { useWatchConfig, ExtendedConfigState } from '@/hooks/use-watch-config';
+import { WatchConfigContext, ExtendedConfigState } from '@/hooks/use-watch-config';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
 
@@ -854,8 +854,8 @@ const LUG_ARM_Z  = 0.10;  // Z center for lug body, spring bar, and strap — si
 // STRAP_HALF removed — strap length now expressed as WRAP_SEGS × SEG_LEN in the StrapJoint chain
 
 export default function WatchModel({ step = 0, lastInteractionRef, showWrist = false, configOverride }: WatchModelProps) {
-  const { config: contextConfig } = useWatchConfig();
-  const config = configOverride ?? contextConfig;
+  const ctx = useContext(WatchConfigContext);
+  const config: ExtendedConfigState = configOverride ?? ctx?.config ?? {} as ExtendedConfigState;
   const groupRef = useRef<THREE.Group>(null);
   const prevStepRef = useRef(step);
   const faceSnapTargetRef = useRef<number | null>(null);

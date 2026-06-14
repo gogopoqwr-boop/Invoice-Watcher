@@ -279,7 +279,7 @@ export default function BoxSetup() {
           {/* ── Summary ── */}
           <div className="liquid-glass rounded-2xl p-4 space-y-2 text-sm">
             {([
-              ['Базовая стоимость', basePrice !== null ? <span className="flex items-center gap-0.5 font-medium">{basePrice} <TgStar size={11} /></span> : <span className="font-medium">…</span>],
+              ['Базовая стоимость', config.priceStars != null ? <span className="flex items-center gap-0.5 font-medium">{config.priceStars} <TgStar size={11} /></span> : <span className="font-medium">…</span>],
               ['Упаковка',         boxOption.surcharge > 0 ? <span className="flex items-center gap-0.5 font-medium">+{boxOption.surcharge} <TgStar size={11} /></span> : <span className="font-medium">бесплатно</span>],
               ['Лента',            giftWrap ? <span className="flex items-center gap-0.5 font-medium">+2 <TgStar size={11} /></span> : <span className="font-medium">—</span>],
             ] as [string, React.ReactNode][]).map(([k, v]) => (
@@ -291,7 +291,7 @@ export default function BoxSetup() {
             <div className="flex justify-between items-center border-t border-border/40 pt-2 mt-1">
               <span className="font-bold">Итого</span>
               <span className="font-black text-primary flex items-center gap-0.5">
-                {basePrice !== null ? <>{totalStars} <TgStar size={12} /></> : '…'}
+                {totalStars} <TgStar size={12} />
               </span>
             </div>
           </div>
@@ -305,10 +305,8 @@ export default function BoxSetup() {
         <div className="px-5 pb-6 pt-3 border-t border-border/40 shrink-0 space-y-3">
           <div className="flex items-center justify-between px-1">
             <span className="text-xs text-muted-foreground uppercase tracking-widest">Итого</span>
-            <span className="text-sm font-bold">
-              {basePrice !== null
-                ? <span className="flex items-center gap-0.5">{totalStars} <TgStar size={13} /></span>
-                : '…'}
+            <span className="text-sm font-bold flex items-center gap-0.5">
+              {totalStars} <TgStar size={13} />
             </span>
           </div>
           <div className="flex gap-3">
@@ -322,9 +320,7 @@ export default function BoxSetup() {
             >
               {submitting
                 ? 'Оформление...'
-                : basePrice !== null
-                ? <span className="flex items-center justify-center gap-1">Оплатить — {totalStars} <TgStar size={13} /></span>
-                : 'Оплатить →'}
+                : <span className="flex items-center justify-center gap-1">Оплатить — {totalStars} <TgStar size={13} /></span>}
             </button>
           </div>
           {orderError && (

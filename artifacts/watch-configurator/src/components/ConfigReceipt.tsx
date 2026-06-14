@@ -157,12 +157,22 @@ export default function ConfigReceipt({ configId, totalStars, alwaysOpen, compac
             <Suspense fallback={null}>
               <WatchBoxScene
                 config={{
-                  watchfaceGeometry: (cfg as any).watchfaceGeometry,
-                  watchfaceColor:    (cfg as any).watchfaceColor,
-                  braceletMaterial:  (cfg as any).braceletMaterial,
-                  braceletColor:     (cfg as any).braceletColor,
-                  handsEnabled:      (cfg as any).handsEnabled,
-                  handsColor:        (cfg as any).handsColor,
+                  watchfaceGeometry:  (cfg as any).watchfaceGeometry,
+                  watchfaceMaterial:  (cfg as any).watchfaceMaterial,
+                  watchfaceColor:     (cfg as any).watchfaceColor,
+                  braceletMaterial:   (cfg as any).braceletMaterial,
+                  braceletType:       (cfg as any).braceletType,
+                  braceletColor:      (cfg as any).braceletColor,
+                  handsEnabled:       (cfg as any).handsEnabled,
+                  handsColor:         (cfg as any).handsColor,
+                  handsCount:         (cfg as any).handsCount,
+                  watchfaceText:      (cfg as any).watchfaceText,
+                  watchfaceTextMode:  (cfg as any).watchfaceTextMode,
+                  watchfaceTextColor: (cfg as any).watchfaceTextColor,
+                  watchfaceSize:      (cfg as any).watchfaceSize,
+                  strapWidth:         (cfg as any).strapWidth,
+                  skinFullUrl:        (cfg as any).skinFullUrl,
+                  skinStripeUrl:      (cfg as any).skinStripeUrl,
                 }}
                 boxType={(cfg as any).boxType ?? 'standard'}
                 open={boxOpen}
