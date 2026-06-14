@@ -62,7 +62,7 @@ export default function BoxSetup() {
   const [selectedBox, setSelectedBox] = useState<BoxType>(config.boxType ?? 'standard');
   const [message, setMessage] = useState(config.boxMessage ?? '');
   const [giftWrap, setGiftWrap] = useState(config.giftWrap ?? false);
-  const [boxOpen, setBoxOpen] = useState(false);
+  const [boxOpen, setBoxOpen] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [basePrice, setBasePrice] = useState<number | null>(null);

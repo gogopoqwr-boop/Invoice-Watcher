@@ -22,7 +22,7 @@ const BOX_STYLES = {
     bodyColor:     '#1e293b',
     lidColor:      '#253347',
     interiorColor: '#0f172a',
-    cushionColor:  '#162032',
+    cushionColor:  '#2c4a72',   // visible blue-grey vs dark interior
     accentColor:   '#475569',
     rimColor:      '#334155',
     metalness: 0.22,
@@ -33,8 +33,8 @@ const BOX_STYLES = {
   premium: {
     bodyColor:     '#100800',
     lidColor:      '#1c0d00',
-    interiorColor: '#2e1030',
-    cushionColor:  '#3d1540',
+    interiorColor: '#1a0820',
+    cushionColor:  '#6b2060',   // rich velvet purple, visible vs dark interior
     accentColor:   '#c9970a',
     rimColor:      '#b8860b',
     metalness: 0.55,
@@ -45,8 +45,8 @@ const BOX_STYLES = {
   collector: {
     bodyColor:     '#5c3d1e',
     lidColor:      '#7c5228',
-    interiorColor: '#1a3050',
-    cushionColor:  '#122040',
+    interiorColor: '#0e1e10',
+    cushionColor:  '#1e4a30',   // forest green satin, contrasts against dark
     accentColor:   '#c9970a',
     rimColor:      '#a07030',
     metalness: 0.10,
@@ -287,21 +287,22 @@ function WatchInBox({ config, visible }: { config: WatchConfig; visible: boolean
   const faceTex    = useMemo(() => buildFaceTex(faceCol, text), [faceCol, text]);
   useEffect(() => () => { bodyGeo.dispose(); faceGeo.dispose(); crystalGeo.dispose(); faceTex.dispose(); }, [bodyGeo, faceGeo, crystalGeo, faceTex]);
 
-  // Pop-in spring when the box opens; scale=0 creates degenerate matrix so
-  // we gate the whole subtree with visible={visible} and only animate inside.
+  // Pop-in spring when box opens.
+  // Never go to exactly 0 — a zero scale creates a degenerate Three.js matrix
+  // that silently breaks rendering for the rest of the frame.
+  // Use Three.js group.visible=false to skip the subtree when closed instead.
   const { sc } = useSpring({
-    sc: visible ? 0.44 : 0,
-    config: { mass: 0.8, tension: 160, friction: 22 },
-    delay: visible ? 320 : 0,
+    sc: visible ? 0.44 : 0.001,
+    config: { mass: 0.8, tension: 140, friction: 20 },
+    delay: visible ? 180 : 0,
   });
-
-  if (!visible) return null;
 
   return (
     <animated.group
-      position={[0, -0.28, 0]}   // sits IN the cushion (cushion top ≈ -0.235)
-      scale={sc}                  // 0 → 0.44; straps fit at this scale (tip ≈ ±1.23, wall ±1.32)
+      position={[0, -0.28, 0]}   // sits on the cushion (cushion top ≈ -0.235)
+      scale={sc}                  // 0.001 → 0.44; straps fit (tip ≈ ±1.23, wall ±1.32)
       rotation={[-Math.PI / 2, 0, 0]}
+      visible={visible}           // Three.js skips subtree when false; no degenerate matrix
     >
         {/* Watch case */}
         <mesh>
