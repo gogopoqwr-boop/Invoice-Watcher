@@ -4,3 +4,4 @@ export * from "./orders";
 export * from "./adminUsers";
 export * from "./analyticsEvents";
 export * from "./presetComments";
+export * from "./settings";

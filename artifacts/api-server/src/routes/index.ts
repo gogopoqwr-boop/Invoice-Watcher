@@ -8,6 +8,7 @@ import analyticsRouter from "./analytics";
 import authRouter from "./auth";
 import botRouter from "./bot";
 import previewRouter from "./preview";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(analyticsRouter);
 router.use(authRouter);
 router.use(botRouter);
 router.use(previewRouter);
+router.use(adminRouter);
 
 export default router;
