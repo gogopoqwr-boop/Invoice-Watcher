@@ -1007,11 +1007,16 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   const handsOn  = config.handsEnabled !== false;
 
   // center + hands → canvas draws flat 2D text under the hands
+  // circular in mini-preview mode → canvas draws the circular ring (Text3D looks bad at card scale)
   // all other combos → canvas stays blank, Text3D handles it
+  const isMiniPreview = !!configOverride;
   const canvasTextMode: 'none' | 'circular' | 'center-flat' | 'center-raised' =
-    hasText && textMode === 'center' && handsOn ? 'center-flat' : 'none';
+    hasText && textMode === 'center' && handsOn ? 'center-flat' :
+    hasText && textMode === 'circular' && isMiniPreview ? 'circular' :
+    'none';
 
-  const isCircular = hasText && textMode === 'circular';
+  // In mini-preview mode circular text is handled by the canvas texture — skip Text3D
+  const isCircular = hasText && textMode === 'circular' && !isMiniPreview;
 
   const faceTexture = useMemo(
     () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceGeometry, canvasTextMode, config.watchfaceText),
