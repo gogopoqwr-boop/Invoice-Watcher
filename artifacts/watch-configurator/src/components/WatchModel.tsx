@@ -314,11 +314,8 @@ function buildBumpTexture(
 function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
   text: string; mode: 'center' | 'circular'; textColor: string; faceZ: number; handsEnabled: boolean; geom: string;
 }) {
-  const trimmed = text.trim().toUpperCase();
+  const trimmed = text.trim().toUpperCase().replace(/\n/g, ' ').trim();
   if (!trimmed || trimmed.startsWith('EYE:')) return null;
-
-  // Center + hands: canvas draws flat 2D text — nothing 3D needed here
-  if (mode === 'center' && handsEnabled) return null;
 
   // Letters sit just above face disc, safely below the crystal bottom bevel
   const textZ = faceZ + 0.006;
@@ -405,25 +402,8 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
     );
   }
 
-  // ── mode === 'center', no hands — extruded bold text centred on dial ────────
-  const lines   = trimmed.split('\n').filter(Boolean).slice(0, 3);
-  const maxLen  = Math.max(...lines.map(l => l.length), 1);
-  const fSize   = Math.min(0.44, Math.max(0.14, 1.30 / maxLen));
-  const lineH   = fSize * 1.4;
-  const totalH  = (lines.length - 1) * lineH;
-
-  return (
-    <group position={[0, 0, textZ]}>
-      {lines.map((line, i) => (
-        <Center key={i} position={[0, totalH / 2 - i * lineH, 0]}>
-          <Text3D font={TYPEFACE_URL} size={fSize} {...extrudeFor(fSize)}>
-            {line}
-            <meshStandardMaterial {...matProps} />
-          </Text3D>
-        </Center>
-      ))}
-    </group>
-  );
+  // Should never reach here — mode is always 'circular'.
+  return null;
 }
 
 // ─── Clasp & bone-chain strap system ───────────────────────────────────────
@@ -989,22 +969,15 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   }, [config.watchfaceGeometry]);
 
   const hasText = !!(config.watchfaceText?.trim()) && !config.watchfaceText.startsWith('EYE:');
-  const textMode = config.watchfaceTextMode ?? 'center';
+  // Text is always circular (around the bezel) — center mode removed from the UI.
+  // Force it here so legacy presets with textMode='center' also render correctly.
+  const textMode = 'circular' as const;
   const handsOn  = config.handsEnabled !== false;
 
-  // Determine which canvas text mode to use:
-  // Text3D handles circular and center-raised — canvas draws NO letters for
-  // those modes (only the flat center-flat case uses canvas text).
-  // 'none' is passed so buildFaceTexture only draws dial background + markers.
-  const canvasTextMode: 'none' | 'circular' | 'center-flat' | 'center-raised' = !hasText
-    ? 'none'
-    : textMode === 'circular'
-    ? 'none'          // 3D letters handled by Text3D
-    : handsOn
-    ? 'center-flat'   // flat 2D under hands
-    : 'none';         // 3D letters handled by Text3D
+  // All text is handled by Text3D (circular bezel letters) — canvas never draws text.
+  const canvasTextMode: 'none' | 'circular' | 'center-flat' | 'center-raised' = 'none';
 
-  const isCircular = hasText && textMode === 'circular';
+  const isCircular = hasText;
 
   const faceTexture = useMemo(
     () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceGeometry, canvasTextMode, config.watchfaceText),
