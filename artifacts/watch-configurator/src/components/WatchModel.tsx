@@ -349,38 +349,18 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
     if (count === 0) return null;
 
     const faceR = shapeHalfWidth(geom);
-    const r     = faceR * 0.78;   // inset path half-width / radius
+    // For square faces use a tighter radius so letters stay inside the rounded-corner crystal.
+    const r = faceR * (geom === 'square' ? 0.68 : 0.78);
 
-    // Perimeter length determines font size so letters fill the path evenly.
-    const isSquarePath = geom === 'square';
-    const perimeter    = isSquarePath ? 8 * r : 2 * Math.PI * r;
-    const fontSize     = Math.max(0.12, Math.min(0.30, (perimeter * 0.52) / Math.max(count, 4)));
+    // Circular distribution — equally-spaced angles starting at 12 o'clock.
+    // Works for all face geometries: letters always stay within the crystal area
+    // and face the camera via Billboard, so no bezel-convention rotation needed.
+    const perimeter = 2 * Math.PI * r;
+    const fontSize  = Math.max(0.12, Math.min(0.28, (perimeter * 0.52) / Math.max(count, 4)));
 
-    // Compute (x, y) position and normal angle for letter i along the chosen path.
-    //
-    // Square path: starts at top-center (0, r), walks clockwise around all 4 sides.
-    //   Perimeter = 8r; each step = 8r / count.
-    //
-    // Circular path: classic equally-spaced angles, starting at 12 o'clock.
-    //
-    // rotZ = atan2(y, x) - π/2 in both cases so the letter's baseline always
-    // faces inward — the standard watch-bezel convention.
     const letterPositions = Array.from({ length: count }, (_, i) => {
-      let x: number, y: number;
-      if (isSquarePath) {
-        const t = (i / count) * 8 * r;
-        if      (t < r)       { x = t;           y = r;  }          // top (right half)
-        else if (t < 3 * r)   { x = r;           y = 2 * r - t; }   // right side
-        else if (t < 5 * r)   { x = 4 * r - t;   y = -r; }          // bottom
-        else if (t < 7 * r)   { x = -r;           y = t - 6 * r; }   // left side
-        else                  { x = t - 8 * r;   y = r;  }          // top (left half)
-      } else {
-        const angle = Math.PI / 2 - (i / count) * Math.PI * 2;      // 12 o'clock first
-        x = r * Math.cos(angle);
-        y = r * Math.sin(angle);
-      }
-      const rotZ = Math.atan2(y, x) - Math.PI / 2;
-      return { x, y, rotZ };
+      const angle = Math.PI / 2 - (i / count) * Math.PI * 2;  // 12 o'clock first, clockwise
+      return { x: r * Math.cos(angle), y: r * Math.sin(angle) };
     });
 
     return (
