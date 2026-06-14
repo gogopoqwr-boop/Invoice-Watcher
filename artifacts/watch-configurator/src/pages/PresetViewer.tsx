@@ -100,16 +100,17 @@ function WatchScene() {
 type Phase = 'enter' | 'open' | 'exit';
 
 // Saved rect from the card click
-function getOriginRect(): DOMRect | null {
+function getOriginData(): { rect: DOMRect | null; backPath: string } {
   try {
     const raw = sessionStorage.getItem('presetOriginRect');
-    if (!raw) return null;
+    if (!raw) return { rect: null, backPath: '/collections' };
     sessionStorage.removeItem('presetOriginRect'); // consume once — prevent stale ghost on future navigations
     const d = JSON.parse(raw);
-    return { top: d.top, left: d.left, right: d.right, bottom: d.bottom,
-             width: d.width, height: d.height, x: d.x, y: d.y,
-             toJSON: () => d } as DOMRect;
-  } catch { return null; }
+    const rect = { top: d.top, left: d.left, right: d.right, bottom: d.bottom,
+                   width: d.width, height: d.height, x: d.x, y: d.y,
+                   toJSON: () => d } as DOMRect;
+    return { rect, backPath: d.backPath ?? '/collections' };
+  } catch { return { rect: null, backPath: '/collections' }; }
 }
 
 function rectToClip(rect: DOMRect): string {
@@ -129,7 +130,9 @@ export default function PresetViewer() {
   const { updateConfig, sessionId } = useWatchConfig();
 
   const [phase, setPhase] = useState<Phase>('enter');
-  const originRect = useRef<DOMRect | null>(getOriginRect());
+  const originData = useRef(getOriginData());
+  const originRect = useRef<DOMRect | null>(originData.current.rect);
+  const backPath = useRef(originData.current.backPath);
 
   const preset = useMemo(() =>
     ((presets as any[]) ?? []).find((p: any) => String(p.id) === String(id)),
@@ -176,9 +179,8 @@ export default function PresetViewer() {
   }, [preset?.id]);
 
   const goBack = useCallback(() => {
-    // Reverse the clip back into the card, then navigate
     setPhase('exit');
-    setTimeout(() => setLocation('/collections'), 520);
+    setTimeout(() => setLocation(backPath.current), 520);
   }, [setLocation]);
 
   useEffect(() => {

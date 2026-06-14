@@ -265,6 +265,7 @@ export default function CollectionPage() {
         sessionStorage.setItem('presetOriginRect', JSON.stringify({
           top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom,
           width: rect.width, height: rect.height, x: rect.x, y: rect.y,
+          backPath: window.location.pathname,
         }));
       } catch { /* ignore */ }
       setTimeout(() => { setExpanding(false); setLocation(`/preset/${preset.id}`); }, 160);
