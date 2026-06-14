@@ -2,8 +2,58 @@ import { Router } from "express";
 import { db, watchConfigsTable, ordersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { generateWatchBoxSVG } from "../lib/watchBoxSvg.js";
+import { generateWatchRotatingGif } from "../lib/watchGif.js";
 
 const router = Router();
+
+// In-memory cache: config hash → gif buffer (keeps last 30)
+const gifCache = new Map<string, Buffer>();
+function gifCacheKey(cfg: any): string {
+  return [
+    cfg?.watchfaceColor, cfg?.watchfaceGeometry, cfg?.braceletColor,
+    cfg?.braceletMaterial, cfg?.handsEnabled, cfg?.handsColor,
+    cfg?.watchfaceText, cfg?.watchfaceTextMode, cfg?.watchfaceBackgroundType,
+    cfg?.watchfaceGradientEnd,
+  ].join('|');
+}
+
+router.get("/watch-animation/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).send("Invalid id");
+
+    let config: any = null;
+    const [cfg] = await db.select().from(watchConfigsTable).where(eq(watchConfigsTable.id, id));
+    if (cfg) {
+      config = cfg;
+    } else {
+      const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
+      if (order?.configId) {
+        const [c] = await db.select().from(watchConfigsTable).where(eq(watchConfigsTable.id, order.configId));
+        if (c) config = c;
+      }
+    }
+
+    const cacheKey = gifCacheKey(config);
+    let gif = gifCache.get(cacheKey);
+
+    if (!gif) {
+      gif = await generateWatchRotatingGif(config ?? {}, 360, 30, 60);
+      if (gifCache.size >= 30) {
+        const firstKey = gifCache.keys().next().value;
+        if (firstKey !== undefined) gifCache.delete(firstKey);
+      }
+      gifCache.set(cacheKey, gif);
+    }
+
+    res.setHeader("Content-Type", "image/gif");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.send(gif);
+  } catch (err) {
+    req.log.error({ err }, "watch-animation error");
+    res.status(500).send("Error");
+  }
+});
 
 router.get("/watch-preview/:id", async (req, res) => {
   try {

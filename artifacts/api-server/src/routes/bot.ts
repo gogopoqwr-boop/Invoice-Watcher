@@ -113,28 +113,37 @@ async function sendWatchInvoice(chatId: number | string, orderId: number) {
   }
 }
 
-async function sendWatchPreviewPhoto(chatId: string | number, orderId: number, config: any) {
+async function sendWatchPreviewAnimation(chatId: string | number, orderId: number, config: any) {
   const baseUrl = getWebsiteBaseUrl();
   if (!baseUrl || !config) return;
 
-  const photoUrl = `${baseUrl}/api/watch-preview/${orderId}`;
+  const animUrl = `${baseUrl}/api/watch-animation/${orderId}`;
   try {
     const caption = config.name ? `⌚ ${config.name}` : "⌚ Ваши часы";
-    await callTelegram("sendPhoto", {
+    await callTelegram("sendAnimation", {
       chat_id: chatId,
-      photo: photoUrl,
+      animation: animUrl,
       caption,
     });
   } catch {
-    // best-effort — if photo fails, the text receipt still follows
+    // fallback to static photo if animation fails
+    try {
+      await callTelegram("sendPhoto", {
+        chat_id: chatId,
+        photo: `${baseUrl}/api/watch-preview/${orderId}`,
+        caption: config.name ? `⌚ ${config.name}` : "⌚ Ваши часы",
+      });
+    } catch {
+      // best-effort — text receipt still follows
+    }
   }
 }
 
 async function sendPaymentReceipt(chatId: string | number, orderId: number, order: any, config: any) {
   const orderUrl = buildOrderReturnUrl(orderId);
 
-  // Send watch image first (best-effort)
-  await sendWatchPreviewPhoto(chatId, orderId, config);
+  // Send rotating watch animation first (best-effort)
+  await sendWatchPreviewAnimation(chatId, orderId, config);
 
   let configSection = "  Кастомные часы";
   if (config) {
