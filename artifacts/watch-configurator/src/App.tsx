@@ -12,6 +12,7 @@ import Configure from "@/pages/Configure";
 import BoxSetup from "@/pages/BoxSetup";
 import Payment from "@/pages/Payment";
 import Orders from "@/pages/Orders";
+import OrderDetail from "@/pages/OrderDetail";
 import Login from "@/pages/Login";
 import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
@@ -92,6 +93,7 @@ function Router() {
       <Route path="/configure" component={Configure} />
       <Route path="/box" component={BoxSetup} />
       <Route path="/payment/:orderId" component={Payment} />
+      <Route path="/orders/:id" component={OrderDetail} />
       <Route path="/orders" component={Orders} />
       <Route path="/login" component={Login} />
       <Route path="/admin" component={Admin} />

@@ -102,7 +102,7 @@ export default function Payment() {
 
   useEffect(() => {
     if (order?.status && order.status !== 'payment_pending' && order.status !== 'cancelled') {
-      setTimeout(() => setLocation('/orders'), 2000);
+      setTimeout(() => setLocation(`/orders/${orderId}`), 2000);
     }
   }, [order?.status, setLocation]);
 

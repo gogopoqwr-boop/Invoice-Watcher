@@ -20,7 +20,7 @@ function getWebsiteBaseUrl() {
 function buildOrderReturnUrl(orderId: number) {
   const baseUrl = getWebsiteBaseUrl();
   if (!baseUrl) return undefined;
-  return `${baseUrl}/orders?paid=true&orderId=${orderId}`;
+  return `${baseUrl}/orders/${orderId}`;
 }
 
 async function callTelegram(method: string, body: object) {

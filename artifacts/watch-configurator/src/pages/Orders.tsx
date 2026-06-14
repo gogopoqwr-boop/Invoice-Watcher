@@ -193,7 +193,9 @@ export default function Orders() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <span className="flex items-center">{STATUS_ICON_MAP[order.status] ?? <ClipboardList size={16} className="text-muted-foreground shrink-0" />}</span>
-                      <span className="font-black text-sm font-mono text-foreground">#{order.id}</span>
+                      <Link href={`/orders/${order.id}`}>
+                        <span className="font-black text-sm font-mono text-foreground hover:text-primary transition-colors cursor-pointer">#{order.id}</span>
+                      </Link>
                       <span className={cn('text-xs px-2.5 py-0.5 rounded-full font-semibold border', STATUS_COLORS[order.status] ?? 'text-muted-foreground bg-muted border-border')}>
                         {STATUS_LABELS[order.status] ?? order.status}
                       </span>
