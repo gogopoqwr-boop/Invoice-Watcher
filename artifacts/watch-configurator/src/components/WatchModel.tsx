@@ -1174,12 +1174,12 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         </group>
       )}
 
-      {/* Crown */}
-      <mesh position={[1.62, 0.18, 0.10]} rotation={[0, 0, Math.PI / 2]} castShadow>
+      {/* Crown — positioned flush with the right edge of the case for every geometry */}
+      <mesh position={[caseHalf + 0.12, 0.18, 0.10]} rotation={[0, 0, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[0.09, 0.085, 0.28, 18]} />
         <meshStandardMaterial {...caseMat} />
       </mesh>
-      <mesh position={[1.66, 0.18, 0.10]} rotation={[0, 0, Math.PI / 2]}>
+      <mesh position={[caseHalf + 0.16, 0.18, 0.10]} rotation={[0, 0, Math.PI / 2]}>
         <torusGeometry args={[0.09, 0.018, 8, 18]} />
         <meshStandardMaterial color={caseMat.color} metalness={caseMat.metalness} roughness={Math.min(1, caseMat.roughness + 0.15)} />
       </mesh>
