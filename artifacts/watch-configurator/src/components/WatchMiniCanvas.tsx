@@ -164,11 +164,11 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
           color="#daeeff"
           metalness={0}
           roughness={0.04}
-          transmission={0.82}
-          ior={1.45}
-          thickness={0.06}
-          clearcoat={0.8}
-          clearcoatRoughness={0.06}
+          transmission={0.65}
+          ior={1.05}
+          thickness={0.02}
+          clearcoat={1.0}
+          clearcoatRoughness={0.04}
           reflectivity={0.5}
           specularIntensity={1.2}
           specularColor="#ffffff"
@@ -204,7 +204,7 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
       ))}
 
       {handsEnabled && (
-        <group position={[0, 0, 0.59]}>
+        <group position={[0, 0, 0.66]}>
           <group rotation={[0, 0, Math.PI / 5]}>
             <mesh position={[0, 0.26, 0]}>
               <boxGeometry args={[0.058, 0.52, 0.018]} />
