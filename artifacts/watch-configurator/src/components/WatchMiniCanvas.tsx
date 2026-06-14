@@ -39,6 +39,73 @@ function buildShape(geom: string): THREE.Shape {
   return s;
 }
 
+// ── Lightweight canvas texture for mini watch face ────────────────────────
+// Mirrors the circular/center text approach from buildFaceTexture in WatchModel
+// but at 256px with no emboss (mini cards don't need bump maps).
+function buildMiniTexture(
+  faceColor: string,
+  handsColor: string,
+  text: string,
+  textMode: string,
+): THREE.CanvasTexture {
+  const S = 256;
+  const cv = document.createElement('canvas');
+  cv.width = S; cv.height = S;
+  const ctx = cv.getContext('2d')!;
+
+  ctx.fillStyle = faceColor;
+  ctx.fillRect(0, 0, S, S);
+
+  const grad = ctx.createRadialGradient(S * 0.35, S * 0.3, 0, S / 2, S / 2, S * 0.55);
+  grad.addColorStop(0, 'rgba(255,255,255,0.10)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.15)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, S, S);
+
+  const rawText = text.trim().toUpperCase();
+  if (rawText && !rawText.startsWith('EYE:')) {
+    ctx.fillStyle = handsColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    if (textMode === 'circular') {
+      const chars = Array.from(rawText.replace(/ /g, '·'));
+      const count = chars.length;
+      const circR = S * 0.345;
+      const fontSize = Math.max(10, Math.min(36, Math.round(S * 1.05 / Math.max(count, 5))));
+      ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
+      ctx.globalAlpha = 0.92;
+      chars.forEach((ch, i) => {
+        const angle = Math.PI / 2 - (i / count) * Math.PI * 2;  // 12 o'clock first, clockwise
+        const x = S / 2 + circR * Math.cos(angle);
+        const y = S / 2 - circR * Math.sin(angle);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.PI / 2 - angle);  // baseline faces centre
+        ctx.fillText(ch, 0, 0);
+        ctx.restore();
+      });
+      ctx.globalAlpha = 1;
+    } else {
+      const lines = rawText.split('\n').filter(Boolean).slice(0, 3);
+      const maxLen = Math.max(...lines.map(l => l.length), 1);
+      const fontSize = Math.min(S * 0.16, S * 0.70 / maxLen);
+      const lineH = fontSize * 1.35;
+      const totalH = (lines.length - 1) * lineH;
+      ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
+      ctx.globalAlpha = 0.88;
+      lines.forEach((line, i) => {
+        ctx.fillText(line, S / 2, S / 2 - totalH / 2 + i * lineH);
+      });
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.needsUpdate = true;
+  return tex;
+}
+
 interface MiniWatchProps {
   watchfaceGeometry: string;
   watchfaceColor: string;
@@ -46,13 +113,13 @@ interface MiniWatchProps {
   braceletMaterial: string;
   handsColor: string;
   handsEnabled: boolean;
-  paused?: boolean;
   watchfaceText?: string;
+  watchfaceTextMode?: string;
+  paused?: boolean;
 }
 
-function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletMaterial, handsColor, handsEnabled, paused, watchfaceText }: MiniWatchProps) {
+function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletMaterial, handsColor, handsEnabled, watchfaceText, watchfaceTextMode, paused }: MiniWatchProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const rotRef = useRef(0);
 
   const bodyGeo = useMemo(() => {
     const shape = buildShape(watchfaceGeometry);
@@ -65,7 +132,12 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
     return new THREE.ExtrudeGeometry(shape, { depth: 0.04, bevelEnabled: true, bevelSize: 0.035, bevelThickness: 0.035, bevelSegments: 8 });
   }, [watchfaceGeometry]);
 
-  useEffect(() => () => { bodyGeo.dispose(); faceGeo.dispose(); crystalGeo.dispose(); }, [bodyGeo, faceGeo, crystalGeo]);
+  const faceTex = useMemo(
+    () => buildMiniTexture(watchfaceColor, handsColor, watchfaceText ?? '', watchfaceTextMode ?? 'circular'),
+    [watchfaceColor, handsColor, watchfaceText, watchfaceTextMode]
+  );
+
+  useEffect(() => () => { bodyGeo.dispose(); faceGeo.dispose(); crystalGeo.dispose(); faceTex.dispose(); }, [bodyGeo, faceGeo, crystalGeo, faceTex]);
 
   const isMetal = braceletMaterial === 'metal_solid' || braceletMaterial === 'metal_segmented';
   const isResin = braceletMaterial === 'resin';
@@ -84,7 +156,7 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
       </mesh>
       <mesh position={[0, 0, 0.48]}>
         <primitive object={faceGeo} />
-        <meshStandardMaterial color={watchfaceColor} roughness={0.26} metalness={0.05} />
+        <meshStandardMaterial map={faceTex} roughness={0.26} metalness={0.05} />
       </mesh>
       <mesh position={[0, 0, 0.54]}>
         <primitive object={crystalGeo} />
@@ -330,12 +402,6 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
     );
   }
 
-  const watchText = preset.watchfaceText?.trim();
-  const textLines = watchText ? watchText.split('\n').slice(0, 3) : [];
-
-  // Determine contrasting text color for the 3D overlay
-  const faceDark = lum(faceColor) > 0.55;
-  const overlayTextColor = faceDark ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.95)';
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -367,8 +433,9 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
               braceletMaterial={preset.braceletMaterial ?? 'leather'}
               handsColor={preset.handsColor ?? '#ffffff'}
               handsEnabled={preset.handsEnabled ?? true}
-              paused={paused}
               watchfaceText={preset.watchfaceText ?? ''}
+              watchfaceTextMode={preset.watchfaceTextMode ?? 'circular'}
+              paused={paused}
             />
           </Canvas>
         </div>
