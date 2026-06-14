@@ -48,7 +48,7 @@ const defaultState: ExtendedConfigState = {
   handsCount: 3,
   handsColor: "#cbd5e1",
   watchfaceText: "",
-  watchfaceTextMode: "center",
+  watchfaceTextMode: "circular",
 };
 
 type WatchConfigContextType = {

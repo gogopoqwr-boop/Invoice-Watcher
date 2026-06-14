@@ -314,35 +314,15 @@ export default function Configure() {
           </div>
 
 
-          {/* ── Watchface text ── */}
+          {/* ── Watchface text — circular bezel inscription only ── */}
           <div>
-            <h2 className="text-lg font-bold tracking-tight mb-3">Надпись на циферблате</h2>
-            <div className="flex gap-2 mb-3">
-              {([
-                { mode: 'center' as const, label: 'По центру', icon: 'Aa' },
-                { mode: 'circular' as const, label: 'По кругу', icon: '◎' },
-              ]).map(({ mode, label, icon }) => (
-                <button
-                  key={mode}
-                  onClick={() => updateConfig({ watchfaceTextMode: mode })}
-                  className={cn(
-                    'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex flex-col items-center gap-1',
-                    (config.watchfaceTextMode ?? 'center') === mode
-                      ? 'ring-2 ring-primary bg-primary/10'
-                      : 'border border-border/60 bg-card/60 hover:bg-card/80'
-                  )}
-                >
-                  <span className="text-base leading-none">{icon}</span>
-                  <span className="text-[11px] text-muted-foreground">{label}</span>
-                </button>
-              ))}
-            </div>
+            <h2 className="text-lg font-bold tracking-tight mb-3">Надпись на безеле</h2>
             <input
               type="text"
-              maxLength={16}
+              maxLength={24}
               placeholder="Например: ДОХУИЩА"
-              value={config.watchfaceText ?? ''}
-              onChange={e => updateConfig({ watchfaceText: e.target.value })}
+              value={config.watchfaceText?.startsWith('EYE:') ? '' : (config.watchfaceText ?? '')}
+              onChange={e => updateConfig({ watchfaceText: e.target.value, watchfaceTextMode: 'circular' })}
               className="w-full px-4 py-3 rounded-xl text-sm text-foreground border border-border/60 bg-card/80 focus:outline-none focus:ring-2 focus:ring-primary/60 placeholder:text-muted-foreground/50"
             />
             {config.watchfaceText && (
