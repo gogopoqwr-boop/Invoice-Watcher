@@ -106,7 +106,7 @@ function buildMiniTexture(
   return tex;
 }
 
-interface MiniWatchProps {
+export interface MiniWatchProps {
   watchfaceGeometry: string;
   watchfaceColor: string;
   braceletColor: string;
@@ -118,7 +118,7 @@ interface MiniWatchProps {
   paused?: boolean;
 }
 
-function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletMaterial, handsColor, handsEnabled, watchfaceText, watchfaceTextMode, paused }: MiniWatchProps) {
+export function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletMaterial, handsColor, handsEnabled, watchfaceText, watchfaceTextMode, paused }: MiniWatchProps) {
   const groupRef = useRef<THREE.Group>(null);
 
   const bodyGeo = useMemo(() => {
