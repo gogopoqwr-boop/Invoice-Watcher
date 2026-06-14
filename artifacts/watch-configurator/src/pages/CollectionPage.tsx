@@ -324,21 +324,6 @@ export default function CollectionPage() {
             <span className="text-[9px] text-primary/60 font-semibold ml-1 shrink-0">Смотреть →</span>
           </div>
         </button>
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={(e) => handleBuyOpen(e, preset)}
-          onKeyDown={(e) => { if (e.key === 'Enter') handleBuyOpen(e as any, preset); }}
-          className={cn(
-            'mt-1.5 w-full py-2 rounded-xl text-[10px] font-black tracking-widest uppercase text-center cursor-pointer transition-all',
-            soldOut
-              ? 'opacity-30 cursor-not-allowed bg-muted text-muted-foreground pointer-events-none'
-              : 'bg-primary text-white hover:bg-primary/90 active:scale-[0.97]'
-          )}
-          aria-disabled={soldOut}
-        >
-          {soldOut ? 'Распродано' : 'КУПИТЬ'}
-        </div>
       </div>
     );
   };

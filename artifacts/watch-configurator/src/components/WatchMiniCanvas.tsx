@@ -70,11 +70,10 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
   const isMetal = braceletMaterial === 'metal_solid' || braceletMaterial === 'metal_segmented';
   const isResin = braceletMaterial === 'resin';
 
-  useFrame((_, delta) => {
+  useFrame((state) => {
     if (!groupRef.current) return;
-    const targetSpeed = paused ? 0.004 : 0.012;
-    rotRef.current += (targetSpeed - rotRef.current) * 0.08;
-    groupRef.current.rotation.y += rotRef.current;
+    const t = state.clock.elapsedTime;
+    groupRef.current.rotation.y = Math.sin(t * 0.45) * 0.38;
   });
 
   return (
@@ -164,41 +163,6 @@ function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletM
         <meshStandardMaterial color={watchfaceColor} metalness={0.76} roughness={0.14} />
       </mesh>
 
-      {watchfaceText && watchfaceText.trim() && (() => {
-        const lines = watchfaceText.trim().split('\n').slice(0, 3).filter(Boolean);
-        return lines.length > 0 ? (
-          <Html
-            center
-            position={[0, 0, 0.65]}
-            style={{ pointerEvents: 'none' }}
-            zIndexRange={[0, 0]}
-          >
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '1px',
-              background: 'rgba(0,0,0,0.50)',
-              borderRadius: '4px',
-              padding: '2px 5px',
-              whiteSpace: 'nowrap',
-            }}>
-              {lines.map((line, i) => (
-                <span key={i} style={{
-                  color: '#fff',
-                  fontSize: lines.length > 1 ? '7px' : '9px',
-                  fontWeight: 900,
-                  letterSpacing: '0.08em',
-                  lineHeight: 1.15,
-                  display: 'block',
-                }}>
-                  {line}
-                </span>
-              ))}
-            </div>
-          </Html>
-        ) : null;
-      })()}
     </group>
   );
 }
