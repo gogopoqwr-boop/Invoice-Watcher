@@ -5,9 +5,9 @@ import { useWatchConfig } from '@/hooks/use-watch-config';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
 
-// Roboto Bold — jsDelivr mirrors Google Fonts repo; full Cyrillic+Latin in one TTF file.
-// jsDelivr always sets Access-Control-Allow-Origin:* so troika's Worker can fetch it.
-const FONT_URL = 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/roboto/Roboto-Bold.ttf';
+// DejaVu Sans Bold — bundled locally in public/fonts/ so it loads instantly
+// with no CDN dependency. Full Cyrillic+Latin coverage.
+const FONT_URL = '/fonts/DejaVuSans-Bold.ttf';
 
 // Eagerly preload the font so it's ready before Text components mount
 try { Text.preload(FONT_URL); } catch { /* ignore if preload not available */ }
@@ -103,50 +103,9 @@ function buildFaceTexture(
   ctx.fillStyle = handsColor;
   ctx.fill();
 
-  // ── Circular text: draw letters around the ring directly on canvas.
-  // This is the guaranteed path that works even when the CDN font fails.
-  // The 3D WatchFaceText layer adds a metallic sheen on top when the font loads.
-  if (isCircular && text && !text.startsWith('EYE:')) {
-    const chars = Array.from(text.trim().toUpperCase().replace(/ /g, '·'));
-    const count = chars.length;
-    if (count > 0) {
-      const circR   = S * 0.34;
-      const fullRing = count >= 5;
-      const arcSpan  = fullRing ? Math.PI * 2 : Math.min(Math.PI * 1.55, count * 0.44);
-      const fontSize = Math.max(16, Math.min(52, Math.round(S * 1.05 / Math.max(count, 5))));
-      // Start at 12 o'clock (π/2 in canvas-math where sin flips) and go clockwise
-      const startAngle = fullRing
-        ? Math.PI / 2
-        : Math.PI / 2 + arcSpan / 2 - arcSpan / Math.max(count - 1, 1) / 2;
-      const angleStep = fullRing
-        ? (Math.PI * 2) / count
-        : arcSpan / Math.max(count - 1, 1);
-
-      ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
-      ctx.fillStyle = handsColor;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.globalAlpha = 0.92;
-
-      chars.forEach((ch, i) => {
-        // Clockwise from 12: angle decreases in standard math convention.
-        // Canvas Y is flipped, so use (S/2 - sin) to go up at π/2.
-        const angle = startAngle - i * angleStep;
-        const x = S / 2 + circR * Math.cos(angle);
-        const y = S / 2 - circR * Math.sin(angle);
-        ctx.save();
-        ctx.translate(x, y);
-        // Rotate so each letter's base faces the dial centre
-        ctx.rotate(Math.PI / 2 - angle);
-        ctx.fillText(ch, 0, 0);
-        ctx.restore();
-      });
-      ctx.globalAlpha = 1;
-    }
-  }
-
   // ── Center text (2-D): drawn flat on the canvas, sits underneath the hands.
-  // Used when mode='center' AND hands are enabled.
+  // Circular and center-no-hands modes are handled fully in 3D by WatchFaceText
+  // using the locally bundled DejaVuSans-Bold font — no canvas fallback needed.
   if (drawTextOnCanvas && text && !text.startsWith('EYE:')) {
     const lines = text.trim().toUpperCase().split('\n').filter(Boolean).slice(0, 3);
     const maxLen = Math.max(...lines.map(l => l.length), 1);
