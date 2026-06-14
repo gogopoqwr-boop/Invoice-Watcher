@@ -188,19 +188,25 @@ export default function Payment() {
       <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-center
                       min-h-[100dvh] pt-14 px-4 pb-4 gap-4 animate-shimmer-in max-w-2xl mx-auto">
 
-        {/* ── Watch preview — compact on mobile, taller on desktop ── */}
-        <div className="liquid-glass rounded-3xl overflow-hidden md:w-[44%] flex-none flex flex-col">
+        {/* ── Watch preview — compact on mobile, taller on desktop ──
+             NOTE: must NOT use liquid-glass here — backdrop-filter on a parent
+             kills WebGL canvas rendering inside (browser compositing bug).
+             Using equivalent visual style without backdrop-filter. */}
+        <div
+          className="rounded-3xl overflow-hidden md:w-[44%] flex-none flex flex-col border border-white/10 shadow-2xl"
+          style={{ background: 'rgba(255,255,255,0.045)' }}
+        >
           <div className="h-[180px] md:h-[300px]">
             {order.configId ? (
               <WatchPreviewPanel configId={order.configId} />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm canvas-box-bg">
                 Ваши часы
               </div>
             )}
           </div>
           {/* Config badge */}
-          <div className="px-5 pb-4 pt-2 text-center">
+          <div className="px-5 pb-4 pt-2 text-center border-t border-white/8">
             <p className="text-xs text-muted-foreground uppercase tracking-widest">Заказ #{orderId}</p>
             <p className="text-lg font-black tabular-nums mt-0.5 flex items-center justify-center gap-1">{order.totalStars} <TgStar size={15} /></p>
           </div>
