@@ -5,12 +5,16 @@ import { useWatchConfig } from '@/hooks/use-watch-config';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
 
-// DejaVu Sans Bold — bundled locally in public/fonts/ so it loads instantly
-// with no CDN dependency. Full Cyrillic+Latin coverage.
-const FONT_URL = '/fonts/DejaVuSans-Bold.ttf';
+// DejaVu Sans Bold — local font bundled in public/fonts/.
+// Constructed as an absolute URL at runtime so the Troika blob-worker can fetch it
+// (relative paths fail from blob: origin). Used as a bonus overlay when it loads;
+// canvas-drawn embossed text is always the primary renderer.
+const FONT_URL = typeof window !== 'undefined'
+  ? `${window.location.origin}/fonts/DejaVuSans-Bold.ttf`
+  : '/fonts/DejaVuSans-Bold.ttf';
 
-// Eagerly preload the font so it's ready before Text components mount
-try { Text.preload(FONT_URL); } catch { /* ignore if preload not available */ }
+// Attempt to preload the font eagerly (API exists in some drei versions)
+try { (Text as unknown as { preload: (u: string) => void }).preload(FONT_URL); } catch { /* ok */ }
 
 // Error boundary that renders null on error — keeps the rest of the Canvas alive
 // when the font CDN is unreachable or a text render fails.
@@ -61,15 +65,65 @@ function buildFaceShape(geom: string): THREE.Shape {
 }
 
 // ─── Face texture (canvas) ─────────────────────────────────────────────────
+//
+// All text is drawn on the canvas texture — this is the only reliable path
+// in Replit's environment (Troika's blob WebWorker can't resolve font URLs).
+//
+// textMode:
+//   'circular'     — embossed letters around the bezel ring  (3-D look)
+//   'center-flat'  — flat text centred on face, sits under hands (2-D)
+//   'center-raised'— embossed letters centred, no hands obstruction (3-D look)
+//   'none'         — no text
+
+// Derive shadow / highlight colours from the hands colour.
+function embossColors(handsColor: string) {
+  const base = new THREE.Color(handsColor);
+  const shadow = '#' + base.clone().multiplyScalar(0.25).getHexString();
+  const highlight = '#' + base.clone().lerp(new THREE.Color('#ffffff'), 0.55).getHexString();
+  return { shadow, highlight, base: handsColor };
+}
+
+// Draw a single chunk of text at (tx, ty) — already translated & rotated.
+// Layers: dark extrusion → main face → specular streak.
+function drawRaisedText(
+  ctx: CanvasRenderingContext2D,
+  label: string,
+  tx: number, ty: number,
+  rotation: number,
+  colors: { shadow: string; highlight: string; base: string },
+  depth: number,
+) {
+  ctx.save();
+  ctx.translate(tx, ty);
+  ctx.rotate(rotation);
+
+  // Extrusion side-face: dark layers offset bottom-right
+  ctx.fillStyle = colors.shadow;
+  for (let d = Math.ceil(depth); d >= 1; d--) {
+    ctx.fillText(label, d * 0.65, d * 0.72);
+  }
+
+  // Main face
+  ctx.fillStyle = colors.base;
+  ctx.fillText(label, 0, 0);
+
+  // Specular highlight streak (top-left)
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = colors.highlight;
+  ctx.fillText(label, -0.45, -0.5);
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
 
 function buildFaceTexture(
   faceColor: string,
   handsColor: string,
   geom: string,
-  isCircular: boolean,
+  textMode: 'none' | 'circular' | 'center-flat' | 'center-raised',
   text?: string,
-  drawTextOnCanvas = false,
 ): THREE.CanvasTexture {
+  const isCircular = textMode === 'circular';
   const S = 512;
   const cv = document.createElement('canvas');
   cv.width = S; cv.height = S;
@@ -103,11 +157,66 @@ function buildFaceTexture(
   ctx.fillStyle = handsColor;
   ctx.fill();
 
-  // ── Center text (2-D): drawn flat on the canvas, sits underneath the hands.
-  // Circular and center-no-hands modes are handled fully in 3D by WatchFaceText
-  // using the locally bundled DejaVuSans-Bold font — no canvas fallback needed.
-  if (drawTextOnCanvas && text && !text.startsWith('EYE:')) {
-    const lines = text.trim().toUpperCase().split('\n').filter(Boolean).slice(0, 3);
+  const rawText = text?.trim().toUpperCase() ?? '';
+  const hasText  = rawText.length > 0 && !rawText.startsWith('EYE:');
+
+  // ── Circular: embossed letters placed around the bezel ring ──────────────
+  if (textMode === 'circular' && hasText) {
+    const chars = Array.from(rawText.replace(/ /g, '·'));
+    const count = chars.length;
+    if (count > 0) {
+      const circR    = S * 0.355;
+      const fullRing = count >= 5;
+      const arcSpan  = fullRing ? Math.PI * 2 : Math.min(Math.PI * 1.55, count * 0.44);
+      const fontSize = Math.max(18, Math.min(56, Math.round(S * 1.1 / Math.max(count, 5))));
+      const depth    = Math.max(2, fontSize * 0.10);
+      const startAngle = fullRing
+        ? Math.PI / 2
+        : Math.PI / 2 + arcSpan / 2;
+      const angleStep = fullRing
+        ? (Math.PI * 2) / count
+        : arcSpan / Math.max(count - 1, 1);
+
+      ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const colors = embossColors(handsColor);
+      chars.forEach((ch, i) => {
+        // Clockwise from 12 o'clock
+        const angle = startAngle - i * angleStep;
+        const x = S / 2 + circR * Math.cos(angle);
+        const y = S / 2 - circR * Math.sin(angle);
+        // Letter base faces the dial centre
+        const rot = Math.PI / 2 - angle;
+        drawRaisedText(ctx, ch, x, y, rot, colors, depth);
+      });
+    }
+  }
+
+  // ── Center raised: embossed letters centred (no hands) ───────────────────
+  if (textMode === 'center-raised' && hasText) {
+    const lines = rawText.split('\n').filter(Boolean).slice(0, 3);
+    const maxLen = Math.max(...lines.map(l => l.length), 1);
+    const fontSize = Math.min(S * 0.16, S * 0.70 / maxLen);
+    const depth    = Math.max(2, fontSize * 0.09);
+    const lineH    = fontSize * 1.35;
+    const totalH   = (lines.length - 1) * lineH;
+
+    ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const colors = embossColors(handsColor);
+    lines.forEach((line, i) => {
+      const ty = S / 2 - totalH / 2 + i * lineH;
+      drawRaisedText(ctx, line, S / 2, ty, 0, colors, depth);
+    });
+  }
+
+  // ── Center flat: plain text, sits under hands ─────────────────────────────
+  if (textMode === 'center-flat' && hasText) {
+    const lines = rawText.split('\n').filter(Boolean).slice(0, 3);
     const maxLen = Math.max(...lines.map(l => l.length), 1);
     const fontSize = Math.min(S * 0.13, S * 0.65 / maxLen);
     ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
@@ -828,12 +937,26 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
 
   const hasText = !!(config.watchfaceText?.trim()) && !config.watchfaceText.startsWith('EYE:');
   const textMode = config.watchfaceTextMode ?? 'center';
-  const isCircular = hasText && textMode === 'circular';
-  // Draw text on canvas only for center+hands — flat 2D under the hands
-  const drawTextOnCanvas = hasText && textMode === 'center' && (config.handsEnabled !== false);
+  const handsOn  = config.handsEnabled !== false;
+
+  // Determine which canvas text mode to use:
+  //   circular      → embossed letters around ring
+  //   center-flat   → flat 2D under hands (hands are on)
+  //   center-raised → embossed letters in center (no hands)
+  //   none          → no text
+  const canvasTextMode: 'none' | 'circular' | 'center-flat' | 'center-raised' = !hasText
+    ? 'none'
+    : textMode === 'circular'
+    ? 'circular'
+    : handsOn
+    ? 'center-flat'
+    : 'center-raised';
+
+  const isCircular = canvasTextMode === 'circular';
+
   const faceTexture = useMemo(
-    () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular, config.watchfaceText, drawTextOnCanvas),
-    [config.watchfaceColor, config.handsColor, config.watchfaceGeometry, isCircular, config.watchfaceText, drawTextOnCanvas]
+    () => buildFaceTexture(config.watchfaceColor, config.handsColor, config.watchfaceGeometry, canvasTextMode, config.watchfaceText),
+    [config.watchfaceColor, config.handsColor, config.watchfaceGeometry, canvasTextMode, config.watchfaceText]
   );
 
   const isMetal = config.watchfaceMaterial === 'metal';
