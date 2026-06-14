@@ -326,22 +326,25 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled, geom }: {
   // Shared metallic-glow material for all 3D letters
   const matProps = {
     color: handsColor,
-    metalness: 0.95,
-    roughness: 0.06,
+    metalness: 0.92,
+    roughness: 0.08,
     emissive: handsColor,
-    emissiveIntensity: 0.45,
+    emissiveIntensity: 0.35,
   };
 
-  // Subtle extrusion — depth ~10% of font size so letters look embossed,
-  // not like cubes.  Bevel chamfers the edges to catch light.
-  const depth = 0.014;
-  const extrudeProps = {
-    depth,
-    bevelEnabled: true as const,
-    bevelSize: 0.005,
-    bevelThickness: 0.005,
-    bevelSegments: 4,
-  };
+  // Extrude params proportional to font size so bevels never overpower small glyphs.
+  // curveSegments=16 gives smooth O/C/G curves instead of polygon approximations.
+  function extrudeFor(sz: number) {
+    const bev = sz * 0.018;
+    return {
+      depth:          sz * 0.06,
+      bevelEnabled:   true  as const,
+      bevelSize:      bev,
+      bevelThickness: bev,
+      bevelSegments:  5,
+      curveSegments:  16,
+    };
+  }
 
   if (mode === 'circular') {
     const chars = Array.from(trimmed.replace(/ /g, '·'));
@@ -390,7 +393,7 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled, geom }: {
           return (
             <group key={i} position={[x, y, 0]} rotation={[0, 0, rotZ]}>
               <Center>
-                <Text3D font={TYPEFACE_URL} size={fontSize} {...extrudeProps}>
+                <Text3D font={TYPEFACE_URL} size={fontSize} {...extrudeFor(fontSize)}>
                   {ch}
                   <meshStandardMaterial {...matProps} />
                 </Text3D>
@@ -413,7 +416,7 @@ function WatchFaceText({ text, mode, handsColor, faceZ, handsEnabled, geom }: {
     <group position={[0, 0, textZ]}>
       {lines.map((line, i) => (
         <Center key={i} position={[0, totalH / 2 - i * lineH, 0]}>
-          <Text3D font={TYPEFACE_URL} size={fSize} {...extrudeProps}>
+          <Text3D font={TYPEFACE_URL} size={fSize} {...extrudeFor(fSize)}>
             {line}
             <meshStandardMaterial {...matProps} />
           </Text3D>
