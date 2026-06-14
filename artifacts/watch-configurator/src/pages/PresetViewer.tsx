@@ -104,6 +104,7 @@ function getOriginRect(): DOMRect | null {
   try {
     const raw = sessionStorage.getItem('presetOriginRect');
     if (!raw) return null;
+    sessionStorage.removeItem('presetOriginRect'); // consume once — prevent stale ghost on future navigations
     const d = JSON.parse(raw);
     return { top: d.top, left: d.left, right: d.right, bottom: d.bottom,
              width: d.width, height: d.height, x: d.x, y: d.y,
@@ -135,10 +136,17 @@ export default function PresetViewer() {
     [presets, id]
   );
 
-  // Compute clip start from stored card rect
+  // Compute clip start + transform-origin from stored card rect
   const clipStart = useMemo(() => {
     if (!originRect.current) return 'inset(0% 0% 0% 0% round 0px)';
     return rectToClip(originRect.current);
+  }, []);
+
+  // Pin the scale animation to the card's centre so the watch grows *from* the card
+  const transformOrigin = useMemo(() => {
+    if (!originRect.current) return '50% 50%';
+    const r = originRect.current;
+    return `${(r.left + r.width / 2).toFixed(1)}px ${(r.top + r.height / 2).toFixed(1)}px`;
   }, []);
 
   // Expand animation on mount
@@ -265,7 +273,7 @@ export default function PresetViewer() {
   return (
     <div
       className="fixed inset-0 z-0 flex flex-col md:flex-row overflow-hidden bg-background"
-      style={{ clipPath, opacity, transform: `scale(${scale})`, transition }}
+      style={{ clipPath, opacity, transform: `scale(${scale})`, transition, transformOrigin }}
     >
       {/* ── 3D Canvas pane ── */}
       <div className="relative z-10 flex-none h-[58dvh] md:h-auto md:flex-1 md:w-[62%] overflow-hidden" style={{ background: '#0a0a0e' }}>
