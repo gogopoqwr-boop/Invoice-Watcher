@@ -187,7 +187,7 @@ export default function Configure() {
   if (!hasPreset) return null;
 
   return (
-    <div className="w-full bg-background flex flex-col md:flex-row md:overflow-hidden md:h-screen">
+    <div data-theme="dark" className="w-full bg-background flex flex-col md:flex-row md:overflow-hidden md:h-screen">
 
       {/* Left — Watch Preview */}
       <div

@@ -1,5 +1,5 @@
 import React, { useEffect, Component } from "react";
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -100,6 +100,17 @@ function Router() {
   );
 }
 
+function ThemeTogglePortal() {
+  const [location] = useLocation();
+  const hidden = location.startsWith("/preset/") || location === "/configure" || location === "/box";
+  if (hidden) return null;
+  return (
+    <div className="fixed bottom-5 right-5 z-50">
+      <ThemeToggle />
+    </div>
+  );
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -110,10 +121,8 @@ function App() {
               <WatchConfigProvider>
                 <CartProvider>
                   <MouseGlassTracker />
-                  <div className="fixed bottom-5 right-5 z-50">
-                    <ThemeToggle />
-                  </div>
                   <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                    <ThemeTogglePortal />
                     <ErrorBoundary>
                       <Router />
                     </ErrorBoundary>

@@ -264,6 +264,7 @@ export default function PresetViewer() {
 
   return (
     <div
+      data-theme="dark"
       className="fixed inset-0 z-0 flex flex-col md:flex-row overflow-hidden"
       style={{ background: '#0a0a0e', clipPath, opacity, transform: `scale(${scale})`, transition }}
     >
