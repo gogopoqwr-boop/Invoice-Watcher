@@ -512,7 +512,7 @@ function StrapJoint({ k, sign, θ, color, mat, isSegmented, isDeployant, claspCo
   const isResin = mat === 'resin';
   const isFab   = mat === 'cotton_fabric';
   const isLeath = mat === 'leather';
-  const metal   = isSegmented ? 0.92 : mat.includes('metal') ? 0.85 : 0;
+  const metal   = isSegmented ? 0.92 : (mat ?? '').includes('metal') ? 0.85 : 0;
   const rough   = isSegmented ? 0.07 : isLeath ? 0.92 : isFab ? 0.88 : isResin ? 0.06 : 0.78;
   const segW    = 1.05 * width;
 

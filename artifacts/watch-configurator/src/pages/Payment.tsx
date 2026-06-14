@@ -28,37 +28,43 @@ function WatchPreviewPanel({ configId }: { configId: number }) {
 
   return (
     <div className="relative w-full h-full min-h-[260px] flex items-center justify-center overflow-hidden">
-      <Suspense fallback={
+      {!cfg ? (
         <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
           <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
         </div>
-      }>
-        <WatchBoxScene
-          config={{
-            watchfaceGeometry:    cfg?.watchfaceGeometry,
-            watchfaceMaterial:    cfg?.watchfaceMaterial,
-            watchfaceColor:       cfg?.watchfaceColor,
-            braceletMaterial:     cfg?.braceletMaterial,
-            braceletType:         cfg?.braceletType,
-            braceletColor:        cfg?.braceletColor,
-            handsEnabled:         cfg?.handsEnabled,
-            handsColor:           cfg?.handsColor,
-            handsCount:           (cfg as any)?.handsCount,
-            watchfaceText:        (cfg as any)?.watchfaceText ?? (cfg as any)?.handsStyle,
-            watchfaceTextMode:    (cfg as any)?.watchfaceTextMode,
-            watchfaceTextColor:   (cfg as any)?.watchfaceTextColor,
-            watchfaceSize:        (cfg as any)?.watchfaceSize,
-            strapWidth:           (cfg as any)?.strapWidth,
-            skinFullUrl:          (cfg as any)?.skinFullUrl,
-            skinStripeUrl:        (cfg as any)?.skinStripeUrl,
-          } as any}
-          boxType={cfg?.boxType ?? 'standard'}
-          open={open}
-          autoOpen
-          onToggle={() => setOpen(v => !v)}
-          className="h-full w-full"
-        />
-      </Suspense>
+      ) : (
+        <Suspense fallback={
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+            <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          </div>
+        }>
+          <WatchBoxScene
+            config={{
+              watchfaceGeometry:    cfg.watchfaceGeometry,
+              watchfaceMaterial:    cfg.watchfaceMaterial,
+              watchfaceColor:       cfg.watchfaceColor,
+              braceletMaterial:     cfg.braceletMaterial,
+              braceletType:         cfg.braceletType,
+              braceletColor:        cfg.braceletColor,
+              handsEnabled:         cfg.handsEnabled,
+              handsColor:           cfg.handsColor,
+              handsCount:           (cfg as any).handsCount,
+              watchfaceText:        (cfg as any).watchfaceText ?? (cfg as any).handsStyle,
+              watchfaceTextMode:    (cfg as any).watchfaceTextMode,
+              watchfaceTextColor:   (cfg as any).watchfaceTextColor,
+              watchfaceSize:        (cfg as any).watchfaceSize,
+              strapWidth:           (cfg as any).strapWidth,
+              skinFullUrl:          (cfg as any).skinFullUrl,
+              skinStripeUrl:        (cfg as any).skinStripeUrl,
+            } as any}
+            boxType={cfg.boxType ?? 'standard'}
+            open={open}
+            autoOpen
+            onToggle={() => setOpen(v => !v)}
+            className="h-full w-full"
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

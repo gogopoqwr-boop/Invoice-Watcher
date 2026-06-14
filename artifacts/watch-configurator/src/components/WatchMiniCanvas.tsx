@@ -318,6 +318,26 @@ export interface WatchMiniCanvasProps {
   forceMount?: boolean;
 }
 
+// ── Error boundary for RealWatchCanvas — catches __r3f teardown errors ──────
+// React-spring/three animated objects can race with R3F's reconciler cleanup
+// when multiple Canvas instances are torn down simultaneously (e.g. AnimatePresence).
+// This boundary silently swallows those errors and falls back to the color card.
+class RealWatchErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch() { /* intentional swallow */ }
+  render() {
+    if (this.state.hasError) return this.props.fallback;
+    return this.props.children;
+  }
+}
+
 // ── Real 3D preview using the full WatchModel ─────────────────────────────
 // Builds an ExtendedConfigState from the preset object and passes it as
 // configOverride so WatchModel renders the preset without touching global state.
@@ -459,7 +479,13 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
 
       {mounted && !paused && (
         <div className="absolute inset-0">
-          <RealWatchCanvas preset={preset} />
+          <RealWatchErrorBoundary
+            fallback={
+              <WatchColorCard watchfaceColor={faceColor} braceletColor={strapColor} watchfaceText={preset.watchfaceText ?? ''} />
+            }
+          >
+            <RealWatchCanvas preset={preset} />
+          </RealWatchErrorBoundary>
         </div>
       )}
 
