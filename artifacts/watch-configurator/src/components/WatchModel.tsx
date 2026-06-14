@@ -396,18 +396,52 @@ function WatchFaceText({ text, mode, textColor, faceZ, handsEnabled, geom }: {
   const totalH   = (lines.length - 1) * lineH;
 
   return (
-    <Billboard position={[0, 0, textZ]}>
+    <CameraFacingText
+      lines={lines}
+      fontSize={fontSize}
+      lineH={lineH}
+      totalH={totalH}
+      textZ={textZ}
+      matProps={matProps}
+      extrudeFor={extrudeFor}
+    />
+  );
+}
+
+/** Camera-facing text block for center mode.
+ *  Copies the camera quaternion every frame — avoids the <Billboard>+<Center>
+ *  incompatibility where Billboard's rotation distorts Center's bbox offset. */
+function CameraFacingText({ lines, fontSize, lineH, totalH, textZ, matProps, extrudeFor }: {
+  lines: string[];
+  fontSize: number;
+  lineH: number;
+  totalH: number;
+  textZ: number;
+  matProps: object;
+  extrudeFor: (sz: number) => object;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const { camera } = useThree();
+
+  useFrame(() => {
+    if (groupRef.current) {
+      groupRef.current.quaternion.copy(camera.quaternion);
+    }
+  });
+
+  return (
+    <group ref={groupRef} position={[0, 0, textZ]}>
       {lines.map((line, i) => (
         <group key={i} position={[0, totalH / 2 - i * lineH, 0]}>
           <Center>
-            <Text3D font={TYPEFACE_URL} size={fontSize} {...extrudeFor(fontSize)}>
+            <Text3D font={TYPEFACE_URL} size={fontSize} {...(extrudeFor(fontSize) as any)}>
               {line}
-              <meshStandardMaterial {...matProps} />
+              <meshStandardMaterial {...(matProps as any)} />
             </Text3D>
           </Center>
         </group>
       ))}
-    </Billboard>
+    </group>
   );
 }
 
