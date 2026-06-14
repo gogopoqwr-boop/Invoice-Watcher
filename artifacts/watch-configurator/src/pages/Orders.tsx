@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useWatchConfig } from "@/hooks/use-watch-config";
-import { useGetMyOrders } from "@workspace/api-client-react";
+import { useGetMyOrders, getConfiguration } from "@workspace/api-client-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import ConfigReceipt from "@/components/ConfigReceipt";
@@ -26,7 +26,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 import {
-  CreditCard, CheckCircle2, Clock, Settings2, Truck, Package, XCircle, ClipboardList,
+  CreditCard, CheckCircle2, Clock, Settings2, Truck, Package, XCircle, ClipboardList, RotateCcw,
 } from 'lucide-react';
 import { TgStar } from '@/components/TgStar';
 
@@ -79,14 +79,43 @@ async function cancelFree(orderId: number): Promise<{ ok: boolean; msg: string }
 }
 
 export default function Orders() {
-  const { sessionId } = useWatchConfig();
-  const [location] = useLocation();
+  const { sessionId, updateConfig } = useWatchConfig();
+  const [location, navigate] = useLocation();
   const { data: orders, isLoading, refetch } = useGetMyOrders({ sessionId }, { query: { enabled: !!sessionId } } as any);
 
   const [actionId, setActionId] = useState<number | null>(null);
   const [msgs, setMsgs] = useState<Record<number, { ok: boolean; msg: string }>>({});
   const [cancelTargetId, setCancelTargetId] = useState<number | null>(null);
   const [cancelReason, setCancelReason] = useState('');
+  const [repeatId, setRepeatId] = useState<number | null>(null);
+
+  const handleRepeat = async (orderId: number, configId: number) => {
+    setRepeatId(orderId);
+    try {
+      const cfg = await getConfiguration(configId);
+      updateConfig({
+        watchfaceGeometry: cfg.watchfaceGeometry as any,
+        watchfaceMaterial: cfg.watchfaceMaterial as any,
+        watchfaceColor: cfg.watchfaceColor,
+        watchfaceSize: cfg.watchfaceSize ? parseFloat(cfg.watchfaceSize) : 1.0,
+        braceletMaterial: cfg.braceletMaterial as any,
+        braceletType: cfg.braceletType as any,
+        braceletColor: cfg.braceletColor,
+        handsEnabled: cfg.handsEnabled,
+        handsColor: cfg.handsColor ?? undefined,
+        presetId: cfg.presetId ?? undefined,
+        serialNumber: cfg.serialNumber ?? undefined,
+        boxType: undefined,
+        boxMessage: undefined,
+        giftWrap: undefined,
+      });
+      navigate('/configure');
+    } catch {
+      /* ignore */
+    } finally {
+      setRepeatId(null);
+    }
+  };
 
   // Detect where we came from via query param
   const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
