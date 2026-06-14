@@ -1,10 +1,8 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState } from 'react';
 import { useGetConfiguration } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
 import { TgStar } from '@/components/TgStar';
 import { ClipboardList, Check } from 'lucide-react';
-
-const WatchBoxScene = lazy(() => import('@/components/WatchBoxScene'));
 
 // ── Shared breakdown logic (mirrors api-server/src/lib/receipt.ts) ─────────
 
@@ -120,7 +118,6 @@ export interface ConfigReceiptProps {
 
 export default function ConfigReceipt({ configId, totalStars, alwaysOpen, compact }: ConfigReceiptProps) {
   const [open, setOpen] = useState(false);
-  const [boxOpen, setBoxOpen] = useState(false);
   const shouldFetch = alwaysOpen || open;
 
   const { data: cfg, isLoading } = useGetConfiguration(configId as number, {
@@ -153,34 +150,15 @@ export default function ConfigReceipt({ configId, totalStars, alwaysOpen, compac
 
       {open && (
         <div className={cn('mt-2', compact ? 'ml-0' : '')}>
-          {!compact && cfg && (
-            <Suspense fallback={null}>
-              <WatchBoxScene
-                config={{
-                  watchfaceGeometry:  (cfg as any).watchfaceGeometry,
-                  watchfaceMaterial:  (cfg as any).watchfaceMaterial,
-                  watchfaceColor:     (cfg as any).watchfaceColor,
-                  braceletMaterial:   (cfg as any).braceletMaterial,
-                  braceletType:       (cfg as any).braceletType,
-                  braceletColor:      (cfg as any).braceletColor,
-                  handsEnabled:       (cfg as any).handsEnabled,
-                  handsColor:         (cfg as any).handsColor,
-                  handsCount:         (cfg as any).handsCount,
-                  watchfaceText:      (cfg as any).watchfaceText,
-                  watchfaceTextMode:  (cfg as any).watchfaceTextMode,
-                  watchfaceTextColor: (cfg as any).watchfaceTextColor,
-                  watchfaceSize:      (cfg as any).watchfaceSize,
-                  strapWidth:         (cfg as any).strapWidth,
-                  skinFullUrl:        (cfg as any).skinFullUrl,
-                  skinStripeUrl:      (cfg as any).skinStripeUrl,
-                }}
-                boxType={(cfg as any).boxType ?? 'standard'}
-                open={boxOpen}
-                autoOpen
-                onToggle={() => setBoxOpen(v => !v)}
-                className="h-56 mb-3"
+          {!compact && (
+            <div className="canvas-box-bg rounded-2xl overflow-hidden mb-3 flex items-center justify-center" style={{ height: 224 }}>
+              <img
+                src={`/api/watch-animation/${configId}`}
+                alt="Предпросмотр часов"
+                className="w-full h-full object-contain"
+                loading="lazy"
               />
-            </Suspense>
+            </div>
           )}
           <ReceiptBody receipt={receipt} displayTotal={displayTotal} isLoading={isLoading} compact={compact} />
         </div>
