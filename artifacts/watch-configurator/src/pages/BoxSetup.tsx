@@ -170,7 +170,7 @@ export default function BoxSetup() {
         </div>
 
         {/* Box type indicator — sits below the 3D canvas */}
-        <div className="shrink-0 flex items-center justify-center gap-2 py-2.5 border-t border-border/30">
+        <div className="shrink-0 flex items-center justify-center gap-2 py-2.5 bg-background border-t border-border/50">
           <span className="relative flex h-2 w-2">
             <span
               className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60"
@@ -190,7 +190,7 @@ export default function BoxSetup() {
       </div>
 
       {/* ── Right — Options panel ── */}
-      <div className="w-full md:w-[48%] md:h-screen flex flex-col bg-background/80 backdrop-blur-xl border-l border-border/60 overflow-y-auto md:overflow-hidden">
+      <div className="w-full md:w-[48%] md:h-screen flex flex-col bg-background border-l border-border/60 overflow-y-auto md:overflow-hidden">
 
         {/* Header */}
         <div className="px-5 pt-5 pb-3 border-b border-border/40 shrink-0">
@@ -213,8 +213,8 @@ export default function BoxSetup() {
                     className={cn(
                       'w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all duration-150',
                       isSelected
-                        ? 'bg-card shadow-sm'
-                        : 'border border-border/60 bg-card/40 hover:bg-card/60',
+                        ? 'bg-card shadow-md border border-border/40'
+                        : 'border border-border/60 bg-muted/40 hover:bg-muted/70',
                     )}
                     style={isSelected ? {
                       outline: `2px solid ${opt.accentColor}`,
