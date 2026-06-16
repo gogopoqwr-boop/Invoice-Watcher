@@ -231,46 +231,54 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
 }
 
 // ─── Watch inside the box ───────────────────────────────────────────────────
-// Uses a plain useFrame lerp — NOT useSpring — because spring.get() never
-// advances when mounted inside a second R3F Canvas context, leaving scale
-// permanently at 0.001 (invisible). Direct lerp in useFrame is always safe.
+// Scale is driven purely through the ref — no React prop changes so R3F never
+// resets the scale between frames. Target is read from a ref so the closure
+// captures the latest value without stale-closure lag.
 
 function WatchInBox({ config, visible }: { config: ExtendedConfigState; visible: boolean }) {
-  const watchRef = useRef<THREE.Group>(null);
-  const scaleRef = useRef(0.001);
+  const groupRef  = useRef<THREE.Group>(null);
+  const targetRef = useRef<number>(0); // updated each render via the line below
+
+  // Sync latest visible into targetRef every render (no stale closure).
+  targetRef.current = visible ? 0.68 : 0;
+
+  // Imperatively initialise scale to 0 before the first painted frame.
+  useEffect(() => {
+    if (groupRef.current) groupRef.current.scale.setScalar(0);
+  }, []);
 
   useFrame((_, delta) => {
-    if (!watchRef.current) return;
-    const target = visible ? 0.68 : 0.001;
-    scaleRef.current += (target - scaleRef.current) * Math.min(1, delta * 4.5);
-    watchRef.current.scale.setScalar(scaleRef.current);
+    if (!groupRef.current) return;
+    const cur    = groupRef.current.scale.x;
+    const target = targetRef.current;
+    const next   = THREE.MathUtils.lerp(cur, target, Math.min(1, delta * 6));
+    // Snap to 0 when target is 0 and nearly there (prevents invisible micro-render)
+    groupRef.current.scale.setScalar(next < 0.004 && target < 0.01 ? 0 : next);
   });
 
   return (
-    <group visible={visible}>
-      {/*
-        Face-up orientation: MiniWatch local frame has face normal = +Z, strap = ±Y.
-        Rotating -π/2 around X maps: +Z → +Y (face points up), +Y → -Z (strap along box depth). ✓
-        Slight extra X tilt (+0.28) so the camera can see the watch face, not just the edge.
-      */}
-      <group
-        ref={watchRef}
-        position={[0, WATCH_Y, 0]}
-        rotation={[-Math.PI / 2 + 0.28, 0, 0]}
-      >
-        <MiniWatch
-          watchfaceGeometry={config.watchfaceGeometry ?? 'circle'}
-          watchfaceColor={config.watchfaceColor ?? '#C0C0C0'}
-          braceletColor={config.braceletColor ?? '#888888'}
-          braceletMaterial={config.braceletMaterial ?? 'leather'}
-          handsColor={config.handsColor ?? '#ffffff'}
-          handsEnabled={config.handsEnabled ?? true}
-          watchfaceText={config.watchfaceText ?? ''}
-          watchfaceTextMode={config.watchfaceTextMode ?? 'circular'}
-          collectionName={(config as any).collectionName ?? null}
-          paused
-        />
-      </group>
+    /*
+      Always rendered (no visibility gate) so useFrame runs every frame.
+      Face-up: MiniWatch face-normal = +Z. Rotate -π/2 around X → face points +Y (up).
+      Extra +0.28 rad tilt so camera (above) can see the face.
+    */
+    <group
+      ref={groupRef}
+      position={[0, WATCH_Y, 0]}
+      rotation={[-Math.PI / 2 + 0.28, 0, 0]}
+    >
+      <MiniWatch
+        watchfaceGeometry={config.watchfaceGeometry ?? 'circle'}
+        watchfaceColor={config.watchfaceColor ?? '#C0C0C0'}
+        braceletColor={config.braceletColor ?? '#888888'}
+        braceletMaterial={config.braceletMaterial ?? 'leather'}
+        handsColor={config.handsColor ?? '#ffffff'}
+        handsEnabled={config.handsEnabled ?? true}
+        watchfaceText={config.watchfaceText ?? ''}
+        watchfaceTextMode={config.watchfaceTextMode ?? 'circular'}
+        collectionName={(config as any).collectionName ?? null}
+        paused
+      />
     </group>
   );
 }
