@@ -587,7 +587,7 @@ export function CameraRig({ step, lastInteractionRef }: {
 
 // ─── Back panel ───────────────────────────────────────────────────────────
 
-function buildBackTexture(geom: string, caseColor: string, serial?: string): THREE.CanvasTexture {
+function buildBackTexture(geom: string, caseColor: string, serial?: string, collectionName?: string | null): THREE.CanvasTexture {
   const S = 512;
   const cv = document.createElement('canvas');
   cv.width = S; cv.height = S;
@@ -637,6 +637,22 @@ function buildBackTexture(geom: string, caseColor: string, serial?: string): THR
     ctx.restore();
   });
 
+  if (collectionName) {
+    const lines = collectionName.replace(/\\n/g, '\n').split('\n').filter(Boolean);
+    const maxLen = Math.max(...lines.map((l: string) => l.length), 1);
+    const fontSize = Math.min(S * 0.12, S * 0.55 / maxLen);
+    ctx.font = `bold ${Math.round(fontSize)}px Arial, sans-serif`;
+    ctx.fillStyle = engStyle;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.globalAlpha = 0.92;
+    const lineH = fontSize * 1.25;
+    const totalH = (lines.length - 1) * lineH;
+    const baseY = serial ? cy - S * 0.04 : cy;
+    lines.forEach((line: string, i: number) => ctx.fillText(line, cx, baseY - totalH / 2 + i * lineH));
+    ctx.globalAlpha = 1;
+  }
+
   if (serial) {
     ctx.font = `bold ${Math.round(S * 0.043)}px monospace`;
     ctx.fillStyle = engStyle;
@@ -663,11 +679,11 @@ function buildBackTexture(geom: string, caseColor: string, serial?: string): THR
   return tex;
 }
 
-function WatchBackPanel({ geom, caseColor, serial }: {
-  geom: string; caseColor: string; serial?: string;
+function WatchBackPanel({ geom, caseColor, serial, collectionName }: {
+  geom: string; caseColor: string; serial?: string; collectionName?: string | null;
 }) {
   const backDiscGeo = useMemo(() => new THREE.ShapeGeometry(buildFaceShape(geom), 72), [geom]);
-  const backTexture = useMemo(() => buildBackTexture(geom, caseColor, serial), [geom, caseColor, serial]);
+  const backTexture = useMemo(() => buildBackTexture(geom, caseColor, serial, collectionName), [geom, caseColor, serial, collectionName]);
   return (
     <mesh position={[0, 0, -0.12]}>
       <primitive object={backDiscGeo} />
@@ -1051,6 +1067,7 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         geom={config.watchfaceGeometry}
         caseColor={config.watchfaceColor}
         serial={config.serialNumber || undefined}
+        collectionName={(config as any).collectionName || null}
       />
 
       {/* Face disc */}

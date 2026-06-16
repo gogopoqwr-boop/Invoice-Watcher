@@ -301,6 +301,65 @@ function drawEyesOnTexture(ctx: CanvasRenderingContext2D, S: number, eyeType: st
   }
 }
 
+function buildMiniBackTexture(caseColor: string, collectionName?: string | null): THREE.CanvasTexture {
+  const S = 256;
+  const cv = document.createElement('canvas');
+  cv.width = S; cv.height = S;
+  const ctx = cv.getContext('2d')!;
+
+  const bg = new THREE.Color(caseColor).multiplyScalar(0.72);
+  ctx.fillStyle = bg.getStyle();
+  ctx.fillRect(0, 0, S, S);
+
+  const radGrad = ctx.createRadialGradient(S * 0.38, S * 0.35, 0, S / 2, S / 2, S * 0.55);
+  radGrad.addColorStop(0, 'rgba(255,255,255,0.09)');
+  radGrad.addColorStop(1, 'rgba(0,0,0,0.14)');
+  ctx.fillStyle = radGrad;
+  ctx.fillRect(0, 0, S, S);
+
+  const eng = new THREE.Color(caseColor).multiplyScalar(1.55);
+  eng.r = Math.min(1, eng.r); eng.g = Math.min(1, eng.g); eng.b = Math.min(1, eng.b);
+  const es = eng.getStyle();
+  const cx = S / 2, cy = S / 2;
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, S * 0.365, 0, Math.PI * 2);
+  ctx.strokeStyle = es; ctx.globalAlpha = 0.22; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
+
+  const brand = 'ЧЕБЛЯЧАС'.split('');
+  const letterR = S * 0.285;
+  ctx.font = `bold ${Math.round(S * 0.058)}px Arial, sans-serif`;
+  ctx.fillStyle = es; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.globalAlpha = 0.72;
+  brand.forEach((ch, i) => {
+    const a = Math.PI / 2 - (i / brand.length) * Math.PI * 2;
+    const x = cx + letterR * Math.cos(a), y = cy - letterR * Math.sin(a);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 2 - a); ctx.fillText(ch, 0, 0); ctx.restore();
+  });
+  ctx.globalAlpha = 1;
+
+  if (collectionName) {
+    const lines = collectionName.replace(/\\n/g, '\n').split('\n').filter(Boolean);
+    const maxLen = Math.max(...lines.map(l => l.length), 1);
+    const fontSize = Math.min(S * 0.14, S * 0.52 / maxLen);
+    ctx.font = `bold ${Math.round(fontSize)}px Arial, sans-serif`;
+    ctx.fillStyle = es; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.globalAlpha = 0.92;
+    const lineH = fontSize * 1.25;
+    const totalH = (lines.length - 1) * lineH;
+    lines.forEach((line, i) => ctx.fillText(line, cx, cy - totalH / 2 + i * lineH));
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.beginPath();
+  ctx.arc(cx, cy + (collectionName ? S * 0.12 : 0), S * 0.012, 0, Math.PI * 2);
+  ctx.fillStyle = es; ctx.globalAlpha = 0.7; ctx.fill(); ctx.globalAlpha = 1;
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.repeat.set(-1, 1);
+  tex.center.set(0.5, 0.5);
+  tex.needsUpdate = true;
+  return tex;
+}
+
 function buildMiniTexture(
   faceColor: string,
   handsColor: string,
@@ -378,10 +437,11 @@ export interface MiniWatchProps {
   handsEnabled: boolean;
   watchfaceText?: string;
   watchfaceTextMode?: string;
+  collectionName?: string | null;
   paused?: boolean;
 }
 
-export function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletMaterial, handsColor, handsEnabled, watchfaceText, watchfaceTextMode, paused }: MiniWatchProps) {
+export function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletMaterial, handsColor, handsEnabled, watchfaceText, watchfaceTextMode, collectionName, paused }: MiniWatchProps) {
   const groupRef = useRef<THREE.Group>(null);
 
   const bodyGeo = useMemo(() => {
@@ -390,6 +450,7 @@ export function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, br
   }, [watchfaceGeometry]);
 
   const faceGeo = useMemo(() => new THREE.ShapeGeometry(buildShape(watchfaceGeometry), 48), [watchfaceGeometry]);
+  const backGeo = useMemo(() => new THREE.ShapeGeometry(buildShape(watchfaceGeometry), 48), [watchfaceGeometry]);
   const crystalGeo = useMemo(() => {
     const shape = buildShape(watchfaceGeometry);
     return new THREE.ExtrudeGeometry(shape, { depth: 0.04, bevelEnabled: true, bevelSize: 0.035, bevelThickness: 0.035, bevelSegments: 8 });
@@ -400,7 +461,12 @@ export function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, br
     [watchfaceColor, handsColor, watchfaceText, watchfaceTextMode]
   );
 
-  useEffect(() => () => { bodyGeo.dispose(); faceGeo.dispose(); crystalGeo.dispose(); faceTex.dispose(); }, [bodyGeo, faceGeo, crystalGeo, faceTex]);
+  const backTex = useMemo(
+    () => buildMiniBackTexture(watchfaceColor, collectionName),
+    [watchfaceColor, collectionName]
+  );
+
+  useEffect(() => () => { bodyGeo.dispose(); faceGeo.dispose(); backGeo.dispose(); crystalGeo.dispose(); faceTex.dispose(); backTex.dispose(); }, [bodyGeo, faceGeo, backGeo, crystalGeo, faceTex, backTex]);
 
   const isMetal = braceletMaterial === 'metal_solid' || braceletMaterial === 'metal_segmented';
   const isResin = braceletMaterial === 'resin';
@@ -416,6 +482,10 @@ export function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, br
       <mesh>
         <primitive object={bodyGeo} />
         <meshStandardMaterial color={watchfaceColor} metalness={0.76} roughness={0.14} envMapIntensity={0} />
+      </mesh>
+      <mesh position={[0, 0, -0.01]}>
+        <primitive object={backGeo} />
+        <meshStandardMaterial map={backTex} metalness={0.82} roughness={0.22} side={THREE.BackSide} />
       </mesh>
       <mesh position={[0, 0, 0.48]}>
         <primitive object={faceGeo} />
@@ -573,6 +643,7 @@ export interface WatchMiniCanvasProps {
     watchfaceTextMode?: string;
     braceletType?: string;
     watchfaceBackgroundType?: string;
+    collectionName?: string | null;
   };
   paused?: boolean;
   /** Skip IntersectionObserver and mount immediately — use when the card is
@@ -698,6 +769,7 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
               handsEnabled={preset.handsEnabled ?? true}
               watchfaceText={preset.watchfaceText ?? ''}
               watchfaceTextMode={preset.watchfaceTextMode ?? 'circular'}
+              collectionName={preset.collectionName ?? null}
               paused={paused}
             />
           </Canvas>
