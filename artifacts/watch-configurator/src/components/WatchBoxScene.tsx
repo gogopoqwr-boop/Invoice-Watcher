@@ -5,6 +5,8 @@ import * as THREE from 'three';
 import { useSpring } from '@react-spring/three';
 import { MiniWatch } from '@/components/WatchMiniCanvas';
 import type { ExtendedConfigState } from '@/hooks/use-watch-config';
+// NOTE: useSpring from @react-spring/three is still used for GiftRibbon/Box3D lid,
+// but WatchInBox intentionally avoids it (spring scale never fires in a second Canvas).
 
 // ─── WebGL check ────────────────────────────────────────────────────────────
 
@@ -229,20 +231,19 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
 }
 
 // ─── Watch inside the box ───────────────────────────────────────────────────
-// MiniWatch — pure Three.js geometry, no react-spring, safe in any Canvas.
-// WatchModel uses animated.group from @react-spring/three which conflicts
-// when nested inside a second R3F Canvas context. MiniWatch avoids this.
+// Uses a plain useFrame lerp — NOT useSpring — because spring.get() never
+// advances when mounted inside a second R3F Canvas context, leaving scale
+// permanently at 0.001 (invisible). Direct lerp in useFrame is always safe.
 
 function WatchInBox({ config, visible }: { config: ExtendedConfigState; visible: boolean }) {
-  const { sc } = useSpring({
-    from: { sc: 0.001 },
-    sc: visible ? 1 : 0.001,
-    config: { mass: 0.8, tension: 140, friction: 20 },
-    delay: visible ? 200 : 0,
-  });
   const watchRef = useRef<THREE.Group>(null);
-  useFrame(() => {
-    if (watchRef.current) watchRef.current.scale.setScalar(sc.get() * 0.62);
+  const scaleRef = useRef(0.001);
+
+  useFrame((_, delta) => {
+    if (!watchRef.current) return;
+    const target = visible ? 0.68 : 0.001;
+    scaleRef.current += (target - scaleRef.current) * Math.min(1, delta * 4.5);
+    watchRef.current.scale.setScalar(scaleRef.current);
   });
 
   return (
@@ -250,6 +251,7 @@ function WatchInBox({ config, visible }: { config: ExtendedConfigState; visible:
       {/*
         Face-up orientation: MiniWatch local frame has face normal = +Z, strap = ±Y.
         Rotating -π/2 around X maps: +Z → +Y (face points up), +Y → -Z (strap along box depth). ✓
+        Slight extra X tilt (+0.28) so the camera can see the watch face, not just the edge.
       */}
       <group
         ref={watchRef}
@@ -265,6 +267,7 @@ function WatchInBox({ config, visible }: { config: ExtendedConfigState; visible:
           handsEnabled={config.handsEnabled ?? true}
           watchfaceText={config.watchfaceText ?? ''}
           watchfaceTextMode={config.watchfaceTextMode ?? 'circular'}
+          collectionName={(config as any).collectionName ?? null}
           paused
         />
       </group>
