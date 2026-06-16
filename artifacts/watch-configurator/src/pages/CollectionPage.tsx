@@ -85,7 +85,9 @@ function BipolarBg() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<BipolarStage>('lightning');
   const [stage, setStage] = useState<BipolarStage>('lightning');
-  const [fade, setFade] = useState(1);
+  const [prevStage, setPrevStage] = useState<BipolarStage | null>(null);
+  const [prevOpacity, setPrevOpacity] = useState(0);
+  const prevFadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let idx = 0;
@@ -93,19 +95,29 @@ function BipolarBg() {
     const cycle = () => {
       const current = BIPOLAR_STAGES[idx];
       tid = setTimeout(() => {
-        setFade(0);
-        setTimeout(() => {
-          idx = (idx + 1) % BIPOLAR_STAGES.length;
-          const next = BIPOLAR_STAGES[idx].name;
-          stageRef.current = next;
-          setStage(next);
-          setFade(1);
-          cycle();
-        }, 400);
+        // Pin the outgoing gradient on top at full opacity
+        const outgoing = BIPOLAR_STAGES[idx].name as BipolarStage;
+        setPrevStage(outgoing);
+        setPrevOpacity(1);
+
+        // Advance to next stage (renders underneath immediately)
+        idx = (idx + 1) % BIPOLAR_STAGES.length;
+        const next = BIPOLAR_STAGES[idx].name;
+        stageRef.current = next;
+        setStage(next);
+
+        // One frame later start fading the outgoing layer out
+        if (prevFadeTimer.current) clearTimeout(prevFadeTimer.current);
+        prevFadeTimer.current = setTimeout(() => setPrevOpacity(0), 32);
+
+        cycle();
       }, current.dur);
     };
     cycle();
-    return () => clearTimeout(tid);
+    return () => {
+      clearTimeout(tid);
+      if (prevFadeTimer.current) clearTimeout(prevFadeTimer.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -329,14 +341,22 @@ function BipolarBg() {
 
   return (
     <>
+      {/* Incoming stage — always at full opacity underneath */}
       <div
         className="fixed inset-0 z-0 pointer-events-none"
-        style={{
-          background: STAGE_GRADIENTS[stage],
-          opacity: fade,
-          transition: 'opacity 0.4s ease, background 0.4s ease',
-        }}
+        style={{ background: STAGE_GRADIENTS[stage] }}
       />
+      {/* Outgoing stage — crossfades out on top */}
+      {prevStage && (
+        <div
+          className="fixed inset-0 z-0 pointer-events-none"
+          style={{
+            background: STAGE_GRADIENTS[prevStage],
+            opacity: prevOpacity,
+            transition: 'opacity 1100ms cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+        />
+      )}
       <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0" style={{ opacity: 0.9 }} />
     </>
   );
