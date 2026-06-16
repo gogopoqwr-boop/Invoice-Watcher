@@ -229,8 +229,9 @@ function Box3D({ boxType, open }: { boxType: string; open: boolean }) {
 }
 
 // ─── Watch inside the box ───────────────────────────────────────────────────
-// paused=true freezes all WatchModel animation (no auto-rotate, no hand springs).
-// The watch sits face-up on the cushion, perfectly still.
+// MiniWatch — pure Three.js geometry, no react-spring, safe in any Canvas.
+// WatchModel uses animated.group from @react-spring/three which conflicts
+// when nested inside a second R3F Canvas context. MiniWatch avoids this.
 
 function WatchInBox({ config, visible }: { config: ExtendedConfigState; visible: boolean }) {
   const { sc } = useSpring({
@@ -249,7 +250,6 @@ function WatchInBox({ config, visible }: { config: ExtendedConfigState; visible:
       {/*
         Face-up orientation: MiniWatch local frame has face normal = +Z, strap = ±Y.
         Rotating -π/2 around X maps: +Z → +Y (face points up), +Y → -Z (strap along box depth). ✓
-        MiniWatch uses pure Three.js geometry — no context dependency, reliable in any Canvas.
       */}
       <group
         ref={watchRef}
@@ -362,15 +362,16 @@ function Scene({ config, boxType, giftWrap, open }: { config: ExtendedConfigStat
       <pointLight position={[0, 4, -7]} intensity={0.30} color="#9080ff" />
       {/* Front-low fill so box front face isn't lost in shadow */}
       <pointLight position={[0, -1, 8]} intensity={0.28} color="#ffffff" />
-      {/* Interior warm fill — only when box is open; highlights the watch */}
+      {/* Interior lights — only when box is open; highlights the watch */}
       {open && (
-        <pointLight
-          position={[0, 0.3, 0.6]}
-          intensity={1.8}
-          color="#ffeedd"
-          distance={4.5}
-          decay={2.2}
-        />
+        <>
+          {/* Warm overhead fill — wide, soft, illuminates the whole interior */}
+          <pointLight position={[0, 2.2, 1.0]} intensity={4.5} color="#fff8f0" distance={8} decay={1.8} />
+          {/* Cool key from top-front — gives the face a subtle specular highlight */}
+          <pointLight position={[0.6, 1.8, 2.5]} intensity={3.0} color="#d8e8ff" distance={7} decay={2.0} />
+          {/* Narrow fill aimed at the watch face from directly above */}
+          <pointLight position={[0, WATCH_Y + 2.5, 0.4]} intensity={5.0} color="#fffaf5" distance={5} decay={2.0} />
+        </>
       )}
       {/* Transparent shadow catcher — grounds the box */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -H / 2 - 0.02, 0]} receiveShadow>

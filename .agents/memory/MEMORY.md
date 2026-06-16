@@ -4,3 +4,4 @@
 - [Seed data](seed-data.md) — presets + admin users must be seeded via `pnpm --filter @workspace/scripts run seed`; DB starts empty
 - [Typeface.js Y-axis](typeface-y-axis.md) — opentype.js getPath() flips Y (drawing coords); use glyph.path.commands directly for correct THREE.js font JSON
 - [backdrop-filter kills WebGL](backdrop-filter-webgl.md) — never wrap a WebGL Canvas inside an element with backdrop-filter; use background-only styling instead
+- [WatchModel in second Canvas](watchmodel-second-canvas.md) — WatchModel uses animated.group from @react-spring/three; crashes in any Canvas other than the main Configure canvas; use MiniWatch instead
