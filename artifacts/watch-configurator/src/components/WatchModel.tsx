@@ -1263,10 +1263,10 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
       {/* Bezel ring — machined metal overlay around crystal */}
       <BezelRing geom={config.watchfaceGeometry} caseMat={caseMat} />
 
-    </animated.group>
+      {/* Wrist mannequin — inside the tilt group so it follows the watch rotation */}
+      {showWrist && <WristMannequin />}
 
-    {/* Wrist mannequin — rendered outside watch group so it doesn't rotate with it */}
-    {showWrist && <WristMannequin />}
+    </animated.group>
     </>
   );
 }
