@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Environment, OrbitControls } from '@react-three/drei';
+import { Environment, OrbitControls, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { useSpring } from '@react-spring/three';
 import { MiniWatch } from '@/components/WatchMiniCanvas';
@@ -346,15 +346,12 @@ function Scene({ config, boxType, giftWrap, open }: { config: ExtendedConfigStat
     <>
       {/* Low ambient so shadows have depth */}
       <ambientLight intensity={0.38} />
-      {/* Key light — high-front-right, sharp shadows */}
+      {/* Key light — high-front-right */}
       <spotLight
         position={[4, 11, 7]}
-        angle={0.18}
-        penumbra={0.72}
+        angle={0.22}
+        penumbra={0.85}
         intensity={4.8}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-bias={-0.0005}
       />
       {/* Cool fill from upper-left */}
       <directionalLight position={[-5, 7, 3]} intensity={0.60} color="#c8d4f8" />
@@ -373,11 +370,15 @@ function Scene({ config, boxType, giftWrap, open }: { config: ExtendedConfigStat
           <pointLight position={[0, WATCH_Y + 2.5, 0.4]} intensity={5.0} color="#fffaf5" distance={5} decay={2.0} />
         </>
       )}
-      {/* Transparent shadow catcher — grounds the box */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -H / 2 - 0.02, 0]} receiveShadow>
-        <planeGeometry args={[24, 24]} />
-        <shadowMaterial opacity={0.32} />
-      </mesh>
+      {/* Soft contact shadow — grounds the box without polygon artifacts */}
+      <ContactShadows
+        position={[0, -H / 2 - 0.01, 0]}
+        opacity={0.38}
+        scale={14}
+        blur={3.2}
+        far={7}
+        color="#000000"
+      />
       <Environment preset="apartment" />
       {/* Slight X-tilt so camera naturally looks down into the open box */}
       <group rotation={[0.06, -0.30, 0]}>
@@ -508,7 +509,6 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
         camera={{ position: [1.5, 4.5, 12.5], fov: 42 }}
         gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
         style={{ background: 'transparent' }}
-        shadows
       >
         <Scene config={config} boxType={boxType} giftWrap={giftWrap} open={isOpen} />
         <OrbitControls
