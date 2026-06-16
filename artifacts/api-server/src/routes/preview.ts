@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, watchConfigsTable, ordersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { generateWatchBoxSVG } from "../lib/watchBoxSvg.js";
-import { generateWatchRotatingGif } from "../lib/watchGif.js";
+import { generateBoxOpeningGif } from "../lib/watchBoxGif.js";
 
 const router = Router();
 
@@ -12,8 +12,7 @@ function gifCacheKey(cfg: any): string {
   return [
     cfg?.watchfaceColor, cfg?.watchfaceGeometry, cfg?.braceletColor,
     cfg?.braceletMaterial, cfg?.handsEnabled, cfg?.handsColor,
-    cfg?.watchfaceText, cfg?.watchfaceTextMode, cfg?.watchfaceBackgroundType,
-    cfg?.watchfaceGradientEnd,
+    cfg?.watchfaceText, cfg?.boxType, cfg?.giftWrap,
   ].join('|');
 }
 
@@ -38,7 +37,7 @@ router.get("/watch-animation/:id", async (req, res) => {
     let gif = gifCache.get(cacheKey);
 
     if (!gif) {
-      gif = await generateWatchRotatingGif(config ?? {}, 360, 30, 60);
+      gif = await generateBoxOpeningGif(config ?? {}, 360, 44, 55);
       if (gifCache.size >= 30) {
         const firstKey = gifCache.keys().next().value;
         if (firstKey !== undefined) gifCache.delete(firstKey);

@@ -99,7 +99,7 @@ function darken(hex: string, factor = 0.6): string {
   return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
 }
 
-export function generateWatchBoxSVG(cfg: WatchConfig, width = 600, height = 500): string {
+export function generateWatchBoxSVG(cfg: WatchConfig, width = 600, height = 500, lidOpenFraction = 1.0): string {
   const boxType  = cfg.boxType ?? 'standard';
   const s        = BOX_STYLES[boxType] ?? BOX_STYLES.standard;
   const faceCol  = cfg.watchfaceColor  ?? '#1e293b';
@@ -240,10 +240,22 @@ export function generateWatchBoxSVG(cfg: WatchConfig, width = 600, height = 500)
       fill="rgba(255,255,255,0.65)">${displayText}</text>
   ` : '';
 
-  // ── Gift ribbon on the lid (only when closed, but we show open box so skip)
-  const ribbonColor = '#d63370';
-  const accentPlate = isPremCollect
-    ? `<polygon points="42.5,44.8 56.5,39.4 56.5,35.4 42.5,40.8" fill="${s.accentColor}" opacity="0.9"/>`
+  // ── Parameterised lid geometry ────────────────────────────────────────────
+  // Hinge edge: H(36.4,47.8) – G(62.5,62.9)  (stays fixed)
+  // Far edge when closed: E(54,37.6) – F(80.1,52.7) (covers the top face)
+  // Far edge when fully open: (36.4,29.8) – (62.5,44.9)
+  // Delta from closed → open: (-17.6, -7.8) per unit of lidOpenFraction
+  const f = Math.max(0, Math.min(1, lidOpenFraction));
+  const lidEtx = (54   - 17.6 * f).toFixed(2);
+  const lidEty = (37.6 -  7.8 * f).toFixed(2);
+  const lidFtx = (80.1 - 17.6 * f).toFixed(2);
+  const lidFty = (52.7 -  7.8 * f).toFixed(2);
+  const lidPts = `36.4,47.8 62.5,62.9 ${lidFtx},${lidFty} ${lidEtx},${lidEty}`;
+  // Opacity of the "closed-lid cover" drawn on top of the watch (fades out as lid opens)
+  const lidCoverOpacity = Math.max(0, 1 - f * 3).toFixed(3);
+
+  const accentPlate = isPremCollect && f > 0.5
+    ? `<polygon points="42.5,44.8 56.5,39.4 56.5,35.4 42.5,40.8" fill="${s.accentColor}" opacity="${(f * 2 - 1).toFixed(2)}"/>`
     : '';
 
   // ── Compose face element (circle vs rhombus) ─────────────────────────────
@@ -330,13 +342,13 @@ export function generateWatchBoxSVG(cfg: WatchConfig, width = 600, height = 500)
   <!-- Isometric box + watch group (all in original viewBox coords, then scaled) -->
   <g transform="translate(${TX.toFixed(1)},${TY.toFixed(1)}) scale(${SCALE})" filter="url(#box-shadow)">
 
-    <!-- ── Open lid standing upright behind box ── -->
-    <polygon points="36.4,47.8 62.5,62.9 62.5,44.9 36.4,29.8" fill="url(#lid-grad)"/>
+    <!-- ── Lid (parameterised: closed=covers top, open=stands upright) ── -->
+    <polygon points="${lidPts}" fill="url(#lid-grad)"/>
     <line x1="36.4" y1="47.8" x2="62.5" y2="62.9" stroke="${s.rimColor}" stroke-width="0.16" opacity="0.8"/>
     ${accentPlate}
     <!-- lid highlight -->
-    <polygon points="36.4,47.8 62.5,62.9 62.5,44.9 36.4,29.8" fill="rgba(255,255,255,0.04)"/>
-    <line x1="36.4" y1="29.8" x2="62.5" y2="44.9" stroke="${s.rimColor}" stroke-width="0.08" opacity="0.5"/>
+    <polygon points="${lidPts}" fill="rgba(255,255,255,0.04)"/>
+    <line x1="${lidEtx}" y1="${lidEty}" x2="${lidFtx}" y2="${lidFty}" stroke="${s.rimColor}" stroke-width="0.08" opacity="0.5"/>
 
     <!-- ── Box front face ── -->
     <polygon points="54,47 80.1,62.1 80.1,52.7 54,37.6" fill="url(#front-grad)"/>
@@ -395,6 +407,12 @@ export function generateWatchBoxSVG(cfg: WatchConfig, width = 600, height = 500)
     ${isPremCollect ? `
     <!-- Premium/Collector accent corners -->
     <rect x="${(WX-10.5).toFixed(1)}" y="${(WY-5.8).toFixed(1)}" width="2" height="0.4" fill="${s.accentColor}" opacity="0.6" transform="rotate(30,${WX},${WY})"/>
+    ` : ''}
+
+    <!-- ── Closed-lid cover: fades out as lid opens ── -->
+    ${parseFloat(lidCoverOpacity) > 0 ? `
+    <polygon points="54,37.6 80.1,52.7 62.5,62.9 36.4,47.8" fill="${s.lidColor}" opacity="${lidCoverOpacity}"/>
+    <polygon points="54,37.6 80.1,52.7 62.5,62.9 36.4,47.8" fill="rgba(255,255,255,0.04)" opacity="${lidCoverOpacity}"/>
     ` : ''}
   </g>
 
