@@ -13,10 +13,7 @@ const MAT_LABELS: Record<string, string> = {
   cotton_fabric: 'NATO нейлон', resin: 'Смола',
 };
 
-const COLLECTION_ORDER = ['BI-POLAR', 'РОФЛ', 'ГИПЕРСЕРЬЕЗНОСТЬ', 'ЖИВНОСТЬ'];
-const COLLECTION_DISPLAY: Record<string, string> = {
-  'BI-POLAR': 'BI-\nPOLAR',
-};
+const COLLECTION_ORDER = ['bipolar', 'РОФЛ', 'ГИПЕРСЕРЬЕЗНОСТЬ', 'ЖИВНОСТЬ'];
 const MAX_PER = 6;
 type InventoryData = Record<string, { sold: number; max: number }>;
 
@@ -394,7 +391,7 @@ export default function CollectionPage() {
   const classics = allPresets.filter((p: any) => !p.collectionName);
   const collections: Array<{ name: string | null; displayName: string; items: any[] }> = [
     ...COLLECTION_ORDER.map(name => ({
-      name, displayName: COLLECTION_DISPLAY[name] ?? name,
+      name, displayName: name,
       items: allPresets.filter((p: any) => p.collectionName === name).slice(0, MAX_PER),
     })).filter(g => g.items.length > 0),
     ...(classics.length > 0 ? [{ name: null, displayName: 'КЛАССИКА', items: classics.slice(0, MAX_PER) }] : []),
@@ -631,7 +628,7 @@ export default function CollectionPage() {
     }),
   };
 
-  const isBipolar = group?.name === 'BI-POLAR';
+  const isBipolar = group?.name === 'bipolar';
 
   return (
     <div ref={outerRef} className="fixed inset-0 overflow-hidden bg-background" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
@@ -702,7 +699,7 @@ export default function CollectionPage() {
                 </p>
                 <h2
                   className="font-black tracking-tight leading-[0.95] text-foreground"
-                  style={{ fontSize: 'clamp(2.2rem, 10vw, 4.5rem)', whiteSpace: 'pre-line' }}
+                  style={{ fontSize: 'clamp(2.2rem, 10vw, 4.5rem)' }}
                 >
                   {group.displayName}
                 </h2>
