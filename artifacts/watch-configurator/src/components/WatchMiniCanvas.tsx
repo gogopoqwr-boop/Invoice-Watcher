@@ -655,6 +655,9 @@ export function WatchCardModel({
   const minRef   = useRef<THREE.Group>(null);
   const secRef   = useRef<THREE.Group>(null);
 
+  // Intro scale — 0.001 → 1 over ~0.5 s on first mount
+  const introScaleRef = useRef(0.001);
+
   // Spring-physics for hands — loose-pin inertia driven by watch body swing
   const prevRotY    = useRef(0);
   const hourTarget  = useRef(0);
@@ -710,7 +713,20 @@ export function WatchCardModel({
   const caseH   = cardCaseHalf(watchfaceGeometry);
 
   useFrame((state, delta) => {
-    if (!groupRef.current || paused) return;
+    if (!groupRef.current) return;
+
+    // ── Intro materialise — scale 0.001 → 1 on first appearance (~0.5 s)
+    if (introScaleRef.current < 0.9995) {
+      introScaleRef.current = THREE.MathUtils.lerp(
+        introScaleRef.current, 1.0, Math.min(1, delta * 6),
+      );
+      groupRef.current.scale.setScalar(introScaleRef.current);
+    } else if (introScaleRef.current !== 1) {
+      introScaleRef.current = 1;
+      groupRef.current.scale.setScalar(1);
+    }
+
+    if (paused) return;
     const t = state.clock.elapsedTime;
 
     // ── Organic pendulum Y rotation — two harmonics so it never repeats mechanically
@@ -1014,6 +1030,7 @@ export interface WatchMiniCanvasProps {
 export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMiniCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  const [canvasReady, setCanvasReady] = useState(false);
   const didMount = useRef(false);
 
   const faceColor = preset.watchfaceColor ?? '#888888';
@@ -1071,6 +1088,16 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
     };
   }, [forceMount]);
 
+  // Crossfade: delay opacity-in by 80 ms so the first WebGL frame has rendered
+  // before we reveal it. Reset immediately when unmounted or paused.
+  useEffect(() => {
+    if (mounted && !paused) {
+      const t = setTimeout(() => setCanvasReady(true), 80);
+      return () => clearTimeout(t);
+    }
+    setCanvasReady(false);
+  }, [mounted, paused]);
+
   if (!WEB_GL_OK) {
     return (
       <div className="w-full h-full flex items-center justify-center p-4">
@@ -1099,15 +1126,29 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {/* Color card shown only while Canvas hasn't mounted — hides once 3D is live */}
-      {(!mounted || paused) && (
-        <div className="absolute inset-0">
-          <WatchColorCard watchfaceColor={faceColor} braceletColor={strapColor} watchfaceText={preset.watchfaceText ?? ''} />
-        </div>
-      )}
 
+      {/* Color card always present as background — visible while 3D is loading,
+          fades behind the Canvas once canvasReady flips true */}
+      <div
+        className="absolute inset-0"
+        style={{
+          opacity: canvasReady ? 0 : 1,
+          transition: 'opacity 500ms ease-in-out',
+          pointerEvents: 'none',
+        }}
+      >
+        <WatchColorCard watchfaceColor={faceColor} braceletColor={strapColor} watchfaceText={preset.watchfaceText ?? ''} />
+      </div>
+
+      {/* 3D Canvas — fades in once canvasReady, stays mounted for smooth transitions */}
       {mounted && !paused && (
-        <div className="absolute inset-0">
+        <div
+          className="absolute inset-0"
+          style={{
+            opacity: canvasReady ? 1 : 0,
+            transition: 'opacity 500ms ease-in-out',
+          }}
+        >
           <Canvas
             camera={{ position: [0, 0.5, 9.0], fov: 38 }}
             gl={{ alpha: true, antialias: true, powerPreference: 'low-power', preserveDrawingBuffer: false }}
