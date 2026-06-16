@@ -415,7 +415,7 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
       {mounted && !paused && (
         <div className="absolute inset-0">
           <Canvas
-            camera={{ position: [0, 0.5, 8.0], fov: 40 }}
+            camera={{ position: [0, 1.2, 7.2], fov: 38 }}
             gl={{ alpha: true, antialias: true, powerPreference: 'low-power', preserveDrawingBuffer: false }}
             style={{ background: 'transparent', width: '100%', height: '100%' }}
             dpr={[1, 1.2]}
