@@ -169,23 +169,30 @@ export default function BoxSetup() {
           )}
         </div>
 
-        {/* Box type indicator — sits below the 3D canvas */}
-        <div className="shrink-0 flex items-center justify-center gap-2 py-2.5 bg-background border-t border-border/50">
-          <span className="relative flex h-2 w-2">
-            <span
-              className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60"
-              style={{ background: boxOption.accentColor }}
-            />
-            <span
-              className="relative inline-flex rounded-full h-2 w-2"
-              style={{ background: boxOption.accentColor }}
-            />
-          </span>
-          <p
-            className="text-[11px] uppercase tracking-[0.22em] font-semibold text-muted-foreground"
+        {/* Box type indicator + open/close toggle — below the 3D canvas */}
+        <div className="shrink-0 flex items-center justify-between px-4 py-2 bg-background border-t border-border/50">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span
+                className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60"
+                style={{ background: boxOption.accentColor }}
+              />
+              <span
+                className="relative inline-flex rounded-full h-2 w-2"
+                style={{ background: boxOption.accentColor }}
+              />
+            </span>
+            <p className="text-[11px] uppercase tracking-[0.22em] font-semibold text-muted-foreground">
+              {boxOption.label} · {boxOption.sublabel}
+            </p>
+          </div>
+          <button
+            onClick={() => setBoxOpen(v => !v)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold border border-border/60 bg-muted/40 hover:bg-muted/70 active:scale-95 transition-all"
           >
-            {boxOption.label} · {boxOption.sublabel}
-          </p>
+            <span>{boxOpen ? '📦' : '🎁'}</span>
+            <span className="uppercase tracking-wide">{boxOpen ? 'Закрыть' : 'Открыть'}</span>
+          </button>
         </div>
       </div>
 
