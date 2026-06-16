@@ -113,7 +113,7 @@ function Watch3DView({ lastInteractionRef, showWrist }: { lastInteractionRef: Re
       <pointLight position={[0, 6, -2]} intensity={0.3} color="#e0eaff" />
       <Suspense fallback={null}>
         <WatchModel step={BRACELET_STEP} lastInteractionRef={lastInteractionRef} showWrist={showWrist} />
-        <CameraRig step={BRACELET_STEP} lastInteractionRef={lastInteractionRef} />
+        <CameraRig step={BRACELET_STEP} lastInteractionRef={lastInteractionRef} showWrist={showWrist} />
         <Environment preset="city" />
         <ContactShadows position={[0, -5.9, 0]} opacity={0.55} scale={14} blur={2.0} far={6} />
       </Suspense>

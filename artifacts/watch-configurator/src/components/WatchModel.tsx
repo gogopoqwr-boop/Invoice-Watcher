@@ -556,20 +556,23 @@ function StrapJoint({ k, sign, θ, color, mat, isSegmented, isDeployant, claspCo
 const INTERACTION_PAUSE_MS = 10_000;
 const RESUME_RAMP_MS = 2_500;
 
-export function CameraRig({ step, lastInteractionRef }: {
+export function CameraRig({ step, lastInteractionRef, showWrist }: {
   step: number;
   lastInteractionRef?: React.RefObject<number>;
+  showWrist?: boolean;
 }) {
   const { camera } = useThree();
   const targets: [number, number, number][] = [
-    [0, 1.2, 7.5],
-    [0, 1.2, 7.5],
-    [0, -3.0, 7.0],
-    [0, 1.2, 7.5],
-    [0, 1.2, 7.5],
+    [0,  1.2, 7.5],  // step 0
+    [0,  1.2, 7.5],  // step 1
+    [0, -0.6, 7.5],  // step 2 — bracelet: slightly below to show strap curl
+    [0,  1.2, 7.5],  // step 3
+    [0,  1.2, 7.5],  // step 4
   ];
-  const pos = targets[Math.min(step, targets.length - 1)];
-  const vec = useMemo(() => new THREE.Vector3(...pos), [step]);
+  // Wrist view: above and slightly off-axis — natural "glancing at your watch" angle
+  const wristPos: [number, number, number] = [0.6, 3.2, 6.5];
+  const pos = showWrist ? wristPos : targets[Math.min(step, targets.length - 1)];
+  const vec = useMemo(() => new THREE.Vector3(...pos), [pos[0], pos[1], pos[2]]);
   const resumeStartRef = useRef<number | null>(null);
 
   useFrame(() => {
