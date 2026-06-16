@@ -76,7 +76,7 @@ const STAGE_GRADIENTS: Record<BipolarStage, string> = {
   lightning: 'linear-gradient(180deg,#0b0520 0%,#1a0845 40%,#2d0a6e 100%)',
   rainbow:   'linear-gradient(180deg,#fce4ec 0%,#e8f5e9 35%,#e3f2fd 70%,#fff8e1 100%)',
   summer:    'linear-gradient(180deg,#0ea5e9 0%,#38bdf8 45%,#fde68a 100%)',
-  winter:    'linear-gradient(180deg,#dbeafe 0%,#eff6ff 50%,#f0f9ff 100%)',
+  winter:    'linear-gradient(180deg,#0f172a 0%,#3b82f6 50%,#60a5fa 100%)',
   heavyrain: 'linear-gradient(180deg,#1e293b 0%,#334155 55%,#475569 100%)',
   morning:   'linear-gradient(180deg,#fde68a 0%,#fca5a5 30%,#c7d2fe 70%,#dbeafe 100%)',
 };

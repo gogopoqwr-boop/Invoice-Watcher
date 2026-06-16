@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "НА_УТРАХ_4 — Watch Configurator"
+title = "Watch Configurator"
 version = "1.0.0"
 id = "artifacts/watch-configurator"
 router = "path"
