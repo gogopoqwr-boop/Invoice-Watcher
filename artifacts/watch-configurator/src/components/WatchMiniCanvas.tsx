@@ -420,7 +420,7 @@ function buildMiniTexture(
   text: string,
   textMode: string,
 ): THREE.CanvasTexture {
-  const S = 256;
+  const S = 512;
   const cv = document.createElement('canvas');
   cv.width = S; cv.height = S;
   const ctx = cv.getContext('2d')!;
@@ -543,7 +543,7 @@ export function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, br
       </mesh>
       <mesh position={[0, 0, 0.48]}>
         <primitive object={faceGeo} />
-        <meshStandardMaterial map={faceTex} roughness={0.26} metalness={0.05} />
+        <meshStandardMaterial map={faceTex} roughness={0.38} metalness={0} envMapIntensity={0} />
       </mesh>
       <mesh position={[0, 0, 0.54]}>
         <primitive object={crystalGeo} />
@@ -635,11 +635,64 @@ function lum(hex: string) {
   return 0.299 * r + 0.587 * g + 0.114 * b;
 }
 
-function WatchColorCard({ watchfaceColor, braceletColor, watchfaceText }: { watchfaceColor: string; braceletColor: string; watchfaceText?: string }) {
-  const textLines = watchfaceText?.trim().split('\n').slice(0, 3).filter(Boolean) ?? [];
-  const dark = lum(watchfaceColor) > 0.55;
-  const textColor = dark ? 'rgba(0,0,0,0.82)' : 'rgba(255,255,255,0.92)';
+const EYE_EMOJI: Record<string, string> = {
+  halfmood: '🙂‍↕️', drops: '💧', sunny: '☀️', cry: '😢', lightning: '⚡',
+  spider: '🕷️', squid: '🦑', reptile: '🦎', gremlin: '👹', cyber: '🤖',
+};
 
+function WatchFaceContent({ text, faceColor }: { text: string; faceColor: string }) {
+  const raw = text.trim();
+  if (raw.toUpperCase().startsWith('EYE:')) {
+    const key = raw.slice(4).toLowerCase();
+    if (key === 'halfmood') {
+      return (
+        <div className="absolute inset-0 overflow-hidden rounded-full flex">
+          <div className="flex-1 flex items-center justify-center text-[18px]" style={{ background: '#FFE234' }}>🙂</div>
+          <div className="flex-1 flex items-center justify-center text-[18px]" style={{ background: '#B8D4FF' }}>😢</div>
+        </div>
+      );
+    }
+    if (key === 'drops') {
+      return (
+        <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-0 overflow-hidden rounded-full p-1">
+          {['💧','💧','💧','💧','💧','💧'].map((e,i) => <span key={i} style={{ fontSize: '11px', lineHeight: 1 }}>{e}</span>)}
+        </div>
+      );
+    }
+    if (key === 'sunny') {
+      return (
+        <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-0 overflow-hidden rounded-full p-0.5">
+          {['☀️','☀️','☀️','☀️','☀️','☀️','☀️','☀️','☀️'].map((e,i) => <span key={i} style={{ fontSize: '10px', lineHeight: 1 }}>{e}</span>)}
+        </div>
+      );
+    }
+    if (key === 'cry') {
+      return <div className="absolute inset-0 flex items-center justify-center text-[28px]">😢</div>;
+    }
+    if (key === 'lightning') {
+      return <div className="absolute inset-0 flex items-center justify-center text-[28px]">⚡</div>;
+    }
+    const emoji = EYE_EMOJI[key];
+    return emoji ? <div className="absolute inset-0 flex items-center justify-center text-[28px]">{emoji}</div> : null;
+  }
+  if (raw) {
+    const dark = lum(faceColor) > 0.55;
+    const textColor = dark ? 'rgba(0,0,0,0.82)' : 'rgba(255,255,255,0.92)';
+    const lines = raw.split('\n').slice(0, 3).filter(Boolean);
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-[1px] px-1" style={{ color: textColor }}>
+        {lines.map((line, i) => (
+          <span key={i} style={{ fontSize: lines.length > 1 ? '7px' : '9px', fontWeight: 900, letterSpacing: '0.04em', lineHeight: 1.15, textAlign: 'center' }}>
+            {line}
+          </span>
+        ))}
+      </div>
+    );
+  }
+  return null;
+}
+
+function WatchColorCard({ watchfaceColor, braceletColor, watchfaceText }: { watchfaceColor: string; braceletColor: string; watchfaceText?: string }) {
   return (
     <div
       className="w-full h-full flex items-center justify-center relative overflow-hidden"
@@ -647,37 +700,13 @@ function WatchColorCard({ watchfaceColor, braceletColor, watchfaceText }: { watc
         background: `radial-gradient(ellipse at 50% 38%, ${watchfaceColor}cc 0%, ${watchfaceColor}66 40%, ${braceletColor}44 75%, transparent 100%)`,
       }}
     >
-      {/* watch silhouette */}
       <div className="flex flex-col items-center gap-[3px] select-none pointer-events-none relative" style={{ transform: 'scale(0.72)' }}>
         <div className="w-[34px] h-[22px] rounded-[5px]" style={{ backgroundColor: braceletColor, opacity: 0.72 }} />
         <div
-          className="w-[52px] h-[52px] rounded-full border-[3px] flex items-center justify-center relative"
+          className="w-[52px] h-[52px] rounded-full border-[3px] relative overflow-hidden"
           style={{ backgroundColor: watchfaceColor, borderColor: braceletColor + 'aa' }}
         >
-          <div
-            className="w-[38px] h-[38px] rounded-full"
-            style={{ background: `linear-gradient(135deg, ${watchfaceColor}ff 0%, ${watchfaceColor}88 100%)` }}
-          />
-          {/* text overlaid on face */}
-          {textLines.length > 0 && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-[1px] px-1" style={{ color: textColor }}>
-              {textLines.map((line, i) => (
-                <span key={i} style={{
-                  fontSize: textLines.length > 1 ? '7px' : '8px',
-                  fontWeight: 900,
-                  letterSpacing: '0.04em',
-                  lineHeight: 1.15,
-                  textAlign: 'center',
-                  display: 'block',
-                  textShadow: dark
-                    ? '0 0 3px rgba(255,255,255,0.5)'
-                    : '0 0 3px rgba(0,0,0,0.5)',
-                }}>
-                  {line}
-                </span>
-              ))}
-            </div>
-          )}
+          <WatchFaceContent text={watchfaceText ?? ''} faceColor={watchfaceColor} />
         </div>
         <div className="w-[34px] h-[22px] rounded-[5px]" style={{ backgroundColor: braceletColor, opacity: 0.72 }} />
       </div>
@@ -806,12 +835,13 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
             camera={{ position: [0, 1.2, 7.2], fov: 38 }}
             gl={{ alpha: true, antialias: true, powerPreference: 'low-power', preserveDrawingBuffer: false }}
             style={{ background: 'transparent', width: '100%', height: '100%' }}
-            dpr={[1, 1.2]}
+            dpr={[1, 2]}
           >
-            <ambientLight intensity={0.55} />
-            <directionalLight position={[5, 8, 6]} intensity={1.3} />
-            <directionalLight position={[-3, -2, -4]} intensity={0.28} />
-            <pointLight position={[-4, 2, 3]} intensity={0.7} color="#6366f1" />
+            <ambientLight intensity={0.9} />
+            <directionalLight position={[0, 0, 10]} intensity={1.8} />
+            <directionalLight position={[5, 8, 6]} intensity={0.7} />
+            <directionalLight position={[-3, -2, -4]} intensity={0.2} />
+            <pointLight position={[-4, 2, 3]} intensity={0.4} color="#6366f1" />
             <hemisphereLight intensity={0.25} />
             <Environment preset="city" />
             <MiniWatch
