@@ -127,67 +127,65 @@ export default function BoxSetup() {
     <div className="w-full bg-background flex flex-col md:flex-row md:overflow-hidden md:h-screen">
 
       {/* ── Left — Box preview */}
-      <div
-        className="sticky top-0 z-10 w-full md:static md:w-[52%] h-[58dvh] md:h-screen relative shrink-0 overflow-hidden canvas-box-bg"
-      >
-        {/* Back button — absolute, matches Configure */}
-        <Link href="/configure">
-          <button className="absolute top-3 left-3 z-10 canvas-overlay-btn px-3 py-1.5 text-xs font-semibold">← Настройка</button>
-        </Link>
+      <div className="sticky top-0 z-10 w-full md:static md:w-[52%] md:h-screen shrink-0 flex flex-col canvas-box-bg">
 
-        {/* Box scene fills the entire pane */}
-        <Suspense fallback={
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-          </div>
-        }>
-          <WatchBoxScene
-            config={config}
-            boxType={selectedBox}
-            open={boxOpen}
-            giftWrap={giftWrap}
-            className="h-full rounded-none"
-            onToggle={() => setBoxOpen(v => !v)}
-          />
-        </Suspense>
+        {/* 3D canvas — fills remaining height */}
+        <div className="relative flex-1 overflow-hidden min-h-0 h-[52dvh] md:h-auto">
+          {/* Back button */}
+          <Link href="/configure">
+            <button className="absolute top-3 left-3 z-10 canvas-overlay-btn px-3 py-1.5 text-xs font-semibold">← Настройка</button>
+          </Link>
 
-        {/* Top-right — watch name badge */}
-        {config.presetName && (
-          <div className="pointer-events-none absolute top-3 right-3 z-10">
-            <div
-              className="px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wider backdrop-blur-md border"
-              style={{
-                background: `${boxOption.accentColor}22`,
-                borderColor: `${boxOption.accentColor}55`,
-                color: boxOption.textColor,
-              }}
-            >
-              {config.presetName}
+          {/* Box scene */}
+          <Suspense fallback={
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
             </div>
-          </div>
-        )}
+          }>
+            <WatchBoxScene
+              config={config}
+              boxType={selectedBox}
+              open={boxOpen}
+              giftWrap={giftWrap}
+              className="h-full rounded-none"
+              onToggle={() => setBoxOpen(v => !v)}
+            />
+          </Suspense>
 
-        {/* Bottom overlay — box type + interactive hint */}
-        <div className="pointer-events-none absolute bottom-4 left-0 right-0 flex flex-col items-center gap-2">
-          <div className="flex items-center gap-2">
-            {/* Pulse ring hint */}
-            <span className="relative flex h-2 w-2">
-              <span
-                className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60"
-                style={{ background: boxOption.accentColor }}
-              />
-              <span
-                className="relative inline-flex rounded-full h-2 w-2"
-                style={{ background: boxOption.accentColor }}
-              />
-            </span>
-            <p
-              className="text-[11px] uppercase tracking-[0.22em] font-semibold"
-              style={{ color: boxOption.textColor, opacity: 0.80 }}
-            >
-              {boxOption.label} · {boxOption.sublabel}
-            </p>
-          </div>
+          {/* Top-right — watch name badge */}
+          {config.presetName && (
+            <div className="pointer-events-none absolute top-3 right-3 z-10">
+              <div
+                className="px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wider backdrop-blur-md border"
+                style={{
+                  background: `${boxOption.accentColor}22`,
+                  borderColor: `${boxOption.accentColor}55`,
+                  color: boxOption.textColor,
+                }}
+              >
+                {config.presetName}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Box type indicator — sits below the 3D canvas */}
+        <div className="shrink-0 flex items-center justify-center gap-2 py-2.5 border-t border-border/30">
+          <span className="relative flex h-2 w-2">
+            <span
+              className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60"
+              style={{ background: boxOption.accentColor }}
+            />
+            <span
+              className="relative inline-flex rounded-full h-2 w-2"
+              style={{ background: boxOption.accentColor }}
+            />
+          </span>
+          <p
+            className="text-[11px] uppercase tracking-[0.22em] font-semibold text-muted-foreground"
+          >
+            {boxOption.label} · {boxOption.sublabel}
+          </p>
         </div>
       </div>
 
