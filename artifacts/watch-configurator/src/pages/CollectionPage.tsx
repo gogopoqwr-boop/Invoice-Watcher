@@ -407,7 +407,7 @@ export default function CollectionPage() {
             >
               {/* Centered collection title */}
               <div className="flex-none flex flex-col items-center justify-center px-5 pt-6 pb-4 text-center">
-                <p className="text-[9px] uppercase tracking-[0.45em] text-muted-foreground/40 mb-2">
+                <p className="text-[9px] uppercase tracking-[0.45em] text-muted-foreground/70 mb-2">
                   Коллекция {safeIndex + 1} / {collections.length}
                 </p>
                 <h2
@@ -416,7 +416,7 @@ export default function CollectionPage() {
                 >
                   {group.displayName}
                 </h2>
-                <p className="text-[10px] text-muted-foreground/40 uppercase tracking-widest mt-2">
+                <p className="text-[10px] text-muted-foreground/70 uppercase tracking-widest mt-2">
                   {group.items.length} моделей · только предзаказ
                 </p>
               </div>
@@ -434,9 +434,26 @@ export default function CollectionPage() {
         </AnimatePresence>
       )}
 
-      {/* Collection dots — scroll hint only */}
+      {/* Collection dots + down arrow */}
       {!isLoading && collections.length > 1 && (
-        <div className="fixed bottom-6 left-0 right-0 z-30 flex justify-center">
+        <div className="fixed bottom-6 left-0 right-0 z-30 flex flex-col items-center gap-3">
+          {/* Down arrow — only when there's a next collection */}
+          {hasNext && (
+            <motion.button
+              onClick={() => goTo(safeIndex + 1, 1)}
+              className="flex flex-col items-center gap-1 text-muted-foreground/70 hover:text-foreground transition-colors"
+              animate={{ y: [0, 5, 0] }}
+              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+              aria-label="Следующая коллекция"
+            >
+              <span className="text-[9px] uppercase tracking-[0.3em] font-semibold">Листай вниз</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </motion.button>
+          )}
+
+          {/* Dots */}
           <div className="flex items-center gap-2">
             {collections.map((_, i) => (
               <button
@@ -446,7 +463,7 @@ export default function CollectionPage() {
                 style={{
                   width: i === safeIndex ? 20 : 6,
                   height: 6,
-                  background: i === safeIndex ? 'var(--primary)' : 'rgba(255,255,255,0.25)',
+                  background: i === safeIndex ? 'var(--primary)' : 'color-mix(in srgb, var(--foreground) 25%, transparent)',
                 }}
               />
             ))}
