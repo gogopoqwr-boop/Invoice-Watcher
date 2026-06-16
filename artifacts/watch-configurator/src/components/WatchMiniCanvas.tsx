@@ -626,6 +626,206 @@ export function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, br
   );
 }
 
+// ─── Full-quality card watch ──────────────────────────────────────────────────
+// Matches WatchModel geometry — lugs, spring bars, bezel ring, premium crystal,
+// detailed tipped hands — but uses only plain THREE.js groups (no animated.group
+// from @react-spring/three) so it is safe in any independent R3F Canvas.
+
+const CARD_LUG_TIP_Y = 1.85;
+const CARD_LUG_Z     = 0.10;
+
+function cardCaseHalf(geom: string): number {
+  return geom === 'circle' ? 1.5 : geom === 'square' ? 1.28 : 1.1;
+}
+
+export function WatchCardModel({
+  watchfaceGeometry,
+  watchfaceColor,
+  braceletColor,
+  braceletMaterial,
+  handsColor,
+  handsEnabled,
+  watchfaceText,
+  watchfaceTextMode,
+  collectionName,
+  paused,
+}: MiniWatchProps) {
+  const groupRef = useRef<THREE.Group>(null);
+  const hourRef  = useRef<THREE.Group>(null);
+  const minRef   = useRef<THREE.Group>(null);
+  const secRef   = useRef<THREE.Group>(null);
+
+  const bodyGeo    = useMemo(() => new THREE.ExtrudeGeometry(buildShape(watchfaceGeometry), {
+    depth: 0.38, bevelEnabled: true, bevelSize: 0.09, bevelThickness: 0.09, bevelSegments: 8,
+  }), [watchfaceGeometry]);
+
+  const faceGeo    = useMemo(() => new THREE.ShapeGeometry(buildShape(watchfaceGeometry), 64), [watchfaceGeometry]);
+  const backGeo    = useMemo(() => new THREE.ShapeGeometry(buildShape(watchfaceGeometry), 48), [watchfaceGeometry]);
+  const crystalGeo = useMemo(() => new THREE.ExtrudeGeometry(buildShape(watchfaceGeometry), {
+    depth: 0.04, bevelEnabled: true, bevelSize: 0.04, bevelThickness: 0.04, bevelSegments: 10,
+  }), [watchfaceGeometry]);
+
+  const faceTex = useMemo(
+    () => buildMiniTexture(watchfaceColor, handsColor, watchfaceText ?? '', watchfaceTextMode ?? 'circular'),
+    [watchfaceColor, handsColor, watchfaceText, watchfaceTextMode],
+  );
+  const backTex = useMemo(
+    () => buildMiniBackTexture(watchfaceColor, collectionName ?? null),
+    [watchfaceColor, collectionName],
+  );
+
+  useEffect(() => () => {
+    bodyGeo.dispose(); faceGeo.dispose(); backGeo.dispose();
+    crystalGeo.dispose(); faceTex.dispose(); backTex.dispose();
+  }, [bodyGeo, faceGeo, backGeo, crystalGeo, faceTex, backTex]);
+
+  const isMetal = braceletMaterial === 'metal_solid' || braceletMaterial === 'metal_segmented';
+  const isResin = braceletMaterial === 'resin';
+  const caseH   = cardCaseHalf(watchfaceGeometry);
+
+  useFrame((state) => {
+    if (!groupRef.current || paused) return;
+    groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.45) * 0.38;
+  });
+
+  const cMat = { color: watchfaceColor, metalness: 0.76 as number, roughness: 0.14 as number };
+  const faceZ    = 0.48;
+  const crystalZ = 0.56;
+  const handsZ   = 0.57;
+
+  return (
+    <group ref={groupRef} rotation-x={-0.32}>
+
+      {/* ── Case body ── */}
+      <mesh castShadow receiveShadow>
+        <primitive object={bodyGeo} />
+        <meshStandardMaterial {...cMat} envMapIntensity={1.4} />
+      </mesh>
+
+      {/* Back panel */}
+      <mesh position={[0, 0, -0.01]}>
+        <primitive object={backGeo} />
+        <meshStandardMaterial map={backTex} metalness={0.82} roughness={0.22} side={THREE.BackSide} />
+      </mesh>
+
+      {/* Face disc */}
+      <mesh position={[0, 0, faceZ]}>
+        <primitive object={faceGeo} />
+        <meshStandardMaterial map={faceTex} roughness={0.25} metalness={0.05} />
+      </mesh>
+
+      {/* Crystal — high-quality sapphire glass */}
+      <mesh position={[0, 0, crystalZ]}>
+        <primitive object={crystalGeo} />
+        <meshPhysicalMaterial
+          color="#daeeff"
+          metalness={0}
+          roughness={0.0}
+          transmission={0.97}
+          ior={1.52}
+          thickness={0.08}
+          envMapIntensity={5.0}
+          clearcoat={1.0}
+          clearcoatRoughness={0.03}
+          reflectivity={0.7}
+          specularIntensity={2.0}
+          specularColor="#ffffff"
+          attenuationDistance={0.6}
+          attenuationColor="#cce8ff"
+        />
+      </mesh>
+
+      {/* Bezel ring — polished metal rim around crystal (circle only) */}
+      {watchfaceGeometry === 'circle' && (
+        <mesh position={[0, 0, crystalZ + 0.035]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[1.506, 0.072, 10, 72]} />
+          <meshStandardMaterial color={watchfaceColor} metalness={0.92} roughness={0.06} envMapIntensity={2.5} />
+        </mesh>
+      )}
+
+      {/* ── Lugs — top (+1) and bottom (-1) ── */}
+      {([+1, -1] as const).map((sign) => {
+        const tipY  = sign * CARD_LUG_TIP_Y;
+        const baseY = sign * (caseH - 0.12);
+        const cy    = (tipY + baseY) / 2;
+        const lh    = Math.abs(tipY - baseY);
+        return (
+          <group key={sign}>
+            {/* Arm body */}
+            <mesh position={[0, cy, CARD_LUG_Z]} castShadow>
+              <boxGeometry args={[1.14, lh, 0.26]} />
+              <meshStandardMaterial {...cMat} envMapIntensity={1.5} />
+            </mesh>
+            {/* Chamfer — polished front face */}
+            <mesh position={[0, cy, CARD_LUG_Z + 0.07]}>
+              <boxGeometry args={[1.10, lh, 0.04]} />
+              <meshStandardMaterial color={cMat.color} metalness={0.84} roughness={0.06} envMapIntensity={2.0} />
+            </mesh>
+            {/* Spring bar pin */}
+            <mesh position={[0, tipY, CARD_LUG_Z + 0.03]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.036, 0.036, 1.22, 14]} />
+              <meshStandardMaterial color={cMat.color} metalness={0.97} roughness={0.02} />
+            </mesh>
+          </group>
+        );
+      })}
+
+      {/* ── Straps attached at lug tips ── */}
+      {([+1, -1] as const).map((sign) => (
+        <group key={sign} position={[0, sign * CARD_LUG_TIP_Y, CARD_LUG_Z]} rotation={[sign * -0.48, 0, 0]}>
+          <mesh position={[0, sign * 1.20, 0]}>
+            <boxGeometry args={[1.05, 2.40, 0.14]} />
+            <meshStandardMaterial
+              color={braceletColor}
+              metalness={isMetal ? 0.85 : 0}
+              roughness={isMetal ? 0.10 : 0.80}
+              transparent={isResin}
+              opacity={isResin ? 0.72 : 1}
+            />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Crown */}
+      <mesh position={[caseH + 0.12, 0.18, CARD_LUG_Z]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.09, 0.085, 0.28, 18]} />
+        <meshStandardMaterial {...cMat} />
+      </mesh>
+      <mesh position={[caseH + 0.16, 0.18, CARD_LUG_Z]} rotation={[0, 0, Math.PI / 2]}>
+        <torusGeometry args={[0.09, 0.018, 8, 18]} />
+        <meshStandardMaterial color={cMat.color} metalness={cMat.metalness} roughness={Math.min(1, cMat.roughness + 0.12)} />
+      </mesh>
+
+      {/* ── Watch hands ── */}
+      {handsEnabled && (
+        <group position={[0, 0, handsZ]}>
+          {/* Hour */}
+          <group ref={hourRef} rotation={[0, 0, Math.PI / 5]}>
+            <mesh position={[0, 0.26, 0]}><boxGeometry args={[0.058, 0.52, 0.018]} /><meshStandardMaterial color={handsColor} metalness={0.94} roughness={0.06} /></mesh>
+            <mesh position={[0, 0.52, 0]}><boxGeometry args={[0.034, 0.06, 0.018]} /><meshStandardMaterial color={handsColor} metalness={0.94} roughness={0.06} /></mesh>
+            <mesh position={[0, -0.072, 0]}><boxGeometry args={[0.072, 0.10, 0.022]} /><meshStandardMaterial color={handsColor} metalness={0.94} roughness={0.06} /></mesh>
+          </group>
+          {/* Minute */}
+          <group ref={minRef} rotation={[0, 0, -Math.PI / 3.5]}>
+            <mesh position={[0, 0.38, 0]}><boxGeometry args={[0.040, 0.76, 0.016]} /><meshStandardMaterial color={handsColor} metalness={0.94} roughness={0.06} /></mesh>
+            <mesh position={[0, 0.76, 0]}><boxGeometry args={[0.022, 0.04, 0.016]} /><meshStandardMaterial color={handsColor} metalness={0.94} roughness={0.06} /></mesh>
+            <mesh position={[0, -0.08, 0]}><boxGeometry args={[0.055, 0.12, 0.020]} /><meshStandardMaterial color={handsColor} metalness={0.94} roughness={0.06} /></mesh>
+          </group>
+          {/* Second */}
+          <group ref={secRef} rotation={[0, 0, Math.PI * 0.75]}>
+            <mesh position={[0, 0.34, 0.002]}><boxGeometry args={[0.010, 0.68, 0.008]} /><meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} /></mesh>
+            <mesh position={[0, -0.10, 0.002]}><boxGeometry args={[0.024, 0.16, 0.010]} /><meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} /></mesh>
+          </group>
+          {/* Pivot cap + seconds pip */}
+          <mesh rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.058, 0.058, 0.006, 28]} /><meshStandardMaterial color={handsColor} metalness={1} roughness={0.02} /></mesh>
+          <mesh position={[0, 0, 0.007]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.024, 0.024, 0.004, 16]} /><meshStandardMaterial color="#ef4444" metalness={0.85} roughness={0.08} /></mesh>
+        </group>
+      )}
+
+    </group>
+  );
+}
+
 // Lightweight color placeholder shown while a context slot isn't available.
 // Uses the watch's own colors so each card looks distinct and intentional.
 function lum(hex: string) {
@@ -832,19 +1032,20 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
       {mounted && !paused && (
         <div className="absolute inset-0">
           <Canvas
-            camera={{ position: [0, 1.2, 7.2], fov: 38 }}
+            camera={{ position: [0, 0.5, 9.0], fov: 38 }}
             gl={{ alpha: true, antialias: true, powerPreference: 'low-power', preserveDrawingBuffer: false }}
             style={{ background: 'transparent', width: '100%', height: '100%' }}
             dpr={[1, 2]}
           >
-            <ambientLight intensity={0.9} />
+            <ambientLight intensity={0.7} />
             <directionalLight position={[0, 0, 10]} intensity={1.8} />
-            <directionalLight position={[5, 8, 6]} intensity={0.7} />
+            <directionalLight position={[5, 8, 6]} intensity={0.9} castShadow />
+            <directionalLight position={[-3, 4, 5]} intensity={0.5} />
             <directionalLight position={[-3, -2, -4]} intensity={0.2} />
             <pointLight position={[-4, 2, 3]} intensity={0.4} color="#6366f1" />
             <hemisphereLight intensity={0.25} />
             <Environment preset="city" />
-            <MiniWatch
+            <WatchCardModel
               watchfaceGeometry={preset.watchfaceGeometry ?? 'rounded'}
               watchfaceColor={faceColor}
               braceletColor={strapColor}
