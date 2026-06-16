@@ -202,7 +202,7 @@ export default function Configure() {
         {webglAvailable && (
           <button
             onClick={() => setShowWrist(v => !v)}
-            className="absolute top-3 right-3 z-10 canvas-overlay-btn px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 canvas-overlay-btn px-4 py-2 text-xs font-semibold flex items-center gap-2 whitespace-nowrap"
           >
             <span>{showWrist ? '🙈' : '🖐️'}</span>
             <span>{showWrist ? 'Без запястья' : 'На запястье'}</span>

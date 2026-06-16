@@ -735,48 +735,49 @@ function BezelRing({ geom, caseMat }: {
 
 // ─── Wrist mannequin (improved) ────────────────────────────────────────────
 
-export function WristMannequin() {
-  // Lathe profile for a tapered, anatomically shaped wrist
-  // Points define the profile from one end of the wrist to the other
+export function WristMannequin({ visible }: { visible?: boolean }) {
   const wristGeo = useMemo(() => {
     const points = [
-      new THREE.Vector2(1.32, -3.8),  // forearm end (narrower — going up arm)
+      new THREE.Vector2(1.32, -3.8),
       new THREE.Vector2(1.38, -2.0),
-      new THREE.Vector2(1.42, -0.5),  // wrist crease (slightly narrower)
-      new THREE.Vector2(1.48, 0.5),
-      new THREE.Vector2(1.52, 2.0),
-      new THREE.Vector2(1.55, 3.8),   // hand side (slightly wider)
+      new THREE.Vector2(1.42, -0.5),
+      new THREE.Vector2(1.48,  0.5),
+      new THREE.Vector2(1.52,  2.0),
+      new THREE.Vector2(1.55,  3.8),
     ];
     return new THREE.LatheGeometry(points, 28);
   }, []);
   useEffect(() => () => wristGeo.dispose(), [wristGeo]);
 
-  // Slight elliptical flattening: x scale < z scale  
-  // The wrist group is rotated so the cylinder runs along Z (horizontal wrist under the watch)
+  const { s, opacity } = useSpring({
+    s:       visible ? 1   : 0.001,
+    opacity: visible ? 1   : 0,
+    config: { mass: 1.4, tension: 130, friction: 24 },
+  });
+
   return (
-    <group position={[0, 0, -1.55]} rotation={[Math.PI / 2, 0, 0]} scale={[0.96, 1, 1]}>
-      {/* Main wrist body */}
-      <mesh receiveShadow>
-        <primitive object={wristGeo} />
-        <meshStandardMaterial color="#c9a07a" roughness={0.78} metalness={0.0} />
-      </mesh>
+    <animated.group scale={s}>
+      <group position={[0, 0, -1.55]} rotation={[Math.PI / 2, 0, 0]} scale={[0.96, 1, 1]}>
+        <mesh receiveShadow>
+          <primitive object={wristGeo} />
+          <animated.meshStandardMaterial color="#c9a07a" roughness={0.78} metalness={0.0} transparent opacity={opacity} />
+        </mesh>
 
-      {/* Styloid process (wrist bone) bumps */}
-      <mesh position={[0.74, 0, 0.3]} castShadow>
-        <sphereGeometry args={[0.26, 12, 10]} />
-        <meshStandardMaterial color="#bf9068" roughness={0.85} metalness={0} />
-      </mesh>
-      <mesh position={[-0.66, 0, -0.2]} castShadow>
-        <sphereGeometry args={[0.20, 12, 10]} />
-        <meshStandardMaterial color="#bf9068" roughness={0.85} metalness={0} />
-      </mesh>
+        <mesh position={[0.74, 0, 0.3]} castShadow>
+          <sphereGeometry args={[0.26, 12, 10]} />
+          <animated.meshStandardMaterial color="#bf9068" roughness={0.85} metalness={0} transparent opacity={opacity} />
+        </mesh>
+        <mesh position={[-0.66, 0, -0.2]} castShadow>
+          <sphereGeometry args={[0.20, 12, 10]} />
+          <animated.meshStandardMaterial color="#bf9068" roughness={0.85} metalness={0} transparent opacity={opacity} />
+        </mesh>
 
-      {/* Subtle tendon ridge along top of wrist */}
-      <mesh position={[0, 0, 0.6]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.055, 0.055, 7.2, 8]} />
-        <meshStandardMaterial color="#b88a62" roughness={0.92} metalness={0} />
-      </mesh>
-    </group>
+        <mesh position={[0, 0, 0.6]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.055, 0.055, 7.2, 8]} />
+          <animated.meshStandardMaterial color="#b88a62" roughness={0.92} metalness={0} transparent opacity={opacity} />
+        </mesh>
+      </group>
+    </animated.group>
   );
 }
 
@@ -1283,8 +1284,8 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
       {/* Bezel ring — machined metal overlay around crystal */}
       <BezelRing geom={config.watchfaceGeometry} caseMat={caseMat} />
 
-      {/* Wrist mannequin — inside the tilt group so it follows the watch rotation */}
-      {showWrist && <WristMannequin />}
+      {/* Wrist mannequin — always mounted so it can animate in/out */}
+      <WristMannequin visible={showWrist} />
 
     </animated.group>
     </>
