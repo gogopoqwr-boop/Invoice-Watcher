@@ -42,6 +42,115 @@ function buildShape(geom: string): THREE.Shape {
 // ── Lightweight canvas texture for mini watch face ────────────────────────
 // Mirrors the circular/center text approach from buildFaceTexture in WatchModel
 // but at 256px with no emboss (mini cards don't need bump maps).
+
+function drawEyesOnTexture(ctx: CanvasRenderingContext2D, S: number, eyeType: string) {
+  const cx = S / 2, cy = S / 2;
+  switch (eyeType) {
+    case 'spider': {
+      const es = 14, ps = 7;
+      const r = S * 0.32;
+      const positions: [number, number][] = [
+        [-r * 0.45, -r * 0.2], [r * 0.45, -r * 0.2],
+        [-r * 0.15, -r * 0.42], [r * 0.15, -r * 0.42],
+        [-r * 0.55, r * 0.1],  [r * 0.55, r * 0.1],
+        [-r * 0.2,  r * 0.3],  [r * 0.2,  r * 0.3],
+      ];
+      positions.forEach(([ox, oy]) => {
+        ctx.beginPath(); ctx.arc(cx + ox, cy + oy, es, 0, Math.PI * 2);
+        ctx.fillStyle = '#0a1a0a'; ctx.fill();
+        ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx + ox, cy + oy, ps, 0, Math.PI * 2);
+        ctx.fillStyle = '#4ade80'; ctx.globalAlpha = 0.9; ctx.fill(); ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.arc(cx + ox - ps * 0.3, cy + oy - ps * 0.3, ps * 0.35, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fill();
+      });
+      break;
+    }
+    case 'squid': {
+      const er = 38, prW = 8, prH = 26;
+      ctx.beginPath(); ctx.ellipse(cx, cy, er, er * 0.75, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#001a2e'; ctx.fill();
+      ctx.strokeStyle = '#7dd3fc'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(cx, cy, er * 0.65, er * 0.55, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#0e3a5c'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx, cy, prW, prH, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#0a0a1a'; ctx.globalAlpha = 0.95; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.beginPath(); ctx.ellipse(cx, cy, prW * 0.4, prH * 0.4, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(125,211,252,0.6)'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx - er * 0.25, cy - er * 0.3, er * 0.2, er * 0.12, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fill();
+      break;
+    }
+    case 'reptile': {
+      const er = 40, pupilH = 28, pupilW = 8;
+      ctx.beginPath(); ctx.ellipse(cx, cy, er, er * 0.65, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#1a0500'; ctx.fill();
+      ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(cx, cy, er * 0.75, er * 0.5, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#2d0a00'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx, cy, er * 0.55, er * 0.38, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#8b3a00'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx, cy, pupilW, pupilH, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#050505'; ctx.globalAlpha = 0.95; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.beginPath(); ctx.ellipse(cx - pupilW * 0.3, cy - pupilH * 0.3, pupilW * 0.4, pupilH * 0.25, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(251,191,36,0.4)'; ctx.fill();
+      break;
+    }
+    case 'gremlin': {
+      const er = 22, pr = 11, spacing = 32;
+      [-1, 1].forEach(side => {
+        const ex = cx + side * spacing, ey = cy - S * 0.05;
+        ctx.beginPath(); ctx.arc(ex, ey, er, 0, Math.PI * 2);
+        ctx.fillStyle = '#1a0020'; ctx.fill();
+        ctx.strokeStyle = '#f0abfc'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.beginPath(); ctx.arc(ex, ey, er * 0.65, 0, Math.PI * 2);
+        ctx.fillStyle = '#2d0040'; ctx.fill();
+        ctx.beginPath(); ctx.arc(ex, ey, pr, 0, Math.PI * 2);
+        ctx.fillStyle = '#0a0010'; ctx.fill();
+        ctx.beginPath(); ctx.arc(ex - pr * 0.4, ey - pr * 0.4, pr * 0.35, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(240,171,252,0.7)'; ctx.fill();
+        ctx.beginPath(); ctx.arc(ex - er * 0.3, ey - er * 0.3, er * 0.25, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fill();
+      });
+      break;
+    }
+    case 'cyber': {
+      const er = 38;
+      [0.9, 0.7, 0.5].forEach((scale, i) => {
+        ctx.beginPath(); ctx.arc(cx, cy, er * scale, 0, Math.PI * 2);
+        ctx.strokeStyle = i === 0 ? '#5eead4' : i === 1 ? '#0d9488' : '#134e4a';
+        ctx.lineWidth = i === 0 ? 2 : 1;
+        if (i === 1) ctx.setLineDash([er * scale * 0.2, er * scale * 0.1]);
+        ctx.globalAlpha = 0.8; ctx.stroke(); ctx.globalAlpha = 1;
+        ctx.setLineDash([]);
+      });
+      ctx.beginPath(); ctx.arc(cx, cy, er * 0.4, 0, Math.PI * 2);
+      ctx.fillStyle = '#042f2e'; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, er * 0.28, 0, Math.PI * 2);
+      ctx.fillStyle = '#5eead4'; ctx.globalAlpha = 0.9; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.beginPath(); ctx.arc(cx, cy, er * 0.13, 0, Math.PI * 2);
+      ctx.fillStyle = '#042f2e'; ctx.fill();
+      ctx.beginPath(); ctx.moveTo(cx - er, cy); ctx.lineTo(cx + er, cy);
+      ctx.moveTo(cx, cy - er); ctx.lineTo(cx, cy + er);
+      ctx.strokeStyle = '#5eead4'; ctx.lineWidth = 0.6; ctx.globalAlpha = 0.3; ctx.stroke(); ctx.globalAlpha = 1;
+      break;
+    }
+    default: {
+      const er = 22, pr = 11, spacing = 32;
+      [-1, 1].forEach(side => {
+        const ex = cx + side * spacing, ey = cy - S * 0.05;
+        ctx.beginPath(); ctx.arc(ex, ey, er, 0, Math.PI * 2);
+        ctx.fillStyle = 'white'; ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.beginPath(); ctx.arc(ex, ey, pr, 0, Math.PI * 2);
+        ctx.fillStyle = '#1a1a2e'; ctx.fill();
+        ctx.beginPath(); ctx.arc(ex - pr * 0.35, ey - pr * 0.35, pr * 0.3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fill();
+      });
+    }
+  }
+}
+
 function buildMiniTexture(
   faceColor: string,
   handsColor: string,
@@ -63,7 +172,11 @@ function buildMiniTexture(
   ctx.fillRect(0, 0, S, S);
 
   const rawText = text.trim().toUpperCase();
-  if (rawText && !rawText.startsWith('EYE:')) {
+
+  if (rawText.startsWith('EYE:')) {
+    const eyeType = rawText.slice(4).toLowerCase();
+    drawEyesOnTexture(ctx, S, eyeType);
+  } else if (rawText) {
     ctx.fillStyle = handsColor;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -76,12 +189,12 @@ function buildMiniTexture(
       ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
       ctx.globalAlpha = 0.92;
       chars.forEach((ch, i) => {
-        const angle = Math.PI / 2 - (i / count) * Math.PI * 2;  // 12 o'clock first, clockwise
+        const angle = Math.PI / 2 - (i / count) * Math.PI * 2;
         const x = S / 2 + circR * Math.cos(angle);
         const y = S / 2 - circR * Math.sin(angle);
         ctx.save();
         ctx.translate(x, y);
-        ctx.rotate(angle - Math.PI / 2);  // baseline faces centre (accounts for canvas flipY)
+        ctx.rotate(angle - Math.PI / 2);
         ctx.fillText(ch, 0, 0);
         ctx.restore();
       });
