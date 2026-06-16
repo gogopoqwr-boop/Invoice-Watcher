@@ -655,6 +655,18 @@ export function WatchCardModel({
   const minRef   = useRef<THREE.Group>(null);
   const secRef   = useRef<THREE.Group>(null);
 
+  // Spring-physics for hands — loose-pin inertia driven by watch body swing
+  const prevRotY    = useRef(0);
+  const hourTarget  = useRef(0);
+  const minTarget   = useRef(0);
+  const secTarget   = useRef(0);
+  const hourActual  = useRef(0);
+  const minActual   = useRef(0);
+  const secActual   = useRef(0);
+  const hourVel     = useRef(0);
+  const minVel      = useRef(0);
+  const secVel      = useRef(0);
+
   const bodyGeo    = useMemo(() => new THREE.ExtrudeGeometry(buildShape(watchfaceGeometry), {
     depth: 0.38, bevelEnabled: true, bevelSize: 0.09, bevelThickness: 0.09, bevelSegments: 8,
   }), [watchfaceGeometry]);
@@ -679,13 +691,78 @@ export function WatchCardModel({
     crystalGeo.dispose(); faceTex.dispose(); backTex.dispose();
   }, [bodyGeo, faceGeo, backGeo, crystalGeo, faceTex, backTex]);
 
+  // Seed hand positions from actual wall-clock time on mount
+  useEffect(() => {
+    const now = new Date();
+    const s = now.getSeconds() + now.getMilliseconds() / 1000;
+    const m = now.getMinutes() + s / 60;
+    const h = (now.getHours() % 12) + m / 60;
+    secTarget.current  = -(s / 60)  * Math.PI * 2;
+    minTarget.current  = -(m / 60)  * Math.PI * 2;
+    hourTarget.current = -(h / 12)  * Math.PI * 2;
+    secActual.current  = secTarget.current;
+    minActual.current  = minTarget.current;
+    hourActual.current = hourTarget.current;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const isMetal = braceletMaterial === 'metal_solid' || braceletMaterial === 'metal_segmented';
   const isResin = braceletMaterial === 'resin';
   const caseH   = cardCaseHalf(watchfaceGeometry);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (!groupRef.current || paused) return;
-    groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.45) * 0.38;
+    const t = state.clock.elapsedTime;
+
+    // ── Organic pendulum Y rotation — two harmonics so it never repeats mechanically
+    const newRotY = Math.sin(t * 0.38) * 0.52 + Math.sin(t * 0.11) * 0.14;
+    groupRef.current.rotation.y = newRotY;
+
+    // ── Breathing tilt — subtle X oscillation around the resting -0.32 rad
+    groupRef.current.rotation.x = -0.32 + Math.sin(t * 0.22) * 0.055;
+
+    if (!handsEnabled) return;
+
+    // ── Real wall-clock hand targets (updated each frame for smooth sweep)
+    const now = new Date();
+    const s   = now.getSeconds() + now.getMilliseconds() / 1000;
+    const m   = now.getMinutes() + s / 60;
+    const h   = (now.getHours() % 12) + m / 60;
+    secTarget.current  = -(s / 60) * Math.PI * 2;
+    minTarget.current  = -(m / 60) * Math.PI * 2;
+    hourTarget.current = -(h / 12) * Math.PI * 2;
+
+    // ── Loose-pin spring-damper — inertia kick from watch body swing
+    const dRotY = newRotY - prevRotY.current;
+    prevRotY.current = newRotY;
+
+    // Impulse: faster swing → bigger kick to each hand (light hands wobble more)
+    hourVel.current -= dRotY * 2.8;
+    minVel.current  -= dRotY * 8.5;
+    secVel.current  -= dRotY * 24;
+
+    const springStep = (
+      actual: React.MutableRefObject<number>,
+      vel:    React.MutableRefObject<number>,
+      target: number,
+      k: number, b: number,
+    ) => {
+      let err = target - actual.current;
+      // Shortest-path wrap so spring never takes the long way around the dial
+      err = ((err % (Math.PI * 2)) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+      vel.current    += (k * err - b * vel.current) * delta;
+      actual.current += vel.current * delta;
+    };
+
+    // Heavy hour hand — barely wobbles, returns slowly
+    springStep(hourActual, hourVel, hourTarget.current,  4.5, 1.4);
+    // Medium minute hand — some wobble
+    springStep(minActual,  minVel,  minTarget.current,   8.0, 0.9);
+    // Light second hand — springs and oscillates the most
+    springStep(secActual,  secVel,  secTarget.current,  22.0, 0.45);
+
+    if (hourRef.current) hourRef.current.rotation.z = hourActual.current;
+    if (minRef.current)  minRef.current.rotation.z  = minActual.current;
+    if (secRef.current)  secRef.current.rotation.z  = secActual.current;
   });
 
   const cMat = { color: watchfaceColor, metalness: 0.76 as number, roughness: 0.14 as number };
@@ -799,20 +876,20 @@ export function WatchCardModel({
       {/* ── Watch hands ── */}
       {handsEnabled && (
         <group position={[0, 0, handsZ]}>
-          {/* Hour */}
-          <group ref={hourRef} rotation={[0, 0, Math.PI / 5]}>
+          {/* Hour — rotation driven imperatively by spring-physics in useFrame */}
+          <group ref={hourRef}>
             <mesh position={[0, 0.26, 0]}><boxGeometry args={[0.058, 0.52, 0.018]} /><meshStandardMaterial color={handsColor} metalness={0.94} roughness={0.06} /></mesh>
             <mesh position={[0, 0.52, 0]}><boxGeometry args={[0.034, 0.06, 0.018]} /><meshStandardMaterial color={handsColor} metalness={0.94} roughness={0.06} /></mesh>
             <mesh position={[0, -0.072, 0]}><boxGeometry args={[0.072, 0.10, 0.022]} /><meshStandardMaterial color={handsColor} metalness={0.94} roughness={0.06} /></mesh>
           </group>
           {/* Minute */}
-          <group ref={minRef} rotation={[0, 0, -Math.PI / 3.5]}>
+          <group ref={minRef}>
             <mesh position={[0, 0.38, 0]}><boxGeometry args={[0.040, 0.76, 0.016]} /><meshStandardMaterial color={handsColor} metalness={0.94} roughness={0.06} /></mesh>
             <mesh position={[0, 0.76, 0]}><boxGeometry args={[0.022, 0.04, 0.016]} /><meshStandardMaterial color={handsColor} metalness={0.94} roughness={0.06} /></mesh>
             <mesh position={[0, -0.08, 0]}><boxGeometry args={[0.055, 0.12, 0.020]} /><meshStandardMaterial color={handsColor} metalness={0.94} roughness={0.06} /></mesh>
           </group>
           {/* Second */}
-          <group ref={secRef} rotation={[0, 0, Math.PI * 0.75]}>
+          <group ref={secRef}>
             <mesh position={[0, 0.34, 0.002]}><boxGeometry args={[0.010, 0.68, 0.008]} /><meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} /></mesh>
             <mesh position={[0, -0.10, 0.002]}><boxGeometry args={[0.024, 0.16, 0.010]} /><meshStandardMaterial color="#ef4444" metalness={0.75} roughness={0.15} /></mesh>
           </group>
