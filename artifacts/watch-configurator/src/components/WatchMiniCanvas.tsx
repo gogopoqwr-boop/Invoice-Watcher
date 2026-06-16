@@ -135,6 +135,156 @@ function drawEyesOnTexture(ctx: CanvasRenderingContext2D, S: number, eyeType: st
       ctx.strokeStyle = '#5eead4'; ctx.lineWidth = 0.6; ctx.globalAlpha = 0.3; ctx.stroke(); ctx.globalAlpha = 1;
       break;
     }
+    case 'halfmood': {
+      // Left half: happy (warm yellow), Right half: sad (cool blue-grey)
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, 0, S / 2, S);
+      ctx.clip();
+      ctx.fillStyle = '#fde68a'; ctx.fillRect(0, 0, S, S);
+      ctx.restore();
+      ctx.save();
+      ctx.beginPath(); ctx.rect(S / 2, 0, S / 2, S);
+      ctx.clip();
+      ctx.fillStyle = '#bfdbfe'; ctx.fillRect(0, 0, S, S);
+      ctx.restore();
+      // dividing line
+      ctx.beginPath(); ctx.moveTo(S / 2, 0); ctx.lineTo(S / 2, S);
+      ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 2; ctx.stroke();
+      // left eye (happy ^ arch)
+      ctx.beginPath();
+      ctx.arc(cx - S * 0.18, cy - S * 0.08, S * 0.065, Math.PI, 0);
+      ctx.strokeStyle = '#92400e'; ctx.lineWidth = 4; ctx.stroke();
+      // right eye (droopy sad)
+      ctx.beginPath();
+      ctx.arc(cx + S * 0.18, cy - S * 0.08, S * 0.065, 0, Math.PI);
+      ctx.strokeStyle = '#1e3a5f'; ctx.lineWidth = 4; ctx.stroke();
+      // left smile
+      ctx.beginPath();
+      ctx.arc(cx - S * 0.15, cy + S * 0.08, S * 0.10, 0.2, Math.PI - 0.2);
+      ctx.strokeStyle = '#92400e'; ctx.lineWidth = 3.5; ctx.stroke();
+      // right frown
+      ctx.beginPath();
+      ctx.arc(cx + S * 0.15, cy + S * 0.15, S * 0.10, Math.PI + 0.2, -0.2);
+      ctx.strokeStyle = '#1e3a5f'; ctx.lineWidth = 3.5; ctx.stroke();
+      // right tear
+      ctx.beginPath();
+      ctx.ellipse(cx + S * 0.18, cy + S * 0.01, 4, 7, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#60a5fa'; ctx.globalAlpha = 0.8; ctx.fill(); ctx.globalAlpha = 1;
+      break;
+    }
+    case 'drops': {
+      // Scattered teardrops all over the face
+      const dropPositions = [
+        [0.5, 0.18], [0.25, 0.28], [0.75, 0.28], [0.15, 0.52], [0.85, 0.52],
+        [0.38, 0.70], [0.62, 0.70], [0.5, 0.82], [0.28, 0.46], [0.72, 0.46],
+        [0.5, 0.50], [0.42, 0.32], [0.58, 0.32],
+      ];
+      dropPositions.forEach(([px, py], i) => {
+        const dx = px * S, dy = py * S;
+        const dr = S * 0.048 + (i % 3) * S * 0.015;
+        const hue = 200 + (i * 13) % 40;
+        ctx.beginPath();
+        ctx.moveTo(dx, dy - dr * 1.6);
+        ctx.bezierCurveTo(dx + dr * 1.1, dy - dr * 0.5, dx + dr * 1.1, dy + dr * 0.8, dx, dy + dr);
+        ctx.bezierCurveTo(dx - dr * 1.1, dy + dr * 0.8, dx - dr * 1.1, dy - dr * 0.5, dx, dy - dr * 1.6);
+        ctx.fillStyle = `hsla(${hue},75%,65%,0.82)`;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(dx - dr * 0.32, dy - dr * 0.3, dr * 0.22, dr * 0.35, -0.5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fill();
+      });
+      break;
+    }
+    case 'sunny': {
+      const sr = S * 0.18;
+      const rayCount = 12;
+      for (let i = 0; i < rayCount; i++) {
+        const a = (i / rayCount) * Math.PI * 2;
+        const inner = sr * 1.35, outer = sr * (i % 2 === 0 ? 2.1 : 1.75);
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+        ctx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
+        ctx.strokeStyle = 'rgba(251,191,36,0.85)';
+        ctx.lineWidth = i % 2 === 0 ? 5 : 3;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      }
+      const sunGrad = ctx.createRadialGradient(cx - sr * 0.3, cy - sr * 0.3, 0, cx, cy, sr);
+      sunGrad.addColorStop(0, '#fef08a');
+      sunGrad.addColorStop(0.6, '#fbbf24');
+      sunGrad.addColorStop(1, '#f59e0b');
+      ctx.beginPath(); ctx.arc(cx, cy, sr, 0, Math.PI * 2);
+      ctx.fillStyle = sunGrad; ctx.fill();
+      // small suns scattered
+      [[0.18, 0.18], [0.82, 0.22], [0.12, 0.75], [0.78, 0.78]].forEach(([px, py]) => {
+        const bx = px * S, by = py * S, br = S * 0.055;
+        ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(251,191,36,0.45)'; ctx.fill();
+      });
+      break;
+    }
+    case 'cry': {
+      // Two eyes upper center, tears streaming straight down like hanging sticks/drops
+      const eyeSpacing = S * 0.22;
+      const eyeY = cy - S * 0.12;
+      [-1, 1].forEach(side => {
+        const ex = cx + side * eyeSpacing;
+        // eyeball
+        ctx.beginPath(); ctx.ellipse(ex, eyeY, S * 0.085, S * 0.07, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#f0f9ff'; ctx.fill();
+        ctx.strokeStyle = 'rgba(14,165,233,0.4)'; ctx.lineWidth = 1.5; ctx.stroke();
+        // iris
+        ctx.beginPath(); ctx.ellipse(ex, eyeY + S * 0.01, S * 0.048, S * 0.048, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#0369a1'; ctx.fill();
+        // pupil
+        ctx.beginPath(); ctx.arc(ex, eyeY + S * 0.01, S * 0.022, 0, Math.PI * 2);
+        ctx.fillStyle = '#0c1a2e'; ctx.fill();
+        // tear streak (stick down)
+        const tearStartY = eyeY + S * 0.07;
+        const tearEndY = cy + S * 0.32;
+        const grad = ctx.createLinearGradient(ex, tearStartY, ex, tearEndY);
+        grad.addColorStop(0, 'rgba(96,165,250,0.9)');
+        grad.addColorStop(0.7, 'rgba(96,165,250,0.6)');
+        grad.addColorStop(1, 'rgba(96,165,250,0)');
+        ctx.beginPath(); ctx.moveTo(ex - 3, tearStartY); ctx.lineTo(ex + 3, tearStartY);
+        ctx.lineTo(ex + 2, tearEndY); ctx.lineTo(ex - 2, tearEndY); ctx.closePath();
+        ctx.fillStyle = grad; ctx.fill();
+        // teardrop at bottom
+        ctx.beginPath();
+        ctx.moveTo(ex, tearEndY - S * 0.04);
+        ctx.bezierCurveTo(ex + S * 0.04, tearEndY, ex + S * 0.04, tearEndY + S * 0.055, ex, tearEndY + S * 0.055);
+        ctx.bezierCurveTo(ex - S * 0.04, tearEndY + S * 0.055, ex - S * 0.04, tearEndY, ex, tearEndY - S * 0.04);
+        ctx.fillStyle = 'rgba(96,165,250,0.75)'; ctx.fill();
+      });
+      break;
+    }
+    case 'lightning': {
+      // Lightning bolt center + electric glow
+      const lx = cx, ly = cy;
+      const boltPath: [number, number][] = [
+        [lx + S * 0.08, ly - S * 0.36],
+        [lx - S * 0.02, ly - S * 0.04],
+        [lx + S * 0.06, ly - S * 0.04],
+        [lx - S * 0.10, ly + S * 0.36],
+        [lx + S * 0.04, ly + S * 0.04],
+        [lx - S * 0.04, ly + S * 0.04],
+      ];
+      // glow
+      ctx.shadowColor = '#a78bfa'; ctx.shadowBlur = 22;
+      ctx.beginPath();
+      ctx.moveTo(boltPath[0][0], boltPath[0][1]);
+      boltPath.slice(1).forEach(([px, py]) => ctx.lineTo(px, py));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(196,181,253,0.95)'; ctx.fill();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.shadowBlur = 0;
+      // small sparks
+      [[cx - S * 0.3, cy - S * 0.2], [cx + S * 0.3, cy - S * 0.15], [cx - S * 0.25, cy + S * 0.25]].forEach(([sx2, sy2]) => {
+        ctx.beginPath(); ctx.arc(sx2, sy2, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(253,230,138,0.8)'; ctx.fill();
+      });
+      break;
+    }
     default: {
       const er = 22, pr = 11, spacing = 32;
       [-1, 1].forEach(side => {

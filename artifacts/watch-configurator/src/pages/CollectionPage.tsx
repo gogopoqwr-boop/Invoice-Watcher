@@ -13,7 +13,7 @@ const MAT_LABELS: Record<string, string> = {
   cotton_fabric: 'NATO нейлон', resin: 'Смола',
 };
 
-const COLLECTION_ORDER = ['РОФЛ', 'ГИПЕРСЕРЬЕЗНОСТЬ', 'ЖИВНОСТЬ'];
+const COLLECTION_ORDER = ['БИПОЛЯР', 'РОФЛ', 'ГИПЕРСЕРЬЕЗНОСТЬ', 'ЖИВНОСТЬ'];
 const MAX_PER = 6;
 type InventoryData = Record<string, { sold: number; max: number }>;
 
@@ -60,6 +60,286 @@ function useParticles() {
     return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); };
   }, []);
   return canvasRef;
+}
+
+const BIPOLAR_STAGES = [
+  { name: 'lightning', dur: 3200 },
+  { name: 'rainbow',   dur: 3500 },
+  { name: 'summer',    dur: 3200 },
+  { name: 'winter',    dur: 3500 },
+  { name: 'heavyrain', dur: 3200 },
+  { name: 'morning',   dur: 3500 },
+] as const;
+type BipolarStage = typeof BIPOLAR_STAGES[number]['name'];
+
+const STAGE_GRADIENTS: Record<BipolarStage, string> = {
+  lightning: 'linear-gradient(180deg,#0b0520 0%,#1a0845 40%,#2d0a6e 100%)',
+  rainbow:   'linear-gradient(180deg,#fce4ec 0%,#e8f5e9 35%,#e3f2fd 70%,#fff8e1 100%)',
+  summer:    'linear-gradient(180deg,#0ea5e9 0%,#38bdf8 45%,#fde68a 100%)',
+  winter:    'linear-gradient(180deg,#dbeafe 0%,#eff6ff 50%,#f0f9ff 100%)',
+  heavyrain: 'linear-gradient(180deg,#1e293b 0%,#334155 55%,#475569 100%)',
+  morning:   'linear-gradient(180deg,#fde68a 0%,#fca5a5 30%,#c7d2fe 70%,#dbeafe 100%)',
+};
+
+function BipolarBg() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const stageRef = useRef<BipolarStage>('lightning');
+  const [stage, setStage] = useState<BipolarStage>('lightning');
+  const [fade, setFade] = useState(1);
+
+  useEffect(() => {
+    let idx = 0;
+    let tid: ReturnType<typeof setTimeout>;
+    const cycle = () => {
+      const current = BIPOLAR_STAGES[idx];
+      tid = setTimeout(() => {
+        setFade(0);
+        setTimeout(() => {
+          idx = (idx + 1) % BIPOLAR_STAGES.length;
+          const next = BIPOLAR_STAGES[idx].name;
+          stageRef.current = next;
+          setStage(next);
+          setFade(1);
+          cycle();
+        }, 400);
+      }, current.dur);
+    };
+    cycle();
+    return () => clearTimeout(tid);
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    let w = (canvas.width = window.innerWidth);
+    let h = (canvas.height = window.innerHeight);
+    const onResize = () => { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; };
+    window.addEventListener('resize', onResize);
+
+    type Particle = { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; size: number; extra?: number };
+    let particles: Particle[] = [];
+    let lightningFlash = 0;
+    let lightningBolts: Array<Array<[number, number]>> = [];
+    let lightningTimer = 0;
+
+    const spawnForStage = (s: BipolarStage) => {
+      if (s === 'lightning') {
+        particles = Array.from({ length: 30 }, () => ({
+          x: Math.random() * w, y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
+          life: Math.random(), maxLife: 1, size: Math.random() * 2 + 0.5, extra: Math.random(),
+        }));
+      } else if (s === 'rainbow') {
+        particles = Array.from({ length: 25 }, () => ({
+          x: Math.random() * w, y: Math.random() * h * 0.6,
+          vx: (Math.random() - 0.5) * 0.2, vy: -Math.random() * 0.15,
+          life: Math.random(), maxLife: 1, size: Math.random() * 3 + 1,
+        }));
+      } else if (s === 'summer') {
+        particles = Array.from({ length: 40 }, () => ({
+          x: Math.random() * w, y: Math.random() * h,
+          vx: Math.random() * 0.5 + 0.1, vy: -Math.random() * 0.3,
+          life: Math.random(), maxLife: 1, size: Math.random() * 2 + 0.5,
+        }));
+      } else if (s === 'winter') {
+        particles = Array.from({ length: 60 }, () => ({
+          x: Math.random() * w, y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 0.4, vy: Math.random() * 0.6 + 0.2,
+          life: Math.random(), maxLife: 1, size: Math.random() * 4 + 1,
+        }));
+      } else if (s === 'heavyrain') {
+        particles = Array.from({ length: 80 }, () => ({
+          x: Math.random() * w, y: Math.random() * h,
+          vx: -0.5, vy: Math.random() * 8 + 6,
+          life: Math.random(), maxLife: 1, size: Math.random() * 1.5 + 0.5, extra: Math.random() * 12 + 8,
+        }));
+      } else if (s === 'morning') {
+        particles = Array.from({ length: 50 }, () => ({
+          x: Math.random() * w, y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 0.2, vy: Math.random() * 1.5 + 0.5,
+          life: Math.random(), maxLife: 1, size: Math.random() * 2 + 0.5, extra: Math.random() * 6 + 4,
+        }));
+      }
+    };
+
+    spawnForStage(stageRef.current);
+
+    const genBolt = () => {
+      const bx = Math.random() * w;
+      const points: Array<[number, number]> = [[bx, 0]];
+      let cx2 = bx, cy2 = 0;
+      while (cy2 < h * 0.75) {
+        cx2 += (Math.random() - 0.5) * 80;
+        cy2 += Math.random() * 60 + 30;
+        points.push([cx2, cy2]);
+      }
+      return points;
+    };
+
+    let prevStage = stageRef.current;
+    let raf: number;
+    const draw = () => {
+      const s = stageRef.current;
+      if (s !== prevStage) { spawnForStage(s); prevStage = s; lightningBolts = []; lightningTimer = 0; lightningFlash = 0; }
+      ctx.clearRect(0, 0, w, h);
+
+      if (s === 'lightning') {
+        lightningTimer++;
+        if (lightningTimer % 45 === 0 && Math.random() > 0.3) {
+          lightningBolts = [genBolt(), ...(Math.random() > 0.6 ? [genBolt()] : [])];
+          lightningFlash = 12;
+        }
+        if (lightningFlash > 0) {
+          ctx.fillStyle = `rgba(180,140,255,${lightningFlash / 12 * 0.18})`;
+          ctx.fillRect(0, 0, w, h);
+          lightningBolts.forEach(bolt => {
+            ctx.beginPath();
+            ctx.moveTo(bolt[0][0], bolt[0][1]);
+            bolt.slice(1).forEach(([bx2, by2]) => ctx.lineTo(bx2, by2));
+            ctx.strokeStyle = `rgba(255,255,180,${lightningFlash / 12 * 0.95})`;
+            ctx.lineWidth = lightningFlash > 8 ? 3 : 1.5;
+            ctx.shadowColor = '#a78bfa';
+            ctx.shadowBlur = 18;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+          });
+          lightningFlash--;
+        }
+        particles.forEach(p => {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(167,139,250,${0.15 + p.extra! * 0.2})`;
+          ctx.fill();
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+          if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
+        });
+      } else if (s === 'rainbow') {
+        const arcW = w * 0.9, arcH = h * 0.55;
+        const colors = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899'];
+        colors.forEach((c, i) => {
+          const r = arcW * 0.28 + i * (arcW * 0.04);
+          ctx.beginPath();
+          ctx.arc(w / 2, h * 0.72, r, Math.PI, 2 * Math.PI);
+          ctx.strokeStyle = c;
+          ctx.lineWidth = arcW * 0.025;
+          ctx.globalAlpha = 0.28;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        });
+        particles.forEach(p => {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255,255,255,0.55)`;
+          ctx.fill();
+          p.x += p.vx; p.y += p.vy;
+          if (p.y < 0) { p.y = h * 0.6; p.x = Math.random() * w; }
+          if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+        });
+      } else if (s === 'summer') {
+        const sr = Math.min(w, h) * 0.12;
+        const sx = w * 0.75, sy = h * 0.18;
+        const rayCount = 12;
+        for (let i = 0; i < rayCount; i++) {
+          const a = (i / rayCount) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(sx + Math.cos(a) * sr * 1.25, sy + Math.sin(a) * sr * 1.25);
+          ctx.lineTo(sx + Math.cos(a) * sr * 2.0, sy + Math.sin(a) * sr * 2.0);
+          ctx.strokeStyle = 'rgba(253,211,77,0.35)';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(253,211,77,0.22)';
+        ctx.fill();
+        particles.forEach(p => {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(253,230,138,0.4)`;
+          ctx.fill();
+          p.x += p.vx; p.y += p.vy;
+          if (p.x > w) { p.x = 0; p.y = Math.random() * h; }
+          if (p.y < 0) p.y = h;
+        });
+      } else if (s === 'winter') {
+        particles.forEach(p => {
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.life * Math.PI * 2);
+          const sr2 = p.size;
+          for (let i = 0; i < 6; i++) {
+            const a = (i / 6) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(Math.cos(a) * sr2 * 2.5, Math.sin(a) * sr2 * 2.5);
+            ctx.strokeStyle = `rgba(219,234,254,0.65)`;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          }
+          ctx.restore();
+          p.x += p.vx; p.y += p.vy;
+          p.life += 0.005;
+          if (p.y > h) { p.y = -10; p.x = Math.random() * w; }
+          if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+        });
+      } else if (s === 'heavyrain') {
+        particles.forEach(p => {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x + p.vx * 1.5, p.y + (p.extra ?? 10));
+          ctx.strokeStyle = `rgba(148,163,184,0.45)`;
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+          p.x += p.vx; p.y += p.vy;
+          if (p.y > h) { p.y = -10; p.x = Math.random() * w; }
+        });
+      } else if (s === 'morning') {
+        const grd = ctx.createRadialGradient(w * 0.3, h * 0.85, 0, w * 0.3, h * 0.85, w * 0.6);
+        grd.addColorStop(0, 'rgba(253,186,116,0.25)');
+        grd.addColorStop(1, 'rgba(253,186,116,0)');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, w, h);
+        particles.forEach(p => {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x + p.vx * 2, p.y + (p.extra ?? 5));
+          ctx.strokeStyle = `rgba(186,230,253,0.4)`;
+          ctx.lineWidth = 0.7;
+          ctx.stroke();
+          p.x += p.vx; p.y += p.vy;
+          if (p.y > h) { p.y = -10; p.x = Math.random() * w; }
+        });
+        particles.forEach((p, i) => {
+          if (i % 5 !== 0) return;
+          ctx.beginPath();
+          ctx.arc(p.x * 0.9 + w * 0.05, p.y * 0.4, p.size * 0.7, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(254,215,170,0.18)';
+          ctx.fill();
+        });
+      }
+
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); };
+  }, []);
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-0 pointer-events-none"
+        style={{
+          background: STAGE_GRADIENTS[stage],
+          opacity: fade,
+          transition: 'opacity 0.4s ease, background 0.4s ease',
+        }}
+      />
+      <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0" style={{ opacity: 0.9 }} />
+    </>
+  );
 }
 
 function useTilt() {
@@ -348,18 +628,25 @@ export default function CollectionPage() {
     }),
   };
 
+  const isBipolar = group?.name === 'БИПОЛЯР';
+
   return (
     <div ref={outerRef} className="fixed inset-0 overflow-hidden bg-background" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      {/* Particles */}
-      <canvas ref={particlesRef} className="fixed inset-0 pointer-events-none z-0" style={{ opacity: 0.8 }} />
-
-      {/* Ambient orbs */}
-      <div className="fixed top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full pointer-events-none z-0"
-        style={{ background: 'var(--orb-1)', filter: 'blur(100px)', opacity: 0.35 }} />
-      <div className="fixed bottom-[-5%] left-[-5%] w-[400px] h-[400px] rounded-full pointer-events-none z-0"
-        style={{ background: 'var(--orb-2)', filter: 'blur(90px)', opacity: 0.22 }} />
-      <div className="fixed top-[50%] right-[10%] w-[260px] h-[260px] rounded-full pointer-events-none z-0"
-        style={{ background: 'var(--orb-3)', filter: 'blur(70px)', opacity: 0.18 }} />
+      {isBipolar ? (
+        <BipolarBg />
+      ) : (
+        <>
+          {/* Particles */}
+          <canvas ref={particlesRef} className="fixed inset-0 pointer-events-none z-0" style={{ opacity: 0.8 }} />
+          {/* Ambient orbs */}
+          <div className="fixed top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full pointer-events-none z-0"
+            style={{ background: 'var(--orb-1)', filter: 'blur(100px)', opacity: 0.35 }} />
+          <div className="fixed bottom-[-5%] left-[-5%] w-[400px] h-[400px] rounded-full pointer-events-none z-0"
+            style={{ background: 'var(--orb-2)', filter: 'blur(90px)', opacity: 0.22 }} />
+          <div className="fixed top-[50%] right-[10%] w-[260px] h-[260px] rounded-full pointer-events-none z-0"
+            style={{ background: 'var(--orb-3)', filter: 'blur(70px)', opacity: 0.18 }} />
+        </>
+      )}
 
       {/* Top nav */}
       <div className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-5 py-4">
