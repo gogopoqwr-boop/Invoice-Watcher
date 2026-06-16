@@ -319,14 +319,12 @@ export default function Configure() {
           {/* ── Watchface text ── */}
           <div>
             <h2 className="text-lg font-bold tracking-tight mb-3">Надпись</h2>
-            <input
-              type="text"
-              maxLength={24}
-              placeholder="Например: ДОХУИЩА"
-              value={config.watchfaceText?.startsWith('EYE:') ? '' : (config.watchfaceText ?? '')}
-              onChange={e => updateConfig({ watchfaceText: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl text-sm text-foreground border border-border/60 bg-card/80 focus:outline-none focus:ring-2 focus:ring-primary/60 placeholder:text-muted-foreground/50"
-            />
+            <div className="w-full px-4 py-3 rounded-xl text-sm border border-border/40 bg-muted/40 select-none text-muted-foreground">
+              {config.watchfaceText && !config.watchfaceText.startsWith('EYE:')
+                ? <span className="text-foreground font-medium">{config.watchfaceText}</span>
+                : <span className="italic opacity-50">нет надписи</span>
+              }
+            </div>
 
             {/* Placement toggle — always visible once text is entered */}
             {config.watchfaceText && !config.watchfaceText.startsWith('EYE:') && (
@@ -378,7 +376,7 @@ export default function Configure() {
                 </span>
               </div>
             )}
-            {config.watchfaceText && (
+            {false && (
               <button
                 onClick={() => updateConfig({ watchfaceText: '' })}
                 className="mt-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
