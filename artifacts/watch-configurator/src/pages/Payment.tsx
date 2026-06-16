@@ -176,8 +176,8 @@ export default function Payment() {
 
       {/* Top nav — fixed so it never scrolls away */}
       <div className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-3 pointer-events-none">
-        <Link href="/configure" className="pointer-events-auto">
-          <button className="liquid-button px-3 py-1.5 text-xs font-semibold">← К настройке</button>
+        <Link href="/box" className="pointer-events-auto">
+          <button className="liquid-button px-3 py-1.5 text-xs font-semibold">← К упаковке</button>
         </Link>
         <Link href="/orders" className="pointer-events-auto">
           <button className="liquid-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"><Package size={12} /> Мои заказы</button>
