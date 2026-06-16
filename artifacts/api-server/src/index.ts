@@ -53,18 +53,20 @@ const PRESET_SEED = [
 ];
 
 async function ensurePresets() {
-  const [row] = await db.select({ n: count() }).from(watchPresetsTable);
-  if ((row?.n ?? 0) > 0) return; // already seeded
+  const existing = await db.select({ name: watchPresetsTable.name }).from(watchPresetsTable);
+  const existingNames = new Set(existing.map(r => r.name));
+  const missing = PRESET_SEED.filter(p => !existingNames.has(p.name));
+  if (missing.length === 0) return;
 
-  logger.info("Presets table is empty — seeding...");
-  for (const preset of PRESET_SEED) {
+  logger.info({ count: missing.length }, "Seeding missing presets...");
+  for (const preset of missing) {
     try {
-      await db.insert(watchPresetsTable).values(preset as any).onConflictDoNothing();
+      await db.insert(watchPresetsTable).values(preset as any);
     } catch (err) {
       logger.error({ err, name: preset.name }, "Failed to seed preset");
     }
   }
-  logger.info({ count: PRESET_SEED.length }, "Presets seeded");
+  logger.info({ count: missing.length }, "Presets seeded");
 }
 
 async function ensureAdminUsers() {
