@@ -197,7 +197,7 @@ export default function BoxSetup() {
       </div>
 
       {/* ── Right — Options panel ── */}
-      <div className="w-full md:w-[48%] md:h-screen flex flex-col bg-background border-l border-border/60 overflow-y-auto md:overflow-hidden">
+      <div className="w-full md:w-[48%] md:h-screen flex flex-col bg-background border-l border-border/60 md:overflow-hidden">
 
         {/* Header */}
         <div className="px-5 pt-5 pb-3 border-b border-border/40 shrink-0">
@@ -337,7 +337,7 @@ export default function BoxSetup() {
         </div>
 
         {/* Footer */}
-        <div className="px-5 pb-6 pt-3 border-t border-border/40 shrink-0 space-y-3">
+        <div className="px-5 pb-6 pt-3 border-t border-border/40 shrink-0 space-y-3 sticky bottom-0 z-10 bg-background">
           <div className="flex items-center justify-between px-1">
             <span className="text-xs text-muted-foreground uppercase tracking-widest">Итого</span>
             <span className="text-sm font-bold flex items-center gap-0.5">
