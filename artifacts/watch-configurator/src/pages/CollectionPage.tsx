@@ -138,191 +138,265 @@ function BipolarBg() {
 
     const spawnForStage = (s: BipolarStage) => {
       if (s === 'lightning') {
-        particles = Array.from({ length: 30 }, () => ({
-          x: Math.random() * w, y: Math.random() * h,
-          vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
-          life: Math.random(), maxLife: 1, size: Math.random() * 2 + 0.5, extra: Math.random(),
-        }));
-      } else if (s === 'rainbow') {
-        particles = Array.from({ length: 25 }, () => ({
-          x: Math.random() * w, y: Math.random() * h * 0.6,
-          vx: (Math.random() - 0.5) * 0.2, vy: -Math.random() * 0.15,
-          life: Math.random(), maxLife: 1, size: Math.random() * 3 + 1,
-        }));
-      } else if (s === 'summer') {
-        particles = Array.from({ length: 40 }, () => ({
-          x: Math.random() * w, y: Math.random() * h,
-          vx: Math.random() * 0.5 + 0.1, vy: -Math.random() * 0.3,
-          life: Math.random(), maxLife: 1, size: Math.random() * 2 + 0.5,
-        }));
-      } else if (s === 'winter') {
-        particles = Array.from({ length: 60 }, () => ({
-          x: Math.random() * w, y: Math.random() * h,
-          vx: (Math.random() - 0.5) * 0.4, vy: Math.random() * 0.6 + 0.2,
-          life: Math.random(), maxLife: 1, size: Math.random() * 4 + 1,
-        }));
-      } else if (s === 'heavyrain') {
-        particles = Array.from({ length: 80 }, () => ({
-          x: Math.random() * w, y: Math.random() * h,
-          vx: -0.5, vy: Math.random() * 8 + 6,
-          life: Math.random(), maxLife: 1, size: Math.random() * 1.5 + 0.5, extra: Math.random() * 12 + 8,
-        }));
-      } else if (s === 'morning') {
         particles = Array.from({ length: 50 }, () => ({
           x: Math.random() * w, y: Math.random() * h,
-          vx: (Math.random() - 0.5) * 0.2, vy: Math.random() * 1.5 + 0.5,
-          life: Math.random(), maxLife: 1, size: Math.random() * 2 + 0.5, extra: Math.random() * 6 + 4,
+          vx: (Math.random() - 0.5) * 0.6, vy: (Math.random() - 0.5) * 0.6,
+          life: Math.random(), maxLife: 1, size: Math.random() * 2.5 + 0.8, extra: Math.random(),
+        }));
+      } else if (s === 'rainbow') {
+        particles = Array.from({ length: 55 }, () => ({
+          x: Math.random() * w, y: h * 0.2 + Math.random() * h * 0.5,
+          vx: (Math.random() - 0.5) * 0.35, vy: -Math.random() * 0.22 - 0.08,
+          life: Math.random(), maxLife: 1, size: Math.random() * 3.5 + 1.2,
+        }));
+      } else if (s === 'summer') {
+        particles = Array.from({ length: 55 }, () => ({
+          x: Math.random() * w, y: Math.random() * h,
+          vx: Math.random() * 0.7 + 0.2, vy: -(Math.random() * 0.5 + 0.1),
+          life: Math.random(), maxLife: 1, size: Math.random() * 3 + 0.8,
+        }));
+      } else if (s === 'winter') {
+        particles = Array.from({ length: 80 }, () => ({
+          x: Math.random() * w, y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 0.5, vy: Math.random() * 0.8 + 0.3,
+          life: Math.random() * Math.PI * 2, maxLife: 1, size: Math.random() * 6 + 2,
+        }));
+      } else if (s === 'heavyrain') {
+        particles = Array.from({ length: 160 }, () => ({
+          x: Math.random() * (w + 200) - 100, y: Math.random() * h,
+          vx: -3.5, vy: Math.random() * 14 + 12,
+          life: Math.random(), maxLife: 1, size: Math.random() * 1.2 + 0.5, extra: Math.random() * 22 + 18,
+        }));
+      } else if (s === 'morning') {
+        particles = Array.from({ length: 60 }, () => ({
+          x: Math.random() * w, y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 0.25, vy: -(Math.random() * 0.6 + 0.2),
+          life: Math.random(), maxLife: 1, size: Math.random() * 2.5 + 0.8, extra: Math.random() * 8 + 5,
         }));
       }
     };
 
     spawnForStage(stageRef.current);
 
-    const genBolt = () => {
-      const bx = Math.random() * w;
-      const points: Array<[number, number]> = [[bx, 0]];
+    // Generate a branching lightning bolt
+    const genBolt = (): Array<[number, number][]> => {
+      const bx = w * 0.1 + Math.random() * w * 0.8;
+      const main: Array<[number, number]> = [[bx, -10]];
       let cx2 = bx, cy2 = 0;
-      while (cy2 < h * 0.75) {
-        cx2 += (Math.random() - 0.5) * 80;
-        cy2 += Math.random() * 60 + 30;
-        points.push([cx2, cy2]);
+      const branches: Array<[number, number][]> = [];
+      while (cy2 < h * 0.82) {
+        cx2 += (Math.random() - 0.5) * 90;
+        cy2 += Math.random() * 55 + 25;
+        main.push([cx2, cy2]);
+        // random fork branch
+        if (Math.random() > 0.65 && cy2 > h * 0.15 && cy2 < h * 0.6) {
+          const branchLen = 3 + Math.floor(Math.random() * 3);
+          const fork: Array<[number, number]> = [[cx2, cy2]];
+          let fx = cx2, fy = cy2;
+          for (let i = 0; i < branchLen; i++) {
+            fx += (Math.random() - 0.5) * 70;
+            fy += Math.random() * 45 + 20;
+            fork.push([fx, fy]);
+          }
+          branches.push(fork);
+        }
       }
-      return points;
+      return [main, ...branches];
     };
 
     let prevStage = stageRef.current;
     let raf: number;
+    let t = 0;
     const draw = () => {
       const s = stageRef.current;
       if (s !== prevStage) { spawnForStage(s); prevStage = s; lightningBolts = []; lightningTimer = 0; lightningFlash = 0; }
       ctx.clearRect(0, 0, w, h);
+      t++;
 
       if (s === 'lightning') {
         lightningTimer++;
-        if (lightningTimer % 45 === 0 && Math.random() > 0.3) {
-          lightningBolts = [genBolt(), ...(Math.random() > 0.6 ? [genBolt()] : [])];
-          lightningFlash = 12;
+        if (lightningTimer % 32 === 0 && Math.random() > 0.2) {
+          const allBolts = genBolt();
+          if (Math.random() > 0.5) allBolts.push(...genBolt());
+          lightningBolts = allBolts;
+          lightningFlash = 18;
         }
         if (lightningFlash > 0) {
-          ctx.fillStyle = `rgba(180,140,255,${lightningFlash / 12 * 0.18})`;
+          ctx.fillStyle = `rgba(160,120,255,${lightningFlash / 18 * 0.22})`;
           ctx.fillRect(0, 0, w, h);
-          lightningBolts.forEach(bolt => {
+          lightningBolts.forEach((bolt, bi) => {
             ctx.beginPath();
             ctx.moveTo(bolt[0][0], bolt[0][1]);
             bolt.slice(1).forEach(([bx2, by2]) => ctx.lineTo(bx2, by2));
-            ctx.strokeStyle = `rgba(255,255,180,${lightningFlash / 12 * 0.95})`;
-            ctx.lineWidth = lightningFlash > 8 ? 3 : 1.5;
-            ctx.shadowColor = '#a78bfa';
-            ctx.shadowBlur = 18;
+            const isBranch = bi > 0;
+            ctx.strokeStyle = `rgba(255,255,210,${lightningFlash / 18 * (isBranch ? 0.6 : 0.95)})`;
+            ctx.lineWidth = lightningFlash > 12 ? (isBranch ? 1.5 : 3.5) : (isBranch ? 0.8 : 1.8);
+            ctx.shadowColor = '#a78bfa'; ctx.shadowBlur = 22;
             ctx.stroke();
             ctx.shadowBlur = 0;
           });
           lightningFlash--;
         }
         particles.forEach(p => {
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(167,139,250,${0.15 + p.extra! * 0.2})`;
-          ctx.fill();
+          p.life += 0.012;
+          const alpha = 0.1 + Math.abs(Math.sin(p.life * 3)) * 0.25 * p.extra!;
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(167,139,250,${alpha})`; ctx.fill();
           p.x += p.vx; p.y += p.vy;
           if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
           if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
         });
       } else if (s === 'rainbow') {
-        const arcW = w * 0.9, arcH = h * 0.55;
-        const colors = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899'];
-        colors.forEach((c, i) => {
-          const r = arcW * 0.28 + i * (arcW * 0.04);
+        // Vivid multi-band rainbow arcs
+        const arcColors = [
+          { c: '#ff4d4d', a: 0.55 }, { c: '#ff8c00', a: 0.52 }, { c: '#ffd700', a: 0.5 },
+          { c: '#22c55e', a: 0.5 },  { c: '#3b82f6', a: 0.5 },  { c: '#7c3aed', a: 0.48 },
+          { c: '#ec4899', a: 0.42 },
+        ];
+        arcColors.forEach(({ c, a }, i) => {
+          const r = w * 0.30 + i * (w * 0.042);
           ctx.beginPath();
-          ctx.arc(w / 2, h * 0.72, r, Math.PI, 2 * Math.PI);
-          ctx.strokeStyle = c;
-          ctx.lineWidth = arcW * 0.025;
-          ctx.globalAlpha = 0.28;
-          ctx.stroke();
-          ctx.globalAlpha = 1;
+          ctx.arc(w / 2, h * 0.78, r, Math.PI, 2 * Math.PI);
+          ctx.strokeStyle = c; ctx.lineWidth = w * 0.028;
+          ctx.globalAlpha = a; ctx.stroke(); ctx.globalAlpha = 1;
         });
+        // Shimmer sparkles
         particles.forEach(p => {
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255,255,255,0.55)`;
-          ctx.fill();
+          p.life += 0.008;
+          const alpha = 0.3 + Math.abs(Math.sin(p.life * 4)) * 0.45;
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255,255,255,${alpha})`; ctx.fill();
           p.x += p.vx; p.y += p.vy;
-          if (p.y < 0) { p.y = h * 0.6; p.x = Math.random() * w; }
+          if (p.y < 0 || p.y > h * 0.82) { p.y = h * 0.2 + Math.random() * h * 0.5; p.x = Math.random() * w; p.life = Math.random(); }
           if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
         });
       } else if (s === 'summer') {
-        const sr = Math.min(w, h) * 0.12;
-        const sx = w * 0.75, sy = h * 0.18;
-        const rayCount = 12;
+        // Rotating sun with animated rays
+        const sr = Math.min(w, h) * 0.13;
+        const sx = w * 0.76, sy = h * 0.17;
+        const rayRot = t * 0.003;
+        const rayCount = 14;
+        ctx.save(); ctx.translate(sx, sy); ctx.rotate(rayRot);
         for (let i = 0; i < rayCount; i++) {
           const a = (i / rayCount) * Math.PI * 2;
+          const isLong = i % 2 === 0;
           ctx.beginPath();
-          ctx.moveTo(sx + Math.cos(a) * sr * 1.25, sy + Math.sin(a) * sr * 1.25);
-          ctx.lineTo(sx + Math.cos(a) * sr * 2.0, sy + Math.sin(a) * sr * 2.0);
-          ctx.strokeStyle = 'rgba(253,211,77,0.35)';
-          ctx.lineWidth = 3;
-          ctx.stroke();
+          ctx.moveTo(Math.cos(a) * sr * 1.22, Math.sin(a) * sr * 1.22);
+          ctx.lineTo(Math.cos(a) * sr * (isLong ? 2.2 : 1.72), Math.sin(a) * sr * (isLong ? 2.2 : 1.72));
+          ctx.strokeStyle = `rgba(253,211,77,${isLong ? 0.55 : 0.38})`;
+          ctx.lineWidth = isLong ? 5 : 3; ctx.lineCap = 'round'; ctx.stroke();
         }
-        ctx.beginPath();
-        ctx.arc(sx, sy, sr, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(253,211,77,0.22)';
-        ctx.fill();
+        ctx.restore();
+        // Sun disc
+        const sunGrd = ctx.createRadialGradient(sx - sr * 0.3, sy - sr * 0.3, 0, sx, sy, sr * 1.1);
+        sunGrd.addColorStop(0, 'rgba(255,255,180,0.55)');
+        sunGrd.addColorStop(0.5, 'rgba(253,211,77,0.35)');
+        sunGrd.addColorStop(1, 'rgba(251,146,60,0.15)');
+        ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+        ctx.fillStyle = sunGrd; ctx.fill();
+        // Heat shimmer / pollen particles
         particles.forEach(p => {
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(253,230,138,0.4)`;
-          ctx.fill();
+          p.life += 0.009;
+          const wobble = Math.sin(p.life * 5 + p.x * 0.02) * 0.5;
+          const alpha = 0.15 + Math.abs(Math.sin(p.life * 2)) * 0.35;
+          ctx.beginPath(); ctx.arc(p.x + wobble, p.y, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(253,230,138,${alpha})`; ctx.fill();
           p.x += p.vx; p.y += p.vy;
-          if (p.x > w) { p.x = 0; p.y = Math.random() * h; }
-          if (p.y < 0) p.y = h;
+          if (p.x > w + 20) { p.x = -20; p.y = Math.random() * h; }
+          if (p.y < -20) { p.y = h + 20; p.x = Math.random() * w; }
         });
       } else if (s === 'winter') {
         particles.forEach(p => {
+          p.life += 0.008;
           ctx.save();
           ctx.translate(p.x, p.y);
-          ctx.rotate(p.life * Math.PI * 2);
-          const sr2 = p.size;
+          ctx.rotate(p.life);
+          const ar = p.size;
+          const alpha = 0.55 + Math.sin(p.life * 1.5) * 0.2;
+          ctx.globalAlpha = alpha;
           for (let i = 0; i < 6; i++) {
             const a = (i / 6) * Math.PI * 2;
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(Math.cos(a) * sr2 * 2.5, Math.sin(a) * sr2 * 2.5);
-            ctx.strokeStyle = `rgba(219,234,254,0.65)`;
-            ctx.lineWidth = 0.8;
-            ctx.stroke();
+            const armX = Math.cos(a) * ar * 2.6, armY = Math.sin(a) * ar * 2.6;
+            // main arm
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(armX, armY);
+            ctx.strokeStyle = '#dbeafe'; ctx.lineWidth = 1.1; ctx.stroke();
+            // sub-arms (crystal branches)
+            [0.4, 0.7].forEach(frac => {
+              const mx = Math.cos(a) * ar * 2.6 * frac, my = Math.sin(a) * ar * 2.6 * frac;
+              const perp = a + Math.PI / 2;
+              const bl = ar * 0.9;
+              ctx.beginPath();
+              ctx.moveTo(mx + Math.cos(perp) * bl, my + Math.sin(perp) * bl);
+              ctx.lineTo(mx - Math.cos(perp) * bl, my - Math.sin(perp) * bl);
+              ctx.lineWidth = 0.7; ctx.stroke();
+            });
           }
+          // center dot
+          ctx.beginPath(); ctx.arc(0, 0, ar * 0.4, 0, Math.PI * 2);
+          ctx.fillStyle = '#e0f2fe'; ctx.fill();
+          ctx.globalAlpha = 1;
           ctx.restore();
+          // drift slightly sideways
+          p.vx = Math.sin(t * 0.012 + p.maxLife * 6) * 0.45;
           p.x += p.vx; p.y += p.vy;
-          p.life += 0.005;
-          if (p.y > h) { p.y = -10; p.x = Math.random() * w; }
-          if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+          if (p.y > h + 20) { p.y = -20; p.x = Math.random() * w; }
+          if (p.x < -20) p.x = w + 20; if (p.x > w + 20) p.x = -20;
         });
       } else if (s === 'heavyrain') {
         particles.forEach(p => {
           ctx.beginPath();
           ctx.moveTo(p.x, p.y);
-          ctx.lineTo(p.x + p.vx * 1.5, p.y + (p.extra ?? 10));
-          ctx.strokeStyle = `rgba(148,163,184,0.45)`;
-          ctx.lineWidth = 0.8;
+          ctx.lineTo(p.x + p.vx * 3.5, p.y + (p.extra ?? 18));
+          const alpha = 0.3 + (p.size / 1.7) * 0.35;
+          ctx.strokeStyle = `rgba(148,185,210,${alpha})`;
+          ctx.lineWidth = p.size * 0.6;
           ctx.stroke();
           p.x += p.vx; p.y += p.vy;
-          if (p.y > h) { p.y = -10; p.x = Math.random() * w; }
+          if (p.y > h + 20) { p.y = -20; p.x = Math.random() * (w + 200) - 100; }
+          if (p.x < -20) p.x = w + 20;
         });
+        // Puddle splashes at bottom
+        if (t % 14 === 0) {
+          const sx2 = Math.random() * w, sy2 = h - 8;
+          ctx.beginPath(); ctx.ellipse(sx2, sy2, Math.random() * 18 + 6, 3, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(148,185,210,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+        }
       } else if (s === 'morning') {
-        const grd = ctx.createRadialGradient(w * 0.3, h * 0.85, 0, w * 0.3, h * 0.85, w * 0.6);
-        grd.addColorStop(0, 'rgba(253,186,116,0.25)');
-        grd.addColorStop(1, 'rgba(253,186,116,0)');
-        ctx.fillStyle = grd;
-        ctx.fillRect(0, 0, w, h);
-        particles.forEach(p => {
+        // Light shafts from lower-left horizon
+        const beamCount = 6;
+        const originX = w * 0.1, originY = h * 0.9;
+        for (let i = 0; i < beamCount; i++) {
+          const spread = 0.15 + i * 0.12;
+          const angle = -Math.PI * spread;
+          const len = Math.max(w, h) * 1.6;
+          const beamW = len * (0.04 + i * 0.025);
+          const alpha = (0.07 - i * 0.008) * (0.85 + Math.sin(t * 0.018 + i) * 0.15);
+          const grd = ctx.createLinearGradient(originX, originY, originX + Math.cos(angle) * len, originY + Math.sin(angle) * len);
+          grd.addColorStop(0, `rgba(253,186,116,${alpha * 2.5})`);
+          grd.addColorStop(0.4, `rgba(253,211,77,${alpha})`);
+          grd.addColorStop(1, 'rgba(253,211,77,0)');
+          ctx.save();
+          ctx.translate(originX, originY);
+          ctx.rotate(angle - Math.PI / 2);
           ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
-          ctx.lineTo(p.x + p.vx * 2, p.y + (p.extra ?? 5));
-          ctx.strokeStyle = `rgba(186,230,253,0.4)`;
-          ctx.lineWidth = 0.7;
-          ctx.stroke();
-          p.x += p.vx; p.y += p.vy;
-          if (p.y > h) { p.y = -10; p.x = Math.random() * w; }
+          ctx.moveTo(-beamW / 2, 0);
+          ctx.lineTo(beamW / 2, 0);
+          ctx.lineTo(beamW * 2.5, -len);
+          ctx.lineTo(-beamW * 2.5, -len);
+          ctx.closePath();
+          ctx.fillStyle = grd; ctx.fill();
+          ctx.restore();
+        }
+        // Floating dust / pollen
+        particles.forEach(p => {
+          p.life += 0.007;
+          const alpha = 0.2 + Math.abs(Math.sin(p.life * 2.5)) * 0.4;
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(253,230,138,${alpha})`; ctx.fill();
+          p.x += p.vx + Math.sin(t * 0.02 + p.life) * 0.3;
+          p.y += p.vy;
+          if (p.y < -20) { p.y = h + 20; p.x = Math.random() * w; p.life = Math.random(); }
+          if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
         });
         particles.forEach((p, i) => {
           if (i % 5 !== 0) return;
