@@ -20,6 +20,7 @@ export const ordersTable = pgTable("orders", {
   paymentTxId: text("payment_tx_id"),
   telegramPaymentChargeId: text("telegram_payment_charge_id"),
   telegramInvoiceMessageId: integer("telegram_invoice_message_id"),
+  boxMessage: text("box_message"),
   duplicateChargeIds: text("duplicate_charge_ids"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

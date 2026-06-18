@@ -11,6 +11,7 @@ export interface OrderInput {
   userEmail?: string;
   deliveryEmail?: string;
   deliveryAddress?: string;
+  boxMessage?: string;
   telegramId?: string;
   telegramUsername?: string;
   sessionId?: string;

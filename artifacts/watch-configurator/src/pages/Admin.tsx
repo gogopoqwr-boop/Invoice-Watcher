@@ -452,6 +452,17 @@ export default function Admin() {
                       {order.cancelComment && <p className="text-xs text-orange-600 italic mb-1">"{order.cancelComment}"</p>}
                       {order.status==="cancel_requested" && <span className="text-xs font-bold text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full inline-block mb-2">⚠️ Ожидает решения</span>}
 
+                      {/* Box note */}
+                      {(order as any).boxMessage && (
+                        <div className="flex items-start gap-2 mb-2 rounded-xl px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40">
+                          <span className="text-base leading-none mt-0.5">🗒️</span>
+                          <div className="min-w-0">
+                            <p className="text-[10px] uppercase tracking-widest text-amber-600 dark:text-amber-400 font-semibold mb-0.5">Вкладыш в коробку</p>
+                            <p className="text-xs text-amber-900 dark:text-amber-200 italic leading-snug">«{(order as any).boxMessage}»</p>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Receipt */}
                       {order.configId && <ConfigReceipt configId={order.configId} totalStars={order.totalStars} compact/>}
 

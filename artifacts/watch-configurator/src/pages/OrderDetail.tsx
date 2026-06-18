@@ -376,6 +376,17 @@ export default function OrderDetail() {
             </div>
           )}
 
+          {/* Box note */}
+          {o.boxMessage && (
+            <div className="liquid-glass rounded-2xl p-4 mb-4 animate-fade-up delay-250 flex items-start gap-3">
+              <span className="text-2xl leading-none">🗒️</span>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-1">Сообщение-вкладыш</p>
+                <p className="text-sm text-foreground italic leading-relaxed">«{o.boxMessage}»</p>
+              </div>
+            </div>
+          )}
+
           {/* Receipt breakdown */}
           <div className="animate-fade-up delay-300">
             <ConfigReceipt configId={configId} totalStars={o.totalStars} alwaysOpen compact />

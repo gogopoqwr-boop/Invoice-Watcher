@@ -97,6 +97,7 @@ router.post("/orders", async (req, res) => {
       userEmail: body.userEmail ?? null,
       deliveryEmail: body.deliveryEmail ?? null,
       deliveryAddress: body.deliveryAddress ?? null,
+      boxMessage: body.boxMessage ?? null,
       telegramId: body.telegramId ?? null,
       telegramUsername: body.telegramUsername ?? null,
       sessionId: body.sessionId ?? null,

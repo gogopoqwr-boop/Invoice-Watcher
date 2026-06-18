@@ -117,7 +117,7 @@ export default function BoxSetup() {
         } as any,
       });
       const order = await createOrder.mutateAsync({
-        data: { configId: cfg.id, sessionId, totalStars, deliveryEmail: email, deliveryAddress: address } as any,
+        data: { configId: cfg.id, sessionId, totalStars, deliveryEmail: email, deliveryAddress: address, boxMessage: message || undefined } as any,
       });
       setLocation(`/payment/${order.id}`);
     } catch (e) {
@@ -388,8 +388,7 @@ export default function BoxSetup() {
     {showDeliveryModal && (
       <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
         style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}>
-        <div className="w-full max-w-md rounded-3xl p-6 space-y-5 shadow-2xl"
-          style={{ background: 'var(--card)', border: '1px solid rgba(255,255,255,0.1)' }}>
+        <div className="w-full max-w-md rounded-3xl p-6 space-y-5 shadow-2xl bg-card border border-border/30">
 
           <div className="flex items-center justify-between">
             <div>
@@ -422,7 +421,7 @@ export default function BoxSetup() {
               value={deliveryEmail}
               onChange={e => { setDeliveryEmail(e.target.value); setDeliveryErrors(v => ({ ...v, email: undefined })); }}
               className={cn(
-                'w-full px-4 py-3 rounded-xl text-sm border bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary/60',
+                'w-full px-4 py-3 rounded-xl text-sm text-foreground border bg-background/70 placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/60 transition-all',
                 deliveryErrors.email ? 'border-red-400' : 'border-border/60'
               )}
             />
@@ -440,7 +439,7 @@ export default function BoxSetup() {
               value={deliveryAddress}
               onChange={e => { setDeliveryAddress(e.target.value); setDeliveryErrors(v => ({ ...v, address: undefined })); }}
               className={cn(
-                'w-full px-4 py-3 rounded-xl text-sm border bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary/60 resize-none placeholder:text-muted-foreground/50',
+                'w-full px-4 py-3 rounded-xl text-sm text-foreground border bg-background/70 placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/60 resize-none transition-all',
                 deliveryErrors.address ? 'border-red-400' : 'border-border/60'
               )}
             />

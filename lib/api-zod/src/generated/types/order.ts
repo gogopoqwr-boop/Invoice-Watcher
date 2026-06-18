@@ -21,6 +21,8 @@ export interface Order {
   /** @nullable */
   deliveryAddress?: string | null;
   /** @nullable */
+  boxMessage?: string | null;
+  /** @nullable */
   telegramId?: string | null;
   /** @nullable */
   telegramUsername?: string | null;
