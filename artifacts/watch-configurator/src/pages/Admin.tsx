@@ -11,7 +11,7 @@ import ConfigReceipt from "@/components/ConfigReceipt";
 import {
   Home, Package, ClipboardList, Settings2, Sparkles, TrendingUp,
   Check, RefreshCw, Users, Database, DollarSign, Bot, ChevronDown,
-  Pencil, Trash2, Plus, Eye, EyeOff, X, Save, Palette,
+  Pencil, Trash2, Plus, Eye, EyeOff, X, Save, Palette, Download,
 } from 'lucide-react';
 import { TgStar } from '@/components/TgStar';
 import { CollectionStudio } from '@/components/CollectionStudio';
@@ -408,17 +408,40 @@ export default function Admin() {
         ════════════════════════════════════════════════ */}
         {tab === "orders" && (
           <div className="space-y-3">
-            {/* Status filters — horizontal scroll */}
-            <div className="overflow-x-auto -mx-1 px-1 pb-1">
-              <div className="flex gap-1.5 w-max">
-                {["","payment_pending","paid","cancel_requested","processing","shipping","arrived","cancelled"].map(s => (
-                  <button key={s} onClick={()=>{setStatusFilter(s);setPage(1);}}
-                    className={cn("px-3 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap transition-all",
-                      statusFilter===s ? "bg-primary text-white border-primary shadow" : "bg-card/60 border-border/60 text-muted-foreground hover:bg-card hover:text-foreground")}>
-                    {s ? STATUS_LABELS[s].toUpperCase() : "ВСЕ"}
-                  </button>
-                ))}
+            {/* Status filters + export button row */}
+            <div className="flex items-center gap-2">
+              <div className="overflow-x-auto -mx-1 px-1 pb-1 flex-1">
+                <div className="flex gap-1.5 w-max">
+                  {["","payment_pending","paid","cancel_requested","processing","shipping","arrived","cancelled"].map(s => (
+                    <button key={s} onClick={()=>{setStatusFilter(s);setPage(1);}}
+                      className={cn("px-3 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap transition-all",
+                        statusFilter===s ? "bg-primary text-white border-primary shadow" : "bg-card/60 border-border/60 text-muted-foreground hover:bg-card hover:text-foreground")}>
+                      {s ? STATUS_LABELS[s].toUpperCase() : "ВСЕ"}
+                    </button>
+                  ))}
+                </div>
               </div>
+              {user.role === "admin" && (
+                <button
+                  onClick={async () => {
+                    const jwt = localStorage.getItem("jwt") ?? "";
+                    const url = statusFilter
+                      ? `/api/admin/orders/export?status=${statusFilter}`
+                      : `/api/admin/orders/export`;
+                    const res = await fetch(url, { headers: { Authorization: `Bearer ${jwt}` } });
+                    const blob = await res.blob();
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `orders_${new Date().toISOString().slice(0,10)}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                  }}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border border-border/60 bg-card/60 hover:bg-card text-muted-foreground hover:text-foreground transition-all whitespace-nowrap"
+                  title="Скачать CSV"
+                >
+                  <Download size={12} /> CSV
+                </button>
+              )}
             </div>
 
             {ordersLoading ? (

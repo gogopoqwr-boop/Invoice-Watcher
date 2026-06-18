@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, watchPresetsTable, adminUsersTable, settingsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, watchPresetsTable, adminUsersTable, settingsTable, ordersTable, watchConfigsTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
@@ -195,6 +195,60 @@ router.delete("/admin/users/:id", requireAdmin, async (req, res) => {
   } catch (err: any) {
     req.log.error({ err }, "admin delete user failed");
     res.status(500).json({ error: "Failed to delete user" });
+  }
+});
+
+// ── Orders CSV export ─────────────────────────────────────────────────────────
+
+router.get("/admin/orders/export", requireAdmin, async (req, res) => {
+  try {
+    const status = req.query.status as string | undefined;
+
+    const orders = await db.select().from(ordersTable)
+      .where(status ? eq(ordersTable.status, status) : undefined)
+      .orderBy(desc(ordersTable.createdAt));
+
+    const configs = await db.select().from(watchConfigsTable);
+    const configMap = new Map(configs.map(c => [c.id, c]));
+
+    const escape = (v: unknown) => {
+      const s = v == null ? "" : String(v);
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+
+    const header = [
+      "ID", "Статус", "Звёзды", "Email", "Адрес",
+      "Telegram", "TG ID", "Вкладыш", "Пресет",
+      "Корпус", "Ремешок", "Дата",
+    ].map(escape).join(",");
+
+    const rows = orders.map(o => {
+      const cfg = configMap.get(o.configId);
+      return [
+        o.id,
+        o.status,
+        o.totalStars,
+        o.deliveryEmail ?? o.userEmail ?? "",
+        o.deliveryAddress ?? "",
+        o.telegramUsername ?? "",
+        o.telegramId ?? "",
+        o.boxMessage ?? "",
+        (cfg as any)?.presetName ?? "",
+        cfg?.watchfaceMaterial ?? "",
+        cfg?.braceletMaterial ?? "",
+        new Date(o.createdAt).toISOString(),
+      ].map(escape).join(",");
+    });
+
+    const csv = [header, ...rows].join("\r\n");
+    const filename = `orders_${new Date().toISOString().slice(0, 10)}.csv`;
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send("\uFEFF" + csv); // BOM for Excel UTF-8
+  } catch (err: any) {
+    req.log.error({ err }, "admin export orders failed");
+    res.status(500).json({ error: "Failed to export" });
   }
 });
 
