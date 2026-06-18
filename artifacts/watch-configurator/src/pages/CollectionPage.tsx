@@ -466,6 +466,30 @@ export default function CollectionPage() {
   const [buyError, setBuyError] = useState('');
   const [inventory, setInventory] = useState<InventoryData>({});
 
+  // ── Search / filter ──────────────────────────────────────────────────────
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const openSearch = useCallback(() => {
+    setSearchOpen(true);
+    setSearchQuery('');
+    setTimeout(() => searchInputRef.current?.focus(), 60);
+  }, []);
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    setSearchQuery('');
+  }, []);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!searchOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') closeSearch(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [searchOpen, closeSearch]);
+
   // direction: 1 = going to next (slide up), -1 = going to prev (slide down)
   const [direction, setDirection] = useState(1);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -745,23 +769,102 @@ export default function CollectionPage() {
         </>
       )}
 
-      {/* Top nav */}
-      <div className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-5 py-4">
-        <Link href="/">
-          <span className="text-sm font-black uppercase tracking-[0.18em] text-foreground/80 hover:text-foreground transition-colors cursor-pointer select-none" style={{ letterSpacing: '0.18em' }}>
-            Чеблячас
-          </span>
-        </Link>
-        <div className="flex items-center gap-2">
-          <span className="text-[9px] font-black uppercase tracking-[0.3em] px-2.5 py-1 rounded-full border border-primary/40 text-primary/70 bg-primary/5">
-            ПРЕДЗАКАЗ
-          </span>
-          {hasOrders && (
-            <Link href="/orders">
-              <button className="liquid-button px-4 py-2 text-xs font-semibold">Мои заказы</button>
-            </Link>
-          )}
-          <ThemeToggle />
+      {/* ── Top nav ── */}
+      <div className="fixed top-0 left-0 right-0 z-30">
+        <div className="flex items-center justify-between px-5 py-4">
+          <Link href="/">
+            <span className="text-sm font-black uppercase tracking-[0.18em] text-foreground/80 hover:text-foreground transition-colors cursor-pointer select-none" style={{ letterSpacing: '0.18em' }}>
+              Чеблячас
+            </span>
+          </Link>
+          <div className="flex items-center gap-2">
+            {/* Search icon */}
+            <button
+              onClick={searchOpen ? closeSearch : openSearch}
+              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-foreground/8 transition-colors text-foreground/50 hover:text-foreground"
+              aria-label="Поиск коллекций"
+            >
+              {searchOpen ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              )}
+            </button>
+            <span className="text-[9px] font-black uppercase tracking-[0.3em] px-2.5 py-1 rounded-full border border-primary/40 text-primary/70 bg-primary/5">
+              ПРЕДЗАКАЗ
+            </span>
+            {hasOrders && (
+              <Link href="/orders">
+                <button className="liquid-button px-4 py-2 text-xs font-semibold">Мои заказы</button>
+              </Link>
+            )}
+            <ThemeToggle />
+          </div>
+        </div>
+
+        {/* ── Search panel ── */}
+        <div
+          className="overflow-hidden transition-all"
+          style={{
+            maxHeight: searchOpen ? '320px' : '0px',
+            opacity: searchOpen ? 1 : 0,
+            transition: 'max-height 280ms cubic-bezier(0.4,0,0.2,1), opacity 200ms ease',
+          }}
+        >
+          <div className="mx-4 mb-3 rounded-2xl overflow-hidden"
+            style={{ background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(16px)', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}
+          >
+            {/* Input */}
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-black/6">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground shrink-0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input
+                ref={searchInputRef}
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Название коллекции…"
+                className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground/60 text-foreground"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="text-muted-foreground hover:text-foreground transition-colors">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              )}
+            </div>
+
+            {/* Collection chips */}
+            <div className="p-3 flex flex-wrap gap-2">
+              {collections
+                .filter(c => !searchQuery || c.displayName.toLowerCase().includes(searchQuery.toLowerCase()))
+                .map((c, i) => {
+                  const ci = collections.indexOf(c);
+                  const active = ci === safeIndex;
+                  return (
+                    <button
+                      key={c.displayName}
+                      onClick={() => {
+                        const dir = ci > safeIndex ? 1 : -1;
+                        isTransitioning.current = false;
+                        lastScrollTime.current = 0;
+                        goTo(ci, dir);
+                        closeSearch();
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+                      style={{
+                        background: active ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.06)',
+                        color: active ? '#fff' : 'rgba(0,0,0,0.7)',
+                        border: active ? '1px solid transparent' : '1px solid rgba(0,0,0,0.1)',
+                      }}
+                    >
+                      {c.displayName}
+                      <span className="opacity-50 text-[10px]">{c.items.length}</span>
+                    </button>
+                  );
+                })}
+              {collections.filter(c => !searchQuery || c.displayName.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                <p className="text-xs text-muted-foreground px-1 py-1">Ничего не найдено</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
