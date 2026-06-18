@@ -537,6 +537,8 @@ export interface MiniWatchProps {
   watchfaceTextMode?: string;
   collectionName?: string | null;
   paused?: boolean;
+  spinRef?: React.MutableRefObject<number>;
+  isDraggingRef?: React.MutableRefObject<boolean>;
 }
 
 export function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletMaterial, handsColor, handsEnabled, watchfaceText, watchfaceTextMode, collectionName, paused }: MiniWatchProps) {
@@ -693,6 +695,8 @@ export function WatchCardModel({
   watchfaceTextMode,
   collectionName,
   paused,
+  spinRef,
+  isDraggingRef,
 }: MiniWatchProps) {
   const groupRef = useRef<THREE.Group>(null);
   const hourRef  = useRef<THREE.Group>(null);
@@ -772,13 +776,28 @@ export function WatchCardModel({
 
     if (paused) return;
     const t = state.clock.elapsedTime;
+    const dragging = isDraggingRef?.current ?? false;
 
-    // ── Organic pendulum Y rotation — two harmonics so it never repeats mechanically
-    const newRotY = Math.sin(t * 0.38) * 0.52 + Math.sin(t * 0.11) * 0.14;
-    groupRef.current.rotation.y = newRotY;
-
-    // ── Breathing tilt — subtle X oscillation around the resting -0.32 rad
-    groupRef.current.rotation.x = -0.32 + Math.sin(t * 0.22) * 0.055;
+    let newRotY: number;
+    if (dragging && spinRef) {
+      // User is spinning — use accumulated drag value directly, tilt levels out
+      newRotY = spinRef.current;
+      groupRef.current.rotation.y = newRotY;
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(
+        groupRef.current.rotation.x, -0.32, Math.min(1, delta * 8),
+      );
+    } else {
+      // Spring residual spin back to 0, then resume pendulum
+      if (spinRef && Math.abs(spinRef.current) > 0.001) {
+        spinRef.current *= (1 - Math.min(1, delta * 6));
+      }
+      // ── Organic pendulum Y rotation — two harmonics so it never repeats mechanically
+      const pendulumY = Math.sin(t * 0.38) * 0.52 + Math.sin(t * 0.11) * 0.14;
+      newRotY = pendulumY + (spinRef?.current ?? 0);
+      groupRef.current.rotation.y = newRotY;
+      // ── Breathing tilt — subtle X oscillation around the resting -0.32 rad
+      groupRef.current.rotation.x = -0.32 + Math.sin(t * 0.22) * 0.055;
+    }
 
     if (!handsEnabled) return;
 
