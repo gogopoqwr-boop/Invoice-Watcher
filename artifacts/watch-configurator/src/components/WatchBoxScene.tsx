@@ -259,13 +259,13 @@ function WatchInBox({ config, visible }: { config: ExtendedConfigState; visible:
   return (
     /*
       Always rendered (no visibility gate) so useFrame runs every frame.
-      Watch stands upright (face toward camera), with a slight backward tilt
-      so the dial is fully visible from the camera above-front position.
+      rotation-x = +0.30 cancels WatchCardModel's built-in -0.32 lean so the
+      watch stands nearly upright, face fully visible from the camera above.
     */
     <group
       ref={groupRef}
-      position={[0, WATCH_Y + 0.15, 0]}
-      rotation={[-0.18, 0, 0]}
+      position={[0, WATCH_Y + 0.05, 0]}
+      rotation={[0.30, 0, 0]}
     >
       <WatchCardModel
         watchfaceGeometry={config.watchfaceGeometry ?? 'circle'}
