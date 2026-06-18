@@ -368,6 +368,292 @@ function drawEyesOnTexture(ctx: CanvasRenderingContext2D, S: number, eyeType: st
   }
 }
 
+// ── Animated eye drawing — pure function of elapsed time t ───────────────
+function drawAnimatedEyesOnTexture(ctx: CanvasRenderingContext2D, S: number, eyeType: string, t: number) {
+  const cx = S / 2, cy = S / 2;
+  switch (eyeType) {
+
+    case 'spider': {
+      // Each eye blinks independently at a different cadence
+      const BFREQ  = [1.3, 0.9, 1.7, 2.1, 0.7, 1.5, 1.1, 0.6];
+      const BPHASE = [0, 1.2, 2.4, 0.8, 3.1, 1.8, 0.4, 2.7];
+      const es = 14, ps = 7, r = S * 0.32;
+      const positions: [number,number][] = [
+        [-r*0.45,-r*0.2],[r*0.45,-r*0.2],[-r*0.15,-r*0.42],[r*0.15,-r*0.42],
+        [-r*0.55,r*0.1],[r*0.55,r*0.1],[-r*0.2,r*0.3],[r*0.2,r*0.3],
+      ];
+      positions.forEach(([ox,oy],i) => {
+        const blink = Math.max(0, Math.sin(t*BFREQ[i]+BPHASE[i])*9-8);
+        ctx.save(); ctx.translate(cx+ox, cy+oy); ctx.scale(1, 1-blink*0.95);
+        ctx.beginPath(); ctx.arc(0,0,es,0,Math.PI*2); ctx.fillStyle='#0a1a0a'; ctx.fill();
+        ctx.strokeStyle='#4ade80'; ctx.lineWidth=1.5; ctx.stroke();
+        if (blink < 0.7) {
+          ctx.beginPath(); ctx.arc(0,0,ps,0,Math.PI*2); ctx.fillStyle='#4ade80'; ctx.globalAlpha=0.9; ctx.fill(); ctx.globalAlpha=1;
+          ctx.beginPath(); ctx.arc(-ps*0.3,-ps*0.3,ps*0.35,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.fill();
+        }
+        ctx.restore();
+      });
+      break;
+    }
+
+    case 'squid': {
+      const er = 38, prW = 8;
+      const prH = 26 * (1 + 0.22*Math.sin(t*1.1)); // dilating pupil
+      ctx.beginPath(); ctx.ellipse(cx,cy,er,er*0.75,0,0,Math.PI*2); ctx.fillStyle='#001a2e'; ctx.fill();
+      ctx.strokeStyle='#7dd3fc'; ctx.lineWidth=2; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(cx,cy,er*0.65,er*0.55,0,0,Math.PI*2); ctx.fillStyle='#0e3a5c'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx,cy,prW,prH,0,0,Math.PI*2); ctx.fillStyle='#0a0a1a'; ctx.globalAlpha=0.95; ctx.fill(); ctx.globalAlpha=1;
+      ctx.beginPath(); ctx.ellipse(cx,cy,prW*0.4,prH*0.4,0,0,Math.PI*2); ctx.fillStyle='rgba(125,211,252,0.6)'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx-er*0.25,cy-er*0.3,er*0.2,er*0.12,0,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.fill();
+      break;
+    }
+
+    case 'reptile': {
+      const er = 40, pupilH = 28;
+      const pupilW = Math.max(1.5, 8*(1-0.55*Math.abs(Math.sin(t*0.65)))); // slit narrows/widens
+      ctx.beginPath(); ctx.ellipse(cx,cy,er,er*0.65,0,0,Math.PI*2); ctx.fillStyle='#1a0500'; ctx.fill();
+      ctx.strokeStyle='#f59e0b'; ctx.lineWidth=2; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(cx,cy,er*0.75,er*0.5,0,0,Math.PI*2); ctx.fillStyle='#2d0a00'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx,cy,er*0.55,er*0.38,0,0,Math.PI*2); ctx.fillStyle='#8b3a00'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx,cy,pupilW,pupilH,0,0,Math.PI*2); ctx.fillStyle='#050505'; ctx.globalAlpha=0.95; ctx.fill(); ctx.globalAlpha=1;
+      ctx.beginPath(); ctx.ellipse(cx-pupilW*0.3,cy-pupilH*0.3,pupilW*0.4,pupilH*0.25,0,0,Math.PI*2); ctx.fillStyle='rgba(251,191,36,0.4)'; ctx.fill();
+      break;
+    }
+
+    case 'gremlin': {
+      const er = 22, pr = 11, spacing = 32;
+      const blink = Math.max(0, Math.sin(t*2.1)*7-6);
+      [-1,1].forEach(side => {
+        const ex = cx+side*spacing, ey = cy-S*0.05;
+        ctx.save(); ctx.translate(ex,ey); ctx.scale(1,1-blink*0.9);
+        ctx.beginPath(); ctx.arc(0,0,er,0,Math.PI*2); ctx.fillStyle='#1a0020'; ctx.fill();
+        ctx.strokeStyle='#f0abfc'; ctx.lineWidth=2; ctx.stroke();
+        ctx.beginPath(); ctx.arc(0,0,er*0.65,0,Math.PI*2); ctx.fillStyle='#2d0040'; ctx.fill();
+        ctx.beginPath(); ctx.arc(0,0,pr,0,Math.PI*2); ctx.fillStyle='#0a0010'; ctx.fill();
+        if (blink < 0.75) {
+          ctx.beginPath(); ctx.arc(-pr*0.4,-pr*0.4,pr*0.35,0,Math.PI*2); ctx.fillStyle='rgba(240,171,252,0.7)'; ctx.fill();
+          ctx.beginPath(); ctx.arc(-er*0.3,-er*0.3,er*0.25,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.22)'; ctx.fill();
+        }
+        ctx.restore();
+      });
+      break;
+    }
+
+    case 'cyber': {
+      const er = 38, rot = t*0.4, pulse = 0.55+0.25*Math.sin(t*2.2);
+      [0.9,0.7,0.5].forEach((scale,i) => {
+        ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot*(i%2===0?1:-1));
+        ctx.beginPath(); ctx.arc(0,0,er*scale,0,Math.PI*2);
+        ctx.strokeStyle = i===0?'#5eead4':i===1?'#0d9488':'#134e4a'; ctx.lineWidth = i===0?2:1;
+        if (i===1) ctx.setLineDash([er*scale*0.2,er*scale*0.1]);
+        ctx.globalAlpha=pulse*0.8; ctx.stroke(); ctx.globalAlpha=1; ctx.setLineDash([]); ctx.restore();
+      });
+      ctx.beginPath(); ctx.arc(cx,cy,er*0.4,0,Math.PI*2); ctx.fillStyle='#042f2e'; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx,cy,er*0.28*(0.9+0.1*Math.sin(t*3.1)),0,Math.PI*2); ctx.fillStyle='#5eead4'; ctx.globalAlpha=pulse; ctx.fill(); ctx.globalAlpha=1;
+      ctx.beginPath(); ctx.arc(cx,cy,er*0.13,0,Math.PI*2); ctx.fillStyle='#042f2e'; ctx.fill();
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot);
+      ctx.beginPath(); ctx.moveTo(-er,0); ctx.lineTo(er,0); ctx.moveTo(0,-er); ctx.lineTo(0,er);
+      ctx.strokeStyle='#5eead4'; ctx.lineWidth=0.6; ctx.globalAlpha=0.3; ctx.stroke(); ctx.globalAlpha=1; ctx.restore();
+      break;
+    }
+
+    case 'halfmood': {
+      // Left half — happy, twinkling sparkles
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0,0,S/2,S); ctx.clip();
+      ctx.fillStyle='#FFE234'; ctx.fillRect(0,0,S,S);
+      ctx.beginPath(); ctx.arc(cx-S*0.18,cy-S*0.08,S*0.075,Math.PI,0);
+      ctx.strokeStyle='#7c4a00'; ctx.lineWidth=S*0.032; ctx.lineCap='round'; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(cx-S*0.25,cy+S*0.07,S*0.09,S*0.06,0,0,Math.PI*2); ctx.fillStyle='rgba(255,100,60,0.28)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx-S*0.13,cy+S*0.11,S*0.13,0.1,Math.PI-0.1);
+      ctx.strokeStyle='#7c4a00'; ctx.lineWidth=S*0.032; ctx.lineCap='round'; ctx.stroke();
+      [[cx-S*0.38,cy-S*0.28,0],[cx-S*0.04,cy-S*0.33,1.8]].forEach(([sx,sy,ph]) => {
+        const a = 0.4+0.6*Math.abs(Math.sin(t*2.5+ph));
+        ctx.globalAlpha=a;
+        for (let i=0;i<4;i++) {
+          const ang=(i/4)*Math.PI*2, len=S*(0.022+0.010*Math.abs(Math.sin(t*3+ph)));
+          ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(sx+Math.cos(ang)*len,sy+Math.sin(ang)*len);
+          ctx.strokeStyle='#f59e0b'; ctx.lineWidth=S*0.013; ctx.stroke();
+        }
+        ctx.globalAlpha=1;
+      });
+      ctx.restore();
+      // Right half — sad, animated falling teardrop
+      ctx.save();
+      ctx.beginPath(); ctx.rect(S/2,0,S/2,S); ctx.clip();
+      ctx.fillStyle='#B8D4FF'; ctx.fillRect(0,0,S,S);
+      ctx.beginPath(); ctx.moveTo(cx+S*0.06,cy-S*0.19); ctx.lineTo(cx+S*0.30,cy-S*0.12);
+      ctx.strokeStyle='#1e3a5f'; ctx.lineWidth=S*0.03; ctx.lineCap='round'; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(cx+S*0.18,cy-S*0.07,S*0.08,S*0.065,0,0,Math.PI*2); ctx.fillStyle='#ffffff'; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx+S*0.18,cy-S*0.05,S*0.045,0,Math.PI*2); ctx.fillStyle='#1e3a5f'; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx+S*0.165,cy-S*0.065,S*0.018,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx+S*0.13,cy+S*0.20,S*0.13,Math.PI+0.15,-0.15); ctx.strokeStyle='#1e3a5f'; ctx.lineWidth=S*0.032; ctx.stroke();
+      // Tear slowly drifts down then snaps back
+      const tearDrift = ((t*0.35)%1 < 0.85) ? (t*0.35)%1*S*0.065 : 0;
+      { const tx=cx+S*0.18, ty=cy+S*0.02+tearDrift;
+        ctx.beginPath(); ctx.moveTo(tx,ty);
+        ctx.bezierCurveTo(tx+S*0.055,ty+S*0.07,tx+S*0.055,ty+S*0.16,tx,ty+S*0.17);
+        ctx.bezierCurveTo(tx-S*0.055,ty+S*0.16,tx-S*0.055,ty+S*0.07,tx,ty);
+        ctx.fillStyle='#60a5fa'; ctx.fill();
+        ctx.beginPath(); ctx.ellipse(tx-S*0.018,ty+S*0.04,S*0.016,S*0.032,-0.4,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.fill(); }
+      ctx.restore();
+      ctx.beginPath(); ctx.moveTo(S/2,0); ctx.lineTo(S/2,S); ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=S*0.015; ctx.stroke();
+      break;
+    }
+
+    case 'drops': {
+      ctx.fillStyle='#f0f9ff'; ctx.fillRect(0,0,S,S);
+      const dropDefs:[number,number,number,number][] = [
+        [0.50,0.10,1.4,-0.08],[0.18,0.20,1.1,0.18],[0.82,0.18,1.2,-0.22],
+        [0.07,0.43,1.0,0.30],[0.93,0.40,1.1,-0.15],[0.30,0.63,1.2,0.12],
+        [0.70,0.61,1.0,-0.12],[0.50,0.83,1.3,0.20],[0.13,0.73,0.9,-0.22],
+        [0.87,0.76,1.0,0.16],[0.50,0.48,1.5,0.0],[0.31,0.33,0.85,0.26],
+        [0.69,0.30,0.9,-0.26],[0.21,0.50,0.8,0.12],[0.79,0.53,0.85,-0.10],
+        [0.42,0.16,0.9,0.22],[0.61,0.77,0.8,-0.20],[0.37,0.88,0.9,0.16],
+        [0.64,0.91,0.8,-0.12],[0.09,0.88,0.85,0.22],
+      ];
+      // Cycle one falling drop at a time
+      const cyc = t*0.28, activeDrop = Math.floor(cyc)%dropDefs.length, fallFrac = cyc%1;
+      dropDefs.forEach(([px,py,sc,rot],i) => {
+        const dyExtra = (i===activeDrop && fallFrac<0.75) ? (fallFrac/0.75)*S*0.07 : 0;
+        const dx=px*S, dy=py*S+dyExtra, r=S*0.062*sc;
+        ctx.save(); ctx.translate(dx,dy); ctx.rotate(rot);
+        ctx.beginPath(); ctx.moveTo(0,-r*1.65);
+        ctx.bezierCurveTo(r*1.1,-r*0.3,r*1.1,r*0.85,0,r); ctx.bezierCurveTo(-r*1.1,r*0.85,-r*1.1,-r*0.3,0,-r*1.65);
+        const g=ctx.createRadialGradient(-r*0.25,-r*0.45,0,0,0,r*1.3);
+        g.addColorStop(0,'#bfdbfe'); g.addColorStop(0.5,'#3b82f6'); g.addColorStop(1,'#1d4ed8');
+        ctx.fillStyle=g; ctx.fill();
+        ctx.beginPath(); ctx.ellipse(-r*0.32,-r*0.52,r*0.22,r*0.36,-0.42,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.68)'; ctx.fill();
+        ctx.restore();
+      });
+      break;
+    }
+
+    case 'sunny': {
+      ctx.fillStyle='#fef3c7'; ctx.fillRect(0,0,S,S);
+      ctx.lineCap='round';
+      const rayRot = t*0.15;
+      const drawSunAnim = (bx:number,by:number,br:number,hasFace:boolean,rr:number) => {
+        const rays = hasFace?16:8;
+        ctx.save(); ctx.translate(bx,by); ctx.rotate(rr);
+        for (let i=0;i<rays;i++) {
+          const a=(i/rays)*Math.PI*2, isLong=i%2===0;
+          ctx.beginPath(); ctx.moveTo(Math.cos(a)*br*1.2,Math.sin(a)*br*1.2);
+          ctx.lineTo(Math.cos(a)*br*(isLong?2.1:1.7),Math.sin(a)*br*(isLong?2.1:1.7));
+          ctx.strokeStyle='#f59e0b'; ctx.lineWidth=br*0.19; ctx.stroke();
+        }
+        ctx.restore();
+        const sg=ctx.createRadialGradient(bx-br*0.3,by-br*0.3,0,bx,by,br);
+        sg.addColorStop(0,'#fff176'); sg.addColorStop(0.55,'#fbbf24'); sg.addColorStop(1,'#f59e0b');
+        ctx.beginPath(); ctx.arc(bx,by,br,0,Math.PI*2); ctx.fillStyle=sg; ctx.fill();
+        if (hasFace) {
+          const blinkAmt = Math.max(0,Math.sin(t*1.7)*5-4);
+          [-0.28,0.28].forEach(ox => {
+            ctx.save(); ctx.translate(bx+ox*br,by-br*0.22); ctx.scale(1,1-blinkAmt*0.88);
+            ctx.beginPath(); ctx.arc(0,0,br*0.11,0,Math.PI*2); ctx.fillStyle='#92400e'; ctx.fill();
+            ctx.restore();
+          });
+          ctx.beginPath(); ctx.arc(bx,by+br*0.06,br*0.30,0.18,Math.PI-0.18); ctx.strokeStyle='#92400e'; ctx.lineWidth=br*0.13; ctx.stroke();
+        }
+      };
+      const suns:[number,number,number,boolean,number][] = [
+        [S*0.50,S*0.50,S*0.19,true,rayRot],
+        [S*0.12,S*0.14,S*0.075,false,-rayRot*1.3],[S*0.88,S*0.12,S*0.08,false,rayRot*0.9],
+        [S*0.10,S*0.86,S*0.075,false,rayRot*1.1],[S*0.89,S*0.88,S*0.078,false,-rayRot],
+        [S*0.50,S*0.09,S*0.058,false,-rayRot*0.8],[S*0.50,S*0.91,S*0.058,false,rayRot*1.2],
+        [S*0.09,S*0.50,S*0.055,false,rayRot*0.7],[S*0.91,S*0.50,S*0.055,false,-rayRot*1.1],
+        [S*0.27,S*0.27,S*0.058,false,-rayRot*0.9],[S*0.73,S*0.27,S*0.062,false,rayRot*1.3],
+        [S*0.27,S*0.73,S*0.058,false,rayRot*0.6],[S*0.73,S*0.73,S*0.058,false,-rayRot*0.8],
+      ];
+      suns.forEach(([bx,by,br,hasFace,rr]) => drawSunAnim(bx,by,br,hasFace,rr));
+      break;
+    }
+
+    case 'cry': {
+      ctx.fillStyle='#f0f9ff'; ctx.fillRect(0,0,S,S);
+      const eyeSpacing=S*0.22, eyeY=cy-S*0.21;
+      [-1,1].forEach(side => {
+        const ex=cx+side*eyeSpacing, ph=side===-1?0:0.42;
+        // Eye
+        ctx.beginPath(); ctx.ellipse(ex,eyeY,S*0.12,S*0.10,0,0,Math.PI*2); ctx.fillStyle='#ffffff'; ctx.fill();
+        ctx.strokeStyle='#93c5fd'; ctx.lineWidth=S*0.009; ctx.stroke();
+        ctx.beginPath(); ctx.arc(ex,eyeY+S*0.012,S*0.068,0,Math.PI*2); ctx.fillStyle='#2563eb'; ctx.fill();
+        ctx.beginPath(); ctx.arc(ex,eyeY+S*0.012,S*0.033,0,Math.PI*2); ctx.fillStyle='#0f172a'; ctx.fill();
+        ctx.beginPath(); ctx.arc(ex-S*0.024,eyeY-S*0.01,S*0.017,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.fill();
+        // Flowing tear stream — animated bright band
+        const tearTop=eyeY+S*0.10, tearBot=cy+S*0.36, tw=S*0.020;
+        const flow=(t*0.4+ph)%1;
+        const tg=ctx.createLinearGradient(ex,tearTop,ex,tearBot);
+        tg.addColorStop(0,'rgba(59,130,246,0.88)');
+        const f0=Math.max(0,flow-0.28), f1=flow;
+        if (f0<f1) { tg.addColorStop(Math.max(0,f0-0.04),'rgba(59,130,246,0.88)'); tg.addColorStop(f0,'rgba(186,230,253,0.98)'); tg.addColorStop(f1,'rgba(59,130,246,0.88)'); }
+        tg.addColorStop(0.82,'rgba(96,165,250,0.55)'); tg.addColorStop(1,'rgba(147,197,253,0.04)');
+        ctx.beginPath();
+        ctx.moveTo(ex-tw,tearTop); ctx.lineTo(ex+tw,tearTop);
+        ctx.lineTo(ex+tw*0.38,tearBot); ctx.lineTo(ex-tw*0.38,tearBot);
+        ctx.closePath(); ctx.fillStyle=tg; ctx.fill();
+        // Hanging teardrop — gently bobs
+        const td=tearBot+Math.sin(t*1.8+ph*5)*S*0.012;
+        ctx.beginPath(); ctx.moveTo(ex,td);
+        ctx.bezierCurveTo(ex+S*0.055,td+S*0.02,ex+S*0.055,td+S*0.105,ex,td+S*0.105);
+        ctx.bezierCurveTo(ex-S*0.055,td+S*0.105,ex-S*0.055,td+S*0.02,ex,td);
+        ctx.fillStyle='#60a5fa'; ctx.fill();
+        ctx.beginPath(); ctx.ellipse(ex-S*0.017,td+S*0.027,S*0.015,S*0.024,-0.4,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.fill();
+      });
+      break;
+    }
+
+    case 'lightning': {
+      // Flicker + occasional big burst
+      const flicker = 0.72+0.28*Math.abs(Math.sin(t*2.9));
+      const burst   = Math.sin(t*0.55)>0.88 ? 0.5+0.5*Math.abs(Math.sin(t*16)) : 0;
+      const tot     = Math.min(1, flicker+burst*0.5);
+      const drawBolt = (offX:number,offY:number,sc:number,a:number) => {
+        const pts:[number,number][] = [
+          [cx+offX+S*0.09*sc,cy+offY-S*0.40*sc],[cx+offX-S*0.04*sc,cy+offY-S*0.03*sc],
+          [cx+offX+S*0.08*sc,cy+offY-S*0.03*sc],[cx+offX-S*0.11*sc,cy+offY+S*0.40*sc],
+          [cx+offX+S*0.03*sc,cy+offY+S*0.03*sc],[cx+offX-S*0.05*sc,cy+offY+S*0.03*sc],
+        ];
+        ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+        pts.slice(1).forEach(([px,py])=>ctx.lineTo(px,py)); ctx.closePath();
+        ctx.fillStyle=`rgba(253,224,71,${a*tot})`; ctx.fill();
+        ctx.strokeStyle=`rgba(255,255,255,${a*tot*0.7})`; ctx.lineWidth=S*0.01; ctx.stroke();
+      };
+      ctx.shadowColor='#a78bfa'; ctx.shadowBlur=32*(0.7+burst*0.9);
+      drawBolt(0,0,1,1);
+      ctx.shadowBlur=0;
+      ctx.beginPath(); ctx.moveTo(cx+S*0.07,cy-S*0.38); ctx.lineTo(cx-S*0.01,cy-S*0.06);
+      ctx.strokeStyle=`rgba(255,255,255,${0.65*tot})`; ctx.lineWidth=S*0.014; ctx.stroke();
+      drawBolt(-S*0.28,-S*0.18,0.38,0.55); drawBolt(S*0.24,S*0.20,0.35,0.5);
+      [[cx-S*0.32,cy-S*0.22],[cx+S*0.33,cy-S*0.14],[cx-S*0.27,cy+S*0.28],[cx+S*0.3,cy+S*0.14]].forEach(([sx2,sy2])=>{
+        ctx.beginPath(); ctx.arc(sx2,sy2,S*0.018,0,Math.PI*2); ctx.fillStyle=`rgba(253,230,138,${0.85*tot})`; ctx.fill();
+      });
+      break;
+    }
+
+    default:
+      drawEyesOnTexture(ctx, S, eyeType);
+  }
+}
+
+// Redraws an entire face canvas for one animation frame
+function drawFullFaceFrame(
+  ctx: CanvasRenderingContext2D, S: number,
+  faceColor: string, handsColor: string,
+  text: string, _textMode: string, _geom: string, t: number,
+) {
+  ctx.clearRect(0,0,S,S);
+  ctx.fillStyle = faceColor; ctx.fillRect(0,0,S,S);
+  const g = ctx.createRadialGradient(S*0.35,S*0.3,0,S/2,S/2,S*0.55);
+  g.addColorStop(0,'rgba(255,255,255,0.10)'); g.addColorStop(1,'rgba(0,0,0,0.15)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,S,S);
+  const raw = text.trim().toUpperCase();
+  if (raw.startsWith('EYE:')) {
+    drawAnimatedEyesOnTexture(ctx, S, raw.slice(4).toLowerCase(), t);
+  }
+  // non-EYE text is static — handled by faceTex, not drawn here
+}
+
 function buildMiniBackTexture(caseColor: string, collectionName?: string | null): THREE.CanvasTexture {
   const S = 256;
   const cv = document.createElement('canvas');
@@ -741,6 +1027,9 @@ export function WatchCardModel({
     depth: 0.04, bevelEnabled: true, bevelSize: 0.04, bevelThickness: 0.04, bevelSegments: 10,
   }), [watchfaceGeometry]);
 
+  const isEyeType = (watchfaceText ?? '').trim().toUpperCase().startsWith('EYE:');
+  const lastAnimT = useRef(-99);
+
   const faceTex = useMemo(
     () => buildMiniTexture(watchfaceColor, handsColor, watchfaceText ?? '', watchfaceTextMode ?? 'circular', watchfaceGeometry),
     [watchfaceColor, handsColor, watchfaceText, watchfaceTextMode, watchfaceGeometry],
@@ -750,10 +1039,28 @@ export function WatchCardModel({
     [watchfaceColor, collectionName],
   );
 
+  // Persistent animated canvas+texture for EYE: types — updated ~20fps in useFrame
+  const animFace = useMemo(() => {
+    if (!isEyeType) return null;
+    const S = 512;
+    const cv = document.createElement('canvas');
+    cv.width = S; cv.height = S;
+    const ctx2d = cv.getContext('2d')!;
+    drawFullFaceFrame(ctx2d, S, watchfaceColor, handsColor ?? '#1a1a1a', watchfaceText ?? '', watchfaceTextMode ?? 'circular', watchfaceGeometry, 0);
+    const tex = new THREE.CanvasTexture(cv);
+    const geomH = watchfaceGeometry === 'circle' ? 1.5 : watchfaceGeometry === 'square' ? 1.28 : 1.1;
+    const rep = 0.5 / geomH;
+    tex.offset.set(0.5, 0.5);
+    tex.repeat.set(rep, rep);
+    tex.needsUpdate = true;
+    return { cv, ctx2d, tex };
+  }, [isEyeType, watchfaceGeometry, watchfaceText, watchfaceColor, handsColor, watchfaceTextMode]);
+
   useEffect(() => () => {
     bodyGeo.dispose(); faceGeo.dispose(); backGeo.dispose();
     crystalGeo.dispose(); faceTex.dispose(); backTex.dispose();
-  }, [bodyGeo, faceGeo, backGeo, crystalGeo, faceTex, backTex]);
+    animFace?.tex.dispose();
+  }, [bodyGeo, faceGeo, backGeo, crystalGeo, faceTex, backTex, animFace]);
 
   // Seed hand positions from actual wall-clock time on mount
   useEffect(() => {
@@ -787,8 +1094,16 @@ export function WatchCardModel({
       groupRef.current.scale.setScalar(1);
     }
 
-    if (paused) return;
+    // ── Animated face texture redraw (~20 fps, EYE: types only) ─────────────
     const t = state.clock.elapsedTime;
+    if (animFace && t - lastAnimT.current >= 0.05) {
+      lastAnimT.current = t;
+      drawFullFaceFrame(animFace.ctx2d, 512, watchfaceColor, handsColor ?? '#1a1a1a',
+        watchfaceText ?? '', watchfaceTextMode ?? 'circular', watchfaceGeometry, t);
+      animFace.tex.needsUpdate = true;
+    }
+
+    if (paused) return;
     const dragging = isDraggingRef?.current ?? false;
 
     let newRotY: number;
@@ -880,7 +1195,7 @@ export function WatchCardModel({
       {/* Face disc */}
       <mesh position={[0, 0, faceZ]}>
         <primitive object={faceGeo} />
-        <meshStandardMaterial map={faceTex} roughness={0.25} metalness={0.05} />
+        <meshStandardMaterial map={animFace?.tex ?? faceTex} roughness={0.25} metalness={0.05} />
       </mesh>
 
       {/* Crystal — high-quality sapphire glass */}
@@ -1211,6 +1526,7 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
       return () => clearTimeout(t);
     }
     setCanvasReady(false);
+    return undefined;
   }, [mounted, paused]);
 
   if (!WEB_GL_OK) {
