@@ -1096,6 +1096,45 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
   const [canvasReady, setCanvasReady] = useState(false);
   const didMount = useRef(false);
 
+  // ── Drag-to-spin state ────────────────────────────────────────────────────
+  const spinYRef      = useRef<number>(0);
+  const draggingRef   = useRef<boolean>(false);
+  const lastPtrX      = useRef<number>(0);
+  const totalDragRef  = useRef<number>(0);
+  const [showHint, setShowHint] = useState(false);
+
+  // Show hint briefly after the 3D model has loaded, then fade it out
+  useEffect(() => {
+    if (!canvasReady) return;
+    const t1 = setTimeout(() => setShowHint(true),  600);
+    const t2 = setTimeout(() => setShowHint(false), 3200);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [canvasReady]);
+
+  const onSpinDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    draggingRef.current   = true;
+    lastPtrX.current      = e.clientX;
+    totalDragRef.current  = 0;
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+  };
+
+  const onSpinMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return;
+    const dx = e.clientX - lastPtrX.current;
+    lastPtrX.current     = e.clientX;
+    spinYRef.current    += dx * 0.030;
+    spinYRef.current     = Math.max(-Math.PI * 2.5, Math.min(Math.PI * 2.5, spinYRef.current));
+    totalDragRef.current += Math.abs(dx);
+    if (totalDragRef.current > 5 && showHint) setShowHint(false);
+  };
+
+  const onSpinUp = () => { draggingRef.current = false; };
+
+  // Prevent card navigation when the gesture was a spin, not a tap
+  const onSpinClick = (e: React.MouseEvent) => {
+    if (totalDragRef.current > 8) e.stopPropagation();
+  };
+
   const faceColor = preset.watchfaceColor ?? '#888888';
   const strapColor = preset.braceletColor ?? '#333333';
 
@@ -1188,7 +1227,15 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
 
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <div
+      ref={containerRef}
+      style={{ width: '100%', height: '100%', position: 'relative', touchAction: 'pan-y' }}
+      onPointerDown={onSpinDown}
+      onPointerMove={onSpinMove}
+      onPointerUp={onSpinUp}
+      onPointerCancel={onSpinUp}
+      onClick={onSpinClick}
+    >
 
       {/* Color card always present as background — visible while 3D is loading,
           fades behind the Canvas once canvasReady flips true */}
@@ -1210,6 +1257,7 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
           style={{
             opacity: canvasReady ? 1 : 0,
             transition: 'opacity 500ms ease-in-out',
+            pointerEvents: 'none',
           }}
         >
           <Canvas
@@ -1237,10 +1285,28 @@ export default function WatchMiniCanvas({ preset, paused, forceMount }: WatchMin
               watchfaceTextMode={preset.watchfaceTextMode ?? 'circular'}
               collectionName={preset.collectionName ?? null}
               paused={paused}
+              spinRef={spinYRef}
+              isDraggingRef={draggingRef}
             />
           </Canvas>
         </div>
       )}
+
+      {/* Spin hint — fades in after load, fades out automatically */}
+      <div
+        className="pointer-events-none absolute bottom-8 left-0 right-0 flex justify-center"
+        style={{
+          opacity: showHint ? 1 : 0,
+          transition: 'opacity 400ms ease',
+        }}
+      >
+        <span
+          className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold tracking-wider select-none"
+          style={{ background: 'rgba(0,0,0,0.38)', color: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(4px)' }}
+        >
+          ← потяни →
+        </span>
+      </div>
 
     </div>
   );
