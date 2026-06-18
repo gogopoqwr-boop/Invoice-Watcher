@@ -419,6 +419,7 @@ function buildMiniTexture(
   handsColor: string,
   text: string,
   textMode: string,
+  geom: string,
 ): THREE.CanvasTexture {
   const S = 512;
   const cv = document.createElement('canvas');
@@ -436,10 +437,7 @@ function buildMiniTexture(
 
   const rawText = text.trim().toUpperCase();
 
-  if (rawText.startsWith('EYE:')) {
-    const eyeType = rawText.slice(4).toLowerCase();
-    drawEyesOnTexture(ctx, S, eyeType);
-  } else if (rawText) {
+  if (!rawText.startsWith('EYE:') && rawText) {
     ctx.fillStyle = handsColor;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -478,8 +476,52 @@ function buildMiniTexture(
   }
 
   const tex = new THREE.CanvasTexture(cv);
+  const half = geom === 'circle' ? 1.5 : geom === 'square' ? 1.28 : 1.1;
+  const rep = 0.5 / half;
+  tex.offset.set(0.5, 0.5);
+  tex.repeat.set(rep, rep);
   tex.needsUpdate = true;
   return tex;
+}
+
+// Camera-tracking 3D eyes — matches WatchModel's WatchEyes exactly
+function WatchCardEyes({ faceZ, handsColor }: { faceZ: number; handsColor: string }) {
+  const leftPupilRef  = useRef<THREE.Mesh>(null);
+  const rightPupilRef = useRef<THREE.Mesh>(null);
+  const eyeGroupRef   = useRef<THREE.Group>(null);
+  const _mat4 = useRef(new THREE.Matrix4());
+  const _vec3 = useRef(new THREE.Vector3());
+
+  useFrame(({ camera }) => {
+    if (!eyeGroupRef.current) return;
+    _mat4.current.copy(eyeGroupRef.current.matrixWorld).invert();
+    _vec3.current.copy(camera.position).applyMatrix4(_mat4.current);
+    const maxOff = 0.092;
+    const scale  = Math.min(1, 4 / (Math.abs(_vec3.current.z) || 4));
+    const px = THREE.MathUtils.clamp(_vec3.current.x * 0.065 * scale, -maxOff, maxOff);
+    const py = THREE.MathUtils.clamp(_vec3.current.y * 0.065 * scale, -maxOff, maxOff);
+    if (leftPupilRef.current)  { leftPupilRef.current.position.x  = px; leftPupilRef.current.position.y  = py; }
+    if (rightPupilRef.current) { rightPupilRef.current.position.x = px; rightPupilRef.current.position.y = py; }
+  });
+
+  const eyeZ = faceZ + 0.016;
+  const irisColor = handsColor ?? '#2563eb';
+
+  return (
+    <group ref={eyeGroupRef} position={[0, 0, eyeZ]}>
+      {([-1, 1] as const).map(side => (
+        <group key={side} position={[side * 0.42, 0.10, 0]}>
+          <mesh><circleGeometry args={[0.265, 36]} /><meshStandardMaterial color="#f5f5ee" roughness={0.22} metalness={0} /></mesh>
+          <mesh position={[0, 0, 0.002]}><circleGeometry args={[0.195, 32]} /><meshStandardMaterial color={irisColor} roughness={0.18} metalness={0.05} /></mesh>
+          <mesh ref={side === -1 ? leftPupilRef : rightPupilRef} position={[0, 0, 0.004]}>
+            <circleGeometry args={[0.105, 28]} />
+            <meshStandardMaterial color="#0a0a14" roughness={0.35} metalness={0} />
+          </mesh>
+          <mesh position={[-0.07, 0.07, 0.006]}><circleGeometry args={[0.042, 16]} /><meshStandardMaterial color="white" roughness={0.1} metalness={0} /></mesh>
+        </group>
+      ))}
+    </group>
+  );
 }
 
 export interface MiniWatchProps {
@@ -511,8 +553,8 @@ export function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, br
   }, [watchfaceGeometry]);
 
   const faceTex = useMemo(
-    () => buildMiniTexture(watchfaceColor, handsColor, watchfaceText ?? '', watchfaceTextMode ?? 'circular'),
-    [watchfaceColor, handsColor, watchfaceText, watchfaceTextMode]
+    () => buildMiniTexture(watchfaceColor, handsColor, watchfaceText ?? '', watchfaceTextMode ?? 'circular', watchfaceGeometry),
+    [watchfaceColor, handsColor, watchfaceText, watchfaceTextMode, watchfaceGeometry]
   );
 
   const backTex = useMemo(
@@ -681,13 +723,14 @@ export function WatchCardModel({
   }), [watchfaceGeometry]);
 
   const faceTex = useMemo(
-    () => buildMiniTexture(watchfaceColor, handsColor, watchfaceText ?? '', watchfaceTextMode ?? 'circular'),
-    [watchfaceColor, handsColor, watchfaceText, watchfaceTextMode],
+    () => buildMiniTexture(watchfaceColor, handsColor, watchfaceText ?? '', watchfaceTextMode ?? 'circular', watchfaceGeometry),
+    [watchfaceColor, handsColor, watchfaceText, watchfaceTextMode, watchfaceGeometry],
   );
   const backTex = useMemo(
     () => buildMiniBackTexture(watchfaceColor, collectionName ?? null),
     [watchfaceColor, collectionName],
   );
+  const hasEyes = (watchfaceText ?? '').trim().toUpperCase().startsWith('EYE:');
 
   useEffect(() => () => {
     bodyGeo.dispose(); faceGeo.dispose(); backGeo.dispose();
@@ -806,6 +849,9 @@ export function WatchCardModel({
         <primitive object={faceGeo} />
         <meshStandardMaterial map={faceTex} roughness={0.25} metalness={0.05} />
       </mesh>
+
+      {/* EYE: mode — 3D camera-tracking eyeballs */}
+      {hasEyes && <WatchCardEyes faceZ={faceZ} handsColor={handsColor} />}
 
       {/* Crystal — high-quality sapphire glass */}
       <mesh position={[0, 0, crystalZ]}>
