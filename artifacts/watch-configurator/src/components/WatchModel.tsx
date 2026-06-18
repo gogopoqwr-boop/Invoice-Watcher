@@ -529,7 +529,7 @@ function buildFaceTexture(
 
   const half = shapeHalfWidth(geom);
   const rep = 0.5 / half;
-  tex.offset.set(0.5, 0.5);
+  tex.offset.set(0.5 * (1 - rep), 0.5 * (1 - rep));
   tex.repeat.set(rep, rep);
   tex.needsUpdate = true;
   return tex;
@@ -599,7 +599,7 @@ function buildBumpTexture(
   const tex = new THREE.CanvasTexture(cv);
   const half = shapeHalfWidth(geom);
   const rep  = 0.5 / half;
-  tex.offset.set(0.5, 0.5);
+  tex.offset.set(0.5 * (1 - rep), 0.5 * (1 - rep));
   tex.repeat.set(rep, rep);
   tex.needsUpdate = true;
   return tex;
@@ -994,7 +994,7 @@ function buildBackTexture(geom: string, caseColor: string, serial?: string, coll
   const tex = new THREE.CanvasTexture(cv);
   const half = shapeHalfWidth(geom);
   const rep = 0.5 / half;
-  tex.offset.set(0.5, 0.5);
+  tex.offset.set(0.5 * (1 + rep), 0.5 * (1 - rep));
   tex.repeat.set(-rep, rep);
   tex.needsUpdate = true;
   return tex;

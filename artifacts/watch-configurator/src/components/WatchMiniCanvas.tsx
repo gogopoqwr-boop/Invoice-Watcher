@@ -785,7 +785,7 @@ function buildMiniTexture(
   const tex = new THREE.CanvasTexture(cv);
   const half = geom === 'circle' ? 1.5 : geom === 'square' ? 1.28 : 1.1;
   const rep = 0.5 / half;
-  tex.offset.set(0.5, 0.5);
+  tex.offset.set(0.5 * (1 - rep), 0.5 * (1 - rep));
   tex.repeat.set(rep, rep);
   tex.needsUpdate = true;
   return tex;
@@ -1062,7 +1062,7 @@ export function WatchCardModel({
     const tex = new THREE.CanvasTexture(cv);
     const geomH = watchfaceGeometry === 'circle' ? 1.5 : watchfaceGeometry === 'square' ? 1.28 : 1.1;
     const rep = 0.5 / geomH;
-    tex.offset.set(0.5, 0.5);
+    tex.offset.set(0.5 * (1 - rep), 0.5 * (1 - rep));
     tex.repeat.set(rep, rep);
     tex.needsUpdate = true;
     return { cv, ctx2d, tex };
@@ -1087,8 +1087,9 @@ export function WatchCardModel({
     loader.load(customWatchfaceUrl, (t) => {
       if (disposed) { t.dispose(); return; }
       const h = watchfaceGeometry === 'circle' ? 1.5 : watchfaceGeometry === 'square' ? 1.28 : 1.1;
-      t.offset.set(0.5, 0.5);
-      t.repeat.set(0.5 / h, 0.5 / h);
+      const repF = 0.5 / h;
+      t.offset.set(0.5 * (1 - repF), 0.5 * (1 - repF));
+      t.repeat.set(repF, repF);
       t.needsUpdate = true;
       loaded = t;
       setUrlFaceTex(t);
@@ -1120,8 +1121,9 @@ export function WatchCardModel({
     loader.load(skinFullUrl, (t) => {
       if (disposed) { t.dispose(); return; }
       const h = watchfaceGeometry === 'circle' ? 1.5 : watchfaceGeometry === 'square' ? 1.28 : 1.1;
-      t.offset.set(0.5, 0.5);
-      t.repeat.set(0.5 / h, 0.5 / h);
+      const repB = 0.5 / h;
+      t.offset.set(0.5 * (1 - repB), 0.5 * (1 - repB));
+      t.repeat.set(repB, repB);
       t.needsUpdate = true;
       loaded = t;
       setUrlBodyTex(t);
