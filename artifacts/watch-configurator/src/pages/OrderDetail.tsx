@@ -231,35 +231,38 @@ export default function OrderDetail() {
     <div className="w-full bg-background flex flex-col md:flex-row md:overflow-hidden md:h-screen">
 
       {/* ── Left — box scene (full height, same pattern as BoxSetup) ── */}
-      <div className="sticky top-0 z-10 w-full md:static md:w-[52%] h-[58dvh] md:h-screen relative shrink-0 overflow-hidden canvas-box-bg">
+      <div className="sticky top-0 z-10 w-full md:static md:w-[52%] h-[58dvh] md:h-screen shrink-0 overflow-hidden canvas-box-bg">
+        {/* Inner relative div — always positioned, never overridden by md:static on the outer */}
+        <div className="relative w-full h-full">
 
-        <Link href="/orders">
-          <button className="absolute top-3 left-3 z-20 canvas-overlay-btn px-3 py-1.5 text-xs font-semibold flex items-center gap-1">
-            <ArrowLeft size={13} /> Заказы
-          </button>
-        </Link>
+          <Link href="/orders">
+            <button className="absolute top-3 left-3 z-20 canvas-overlay-btn px-3 py-1.5 text-xs font-semibold flex items-center gap-1">
+              <ArrowLeft size={13} /> Заказы
+            </button>
+          </Link>
 
-        {boxConfig ? (
-          <Suspense fallback={
+          {boxConfig ? (
+            <Suspense fallback={
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              </div>
+            }>
+              <WatchBoxScene
+                config={boxConfig as any}
+                boxType={(cfg as any)?.boxType ?? 'standard'}
+                open={boxOpen}
+                autoOpen
+                compact
+                onToggle={() => setBoxOpen(v => !v)}
+                className="absolute inset-0 rounded-none"
+              />
+            </Suspense>
+          ) : (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
             </div>
-          }>
-            <WatchBoxScene
-              config={boxConfig as any}
-              boxType={(cfg as any)?.boxType ?? 'standard'}
-              open={boxOpen}
-              autoOpen
-              compact
-              onToggle={() => setBoxOpen(v => !v)}
-              className="absolute inset-0 rounded-none"
-            />
-          </Suspense>
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* ── Right — info panel ── */}
