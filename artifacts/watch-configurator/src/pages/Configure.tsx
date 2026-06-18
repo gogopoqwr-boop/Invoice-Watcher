@@ -7,7 +7,7 @@ import WatchSVG from '@/components/WatchSVG';
 import { WebGLErrorBoundary } from '@/components/WebGLErrorBoundary';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import { BRACELET_COMBOS } from '@/components/WatchFullscreenViewer';
-import { WatchConfigInputBraceletType } from '@workspace/api-client-react';
+import { WatchConfigInputBraceletType, WatchConfigInputBraceletMaterial } from '@workspace/api-client-react';
 import { useLocation, Link } from 'wouter';
 import { cn } from '@/lib/utils';
 import { TgStar } from '@/components/TgStar';
@@ -158,7 +158,7 @@ export default function Configure() {
   const [showCustomColor, setShowCustomColor] = useState(false);
 
   const handleSelectCombo = (combo: typeof BRACELET_COMBOS[number]) => {
-    updateConfig({ braceletColor: combo.color, braceletMaterial: combo.material });
+    updateConfig({ braceletColor: combo.color, braceletMaterial: combo.material as WatchConfigInputBraceletMaterial });
     setShowCustomColor(false);
   };
 
@@ -368,7 +368,7 @@ export default function Configure() {
                 <div className="shrink-0 flex flex-col gap-1">
                   <p className="text-[10px] text-muted-foreground mb-1">Материал</p>
                   <div className="flex gap-1">
-                    {(['leather', 'cotton_fabric', 'metal_solid', 'resin'] as const).map(mat => (
+                    {(['leather', 'cotton_fabric', 'metal_solid', 'resin'] as WatchConfigInputBraceletMaterial[]).map(mat => (
                       <button
                         key={mat}
                         onClick={() => updateConfig({ braceletMaterial: mat })}
