@@ -253,3 +253,8 @@ pnpm --filter @workspace/db run push
 | Telegram Stars payment flow, bot webhook | [docs/payment.md](docs/payment.md) |
 | Order lifecycle, status machine, tracking | [docs/orders.md](docs/orders.md) |
 | Admin panel, RBAC, couriers, analytics | [docs/admin-panel.md](docs/admin-panel.md) |
+| All pages, routing, provider hierarchy | [docs/frontend-pages.md](docs/frontend-pages.md) |
+| Configurator state, watch options, price calc | [docs/configurator-state.md](docs/configurator-state.md) |
+| Full API route reference | [docs/api-routes.md](docs/api-routes.md) |
+| Adding routes, extending the spec, local dev tips | [docs/development-guide.md](docs/development-guide.md) |
+| Telegram bot setup, webhook, notifications, refunds | [docs/telegram-bot.md](docs/telegram-bot.md) |
