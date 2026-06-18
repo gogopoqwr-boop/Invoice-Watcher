@@ -3,7 +3,7 @@ import { useLocation, Link } from 'wouter';
 import { useWatchConfig, BoxType } from '@/hooks/use-watch-config';
 import { useCreateConfiguration, useCreateOrder } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
-import { Ribbon } from 'lucide-react';
+import { Ribbon, MapPin, Mail, X } from 'lucide-react';
 import { TgStar } from '@/components/TgStar';
 
 const WatchBoxScene = lazy(() => import('@/components/WatchBoxScene'));
@@ -67,6 +67,11 @@ export default function BoxSetup() {
   const [submitting, setSubmitting] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
 
+  const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+  const [deliveryEmail, setDeliveryEmail] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryErrors, setDeliveryErrors] = useState<{ email?: string; address?: string }>({});
+
   const createConfig = useCreateConfiguration();
   const createOrder = useCreateOrder();
 
@@ -85,7 +90,7 @@ export default function BoxSetup() {
   }, [config.priceStars, config.presetBraceletMaterial, config.braceletMaterial,
       config.watchfaceText, config.handsEnabled, boxOption.surcharge, giftWrap]);
 
-  const handleOrder = async () => {
+  const handleOrder = async (email: string, address: string) => {
     setSubmitting(true);
     setOrderError(null);
     updateConfig({ boxType: selectedBox, boxMessage: message, giftWrap });
@@ -112,18 +117,32 @@ export default function BoxSetup() {
         } as any,
       });
       const order = await createOrder.mutateAsync({
-        data: { configId: cfg.id, sessionId, totalStars },
+        data: { configId: cfg.id, sessionId, totalStars, deliveryEmail: email, deliveryAddress: address } as any,
       });
       setLocation(`/payment/${order.id}`);
     } catch (e) {
       console.error(e);
       setOrderError('Не удалось создать заказ. Проверьте соединение и попробуйте снова.');
-    } finally {
       setSubmitting(false);
     }
   };
 
+  const handleDeliverySubmit = () => {
+    const errs: { email?: string; address?: string } = {};
+    if (!deliveryEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(deliveryEmail.trim())) {
+      errs.email = 'Введите корректный e-mail';
+    }
+    if (deliveryAddress.trim().length < 10) {
+      errs.address = 'Введите полный адрес (не менее 10 символов)';
+    }
+    setDeliveryErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+    setShowDeliveryModal(false);
+    handleOrder(deliveryEmail.trim(), deliveryAddress.trim());
+  };
+
   return (
+    <>
     <div className="w-full bg-background flex flex-col md:flex-row md:overflow-hidden md:h-screen">
 
       {/* ── Left — Box preview */}
@@ -349,7 +368,7 @@ export default function BoxSetup() {
               <button className="liquid-button h-full px-5 py-3 text-sm font-semibold">← Назад</button>
             </Link>
             <button
-              onClick={handleOrder}
+              onClick={() => { setOrderError(null); setShowDeliveryModal(true); }}
               disabled={submitting}
               className="flex-1 py-3 rounded-full text-sm font-bold tracking-widest uppercase bg-primary text-white shadow-lg hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60 transition-all"
             >
@@ -364,5 +383,82 @@ export default function BoxSetup() {
         </div>
       </div>
     </div>
+
+    {/* ── Delivery info modal ── */}
+    {showDeliveryModal && (
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+        style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}>
+        <div className="w-full max-w-md rounded-3xl p-6 space-y-5 shadow-2xl"
+          style={{ background: 'var(--card)', border: '1px solid rgba(255,255,255,0.1)' }}>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-black tracking-tight">Данные доставки</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Предзаказ · отправим через 2 месяца</p>
+            </div>
+            <button onClick={() => setShowDeliveryModal(false)}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted/60 text-muted-foreground transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Presale notice */}
+          <div className="flex gap-3 items-start rounded-2xl px-4 py-3 text-sm"
+            style={{ background: 'rgba(79,70,229,0.12)', border: '1px solid rgba(79,70,229,0.25)' }}>
+            <span className="text-2xl leading-none">📦</span>
+            <p className="text-muted-foreground leading-snug">
+              Это <strong className="text-foreground">предзаказ</strong>. Ваши часы будут изготовлены и отправлены в течение <strong className="text-foreground">2 месяцев</strong> после оплаты.
+            </p>
+          </div>
+
+          {/* Email */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+              <Mail size={11} /> E-mail для уведомлений
+            </label>
+            <input
+              type="email"
+              placeholder="your@email.com"
+              value={deliveryEmail}
+              onChange={e => { setDeliveryEmail(e.target.value); setDeliveryErrors(v => ({ ...v, email: undefined })); }}
+              className={cn(
+                'w-full px-4 py-3 rounded-xl text-sm border bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary/60',
+                deliveryErrors.email ? 'border-red-400' : 'border-border/60'
+              )}
+            />
+            {deliveryErrors.email && <p className="text-xs text-red-400">{deliveryErrors.email}</p>}
+          </div>
+
+          {/* Address */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+              <MapPin size={11} /> Адрес доставки
+            </label>
+            <textarea
+              rows={3}
+              placeholder="Страна, город, улица, дом, квартира, индекс"
+              value={deliveryAddress}
+              onChange={e => { setDeliveryAddress(e.target.value); setDeliveryErrors(v => ({ ...v, address: undefined })); }}
+              className={cn(
+                'w-full px-4 py-3 rounded-xl text-sm border bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary/60 resize-none placeholder:text-muted-foreground/50',
+                deliveryErrors.address ? 'border-red-400' : 'border-border/60'
+              )}
+            />
+            {deliveryErrors.address && <p className="text-xs text-red-400">{deliveryErrors.address}</p>}
+          </div>
+
+          <button
+            onClick={handleDeliverySubmit}
+            disabled={submitting}
+            className="w-full py-3.5 rounded-full text-sm font-bold tracking-widest uppercase bg-primary text-white shadow-lg hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60 transition-all flex items-center justify-center gap-2"
+          >
+            {submitting
+              ? <><span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> Оформление…</>
+              : <span className="flex items-center gap-1.5">Перейти к оплате — {totalStars} <TgStar size={13} /></span>}
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

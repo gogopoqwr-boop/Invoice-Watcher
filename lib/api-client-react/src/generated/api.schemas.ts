@@ -359,6 +359,10 @@ export interface Order {
   /** @nullable */
   userEmail?: string | null;
   /** @nullable */
+  deliveryEmail?: string | null;
+  /** @nullable */
+  deliveryAddress?: string | null;
+  /** @nullable */
   telegramId?: string | null;
   /** @nullable */
   telegramUsername?: string | null;
@@ -386,6 +390,8 @@ export interface OrderList {
 export interface OrderInput {
   configId: number;
   userEmail?: string;
+  deliveryEmail?: string;
+  deliveryAddress?: string;
   telegramId?: string;
   telegramUsername?: string;
   sessionId?: string;

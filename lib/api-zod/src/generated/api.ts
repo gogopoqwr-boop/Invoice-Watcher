@@ -275,6 +275,8 @@ export const ListOrdersResponse = zod.object({
   "createdAt": zod.string()
 }).optional(),
   "userEmail": zod.string().nullish(),
+  "deliveryEmail": zod.string().nullish(),
+  "deliveryAddress": zod.string().nullish(),
   "telegramId": zod.string().nullish(),
   "telegramUsername": zod.string().nullish(),
   "sessionId": zod.string().nullish(),
@@ -297,6 +299,8 @@ export const ListOrdersResponse = zod.object({
 export const CreateOrderBody = zod.object({
   "configId": zod.number(),
   "userEmail": zod.string().optional(),
+  "deliveryEmail": zod.string().optional(),
+  "deliveryAddress": zod.string().optional(),
   "telegramId": zod.string().optional(),
   "telegramUsername": zod.string().optional(),
   "sessionId": zod.string().optional(),
@@ -344,6 +348,8 @@ export const GetMyOrdersResponseItem = zod.object({
   "createdAt": zod.string()
 }).optional(),
   "userEmail": zod.string().nullish(),
+  "deliveryEmail": zod.string().nullish(),
+  "deliveryAddress": zod.string().nullish(),
   "telegramId": zod.string().nullish(),
   "telegramUsername": zod.string().nullish(),
   "sessionId": zod.string().nullish(),
@@ -397,6 +403,8 @@ export const GetOrderResponse = zod.object({
   "createdAt": zod.string()
 }).optional(),
   "userEmail": zod.string().nullish(),
+  "deliveryEmail": zod.string().nullish(),
+  "deliveryAddress": zod.string().nullish(),
   "telegramId": zod.string().nullish(),
   "telegramUsername": zod.string().nullish(),
   "sessionId": zod.string().nullish(),
@@ -454,6 +462,8 @@ export const UpdateOrderStatusResponse = zod.object({
   "createdAt": zod.string()
 }).optional(),
   "userEmail": zod.string().nullish(),
+  "deliveryEmail": zod.string().nullish(),
+  "deliveryAddress": zod.string().nullish(),
   "telegramId": zod.string().nullish(),
   "telegramUsername": zod.string().nullish(),
   "sessionId": zod.string().nullish(),
@@ -510,6 +520,8 @@ export const RequestOrderCancelResponse = zod.object({
   "createdAt": zod.string()
 }).optional(),
   "userEmail": zod.string().nullish(),
+  "deliveryEmail": zod.string().nullish(),
+  "deliveryAddress": zod.string().nullish(),
   "telegramId": zod.string().nullish(),
   "telegramUsername": zod.string().nullish(),
   "sessionId": zod.string().nullish(),
@@ -566,6 +578,8 @@ export const RefundOrderResponse = zod.object({
   "createdAt": zod.string()
 }).optional(),
   "userEmail": zod.string().nullish(),
+  "deliveryEmail": zod.string().nullish(),
+  "deliveryAddress": zod.string().nullish(),
   "telegramId": zod.string().nullish(),
   "telegramUsername": zod.string().nullish(),
   "sessionId": zod.string().nullish(),

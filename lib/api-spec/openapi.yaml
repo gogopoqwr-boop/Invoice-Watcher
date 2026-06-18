@@ -712,6 +712,10 @@ components:
           $ref: "#/components/schemas/WatchConfig"
         userEmail:
           type: ["string", "null"]
+        deliveryEmail:
+          type: ["string", "null"]
+        deliveryAddress:
+          type: ["string", "null"]
         telegramId:
           type: ["string", "null"]
         telegramUsername:
@@ -754,6 +758,10 @@ components:
         configId:
           type: integer
         userEmail:
+          type: string
+        deliveryEmail:
+          type: string
+        deliveryAddress:
           type: string
         telegramId:
           type: string

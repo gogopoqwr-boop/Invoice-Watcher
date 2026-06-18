@@ -95,6 +95,8 @@ router.post("/orders", async (req, res) => {
       paymentToken,
       configId: body.configId,
       userEmail: body.userEmail ?? null,
+      deliveryEmail: body.deliveryEmail ?? null,
+      deliveryAddress: body.deliveryAddress ?? null,
       telegramId: body.telegramId ?? null,
       telegramUsername: body.telegramUsername ?? null,
       sessionId: body.sessionId ?? null,

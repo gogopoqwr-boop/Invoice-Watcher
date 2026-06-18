@@ -7,6 +7,8 @@ export const ordersTable = pgTable("orders", {
   paymentToken: text("payment_token").unique(),
   configId: integer("config_id").notNull(),
   userEmail: text("user_email"),
+  deliveryEmail: text("delivery_email"),
+  deliveryAddress: text("delivery_address"),
   telegramId: text("telegram_id"),
   telegramUsername: text("telegram_username"),
   sessionId: text("session_id"),

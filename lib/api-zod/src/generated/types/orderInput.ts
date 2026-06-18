@@ -9,6 +9,8 @@
 export interface OrderInput {
   configId: number;
   userEmail?: string;
+  deliveryEmail?: string;
+  deliveryAddress?: string;
   telegramId?: string;
   telegramUsername?: string;
   sessionId?: string;
