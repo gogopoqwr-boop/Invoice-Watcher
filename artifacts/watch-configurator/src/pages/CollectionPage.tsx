@@ -5,6 +5,7 @@ import { useListPresets, useGetMyOrders } from '@workspace/api-client-react';
 import { useWatchConfig } from '@/hooks/use-watch-config';
 import WatchMiniCanvas from '@/components/WatchMiniCanvas';
 import { BRACELET_COMBOS } from '@/components/WatchFullscreenViewer';
+import ThemeToggle from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
 
 const MAT_LABELS: Record<string, string> = {
@@ -760,6 +761,7 @@ export default function CollectionPage() {
               <button className="liquid-button px-4 py-2 text-xs font-semibold">Мои заказы</button>
             </Link>
           )}
+          <ThemeToggle />
         </div>
       </div>
 
