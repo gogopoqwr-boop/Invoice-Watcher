@@ -276,7 +276,10 @@ function WatchInBox({ config, visible }: { config: ExtendedConfigState; visible:
         handsEnabled={config.handsEnabled ?? true}
         watchfaceText={config.watchfaceText ?? ''}
         watchfaceTextMode={config.watchfaceTextMode ?? 'circular'}
-        collectionName={(config as any).collectionName ?? null}
+        collectionName={config.collectionName ?? null}
+        customWatchfaceUrl={config.customWatchfaceUrl ?? null}
+        skinStripeUrl={config.skinStripeUrl ?? null}
+        skinFullUrl={config.skinFullUrl ?? null}
         paused
       />
     </group>

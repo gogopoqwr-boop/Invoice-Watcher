@@ -178,6 +178,9 @@ export default function PresetViewer() {
       priceStars: preset.priceStars,
       presetBraceletMaterial: preset.braceletMaterial,
       presetName: preset.name,
+      customWatchfaceUrl: (preset as any).customWatchfaceUrl ?? null,
+      skinStripeUrl: (preset as any).skinStripeUrl ?? null,
+      skinFullUrl: (preset as any).skinFullUrl ?? null,
     });
   }, [preset?.id]);
 
@@ -235,6 +238,9 @@ export default function PresetViewer() {
       watchfaceGeometry: preset.watchfaceGeometry, watchfaceMaterial: preset.watchfaceMaterial,
       watchfaceColor: preset.watchfaceColor, braceletMaterial: preset.braceletMaterial,
       braceletType: preset.braceletType, braceletColor: preset.braceletColor,
+      customWatchfaceUrl: (preset as any).customWatchfaceUrl ?? null,
+      skinStripeUrl: (preset as any).skinStripeUrl ?? null,
+      skinFullUrl: (preset as any).skinFullUrl ?? null,
       handsEnabled: preset.handsEnabled, handsColor: preset.handsColor ?? '#cbd5e1',
       watchfaceText: preset.watchfaceText ?? '', watchfaceTextMode: preset.watchfaceTextMode ?? 'center',
       handsCount: 3,

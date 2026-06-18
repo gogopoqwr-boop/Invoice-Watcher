@@ -35,6 +35,10 @@ export type ExtendedConfigState = ApiConfigState & {
   presetBraceletMaterial?: string;
   // Human-readable preset name — shown in receipt
   presetName?: string;
+  // Preset texture URLs — passed to WatchCardModel so box scene matches chosen preset
+  customWatchfaceUrl?: string | null;
+  skinStripeUrl?: string | null;
+  skinFullUrl?: string | null;
 };
 
 const defaultState: ExtendedConfigState = {
