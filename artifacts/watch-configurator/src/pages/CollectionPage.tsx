@@ -748,9 +748,9 @@ export default function CollectionPage() {
       {/* Top nav */}
       <div className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-5 py-4">
         <Link href="/">
-          <button className="text-xs text-muted-foreground hover:text-foreground transition-colors liquid-button px-3 py-1.5">
-            ← Назад
-          </button>
+          <span className="text-sm font-black uppercase tracking-[0.18em] text-foreground/80 hover:text-foreground transition-colors cursor-pointer select-none" style={{ letterSpacing: '0.18em' }}>
+            Чеблячас
+          </span>
         </Link>
         <div className="flex items-center gap-2">
           <span className="text-[9px] font-black uppercase tracking-[0.3em] px-2.5 py-1 rounded-full border border-primary/40 text-primary/70 bg-primary/5">
