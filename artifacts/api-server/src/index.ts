@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { db, adminUsersTable, ordersTable, watchPresetsTable } from "@workspace/db";
 import { count, eq, lt, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { sendHourlyStats } from "./routes/bot.js";
 
 const rawPort = process.env["PORT"];
 
@@ -112,7 +113,7 @@ async function registerWebhook() {
     const res = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: webhookUrl, allowed_updates: ["message", "pre_checkout_query"] }),
+      body: JSON.stringify({ url: webhookUrl, allowed_updates: ["message", "pre_checkout_query", "callback_query"] }),
     });
     const json = await res.json() as { ok: boolean; description?: string };
     if (json.ok) logger.info({ webhookUrl }, "Telegram webhook registered");
@@ -163,6 +164,18 @@ function startPaymentExpirationWorker() {
   logger.info("Payment expiration worker started (checks every 60s)");
 }
 
+function startHourlyStatsWorker() {
+  const HOUR_MS = 60 * 60 * 1000;
+  // Fire first report shortly after startup, then every hour
+  setTimeout(() => {
+    sendHourlyStats().catch((err) => logger.error({ err }, "Hourly stats error"));
+    setInterval(() => {
+      sendHourlyStats().catch((err) => logger.error({ err }, "Hourly stats error"));
+    }, HOUR_MS);
+  }, 10_000); // 10s after start so DB is ready
+  logger.info("Hourly stats worker started");
+}
+
 app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
@@ -174,4 +187,5 @@ app.listen(port, (err) => {
   ensureAdminUsers().catch((err) => logger.error({ err }, "Admin seed error"));
   registerWebhook().catch((err) => logger.error({ err }, "Webhook registration error"));
   startPaymentExpirationWorker();
+  startHourlyStatsWorker();
 });
