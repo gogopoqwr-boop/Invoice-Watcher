@@ -13,7 +13,7 @@ const MAT_LABELS: Record<string, string> = {
   cotton_fabric: 'NATO нейлон', resin: 'Смола',
 };
 
-const COLLECTION_ORDER = ['bipolar', 'РОФЛ', 'ГИПЕРСЕРЬЕЗНОСТЬ', 'ЖИВНОСТЬ'];
+const COLLECTION_ORDER = ['РОФЛ', 'ГИПЕРСЕРЬЕЗНОСТЬ', 'ЖИВНОСТЬ'];
 const MAX_PER = 6;
 type InventoryData = Record<string, { sold: number; max: number }>;
 
@@ -483,12 +483,14 @@ export default function CollectionPage() {
 
   const allPresets = (presets as any[] | undefined) ?? [];
   const classics = allPresets.filter((p: any) => !p.collectionName);
+  const bipolarItems = allPresets.filter((p: any) => p.collectionName === 'bipolar').slice(0, MAX_PER);
   const collections: Array<{ name: string | null; displayName: string; items: any[] }> = [
     ...COLLECTION_ORDER.map(name => ({
       name, displayName: name,
       items: allPresets.filter((p: any) => p.collectionName === name).slice(0, MAX_PER),
     })).filter(g => g.items.length > 0),
     ...(classics.length > 0 ? [{ name: null, displayName: 'КЛАССИКА', items: classics.slice(0, MAX_PER) }] : []),
+    ...(bipolarItems.length > 0 ? [{ name: 'bipolar', displayName: 'bipolar', items: bipolarItems }] : []),
   ];
 
   const safeIndex = Math.min(index, Math.max(0, collections.length - 1));
