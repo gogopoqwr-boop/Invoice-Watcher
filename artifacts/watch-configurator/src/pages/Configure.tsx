@@ -283,14 +283,7 @@ export default function Configure() {
                   >
                     {/* Price delta badge */}
                     {delta !== 0 && (
-                      <span
-                        className="absolute top-1.5 right-1.5 text-[9px] font-black px-1 py-0.5 rounded-full leading-none"
-                        style={{
-                          background: delta > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)',
-                          color: delta > 0 ? '#ef4444' : '#22c55e',
-                          border: `1px solid ${delta > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(34,197,94,0.25)'}`,
-                        }}
-                      >
+                      <span className="absolute top-1.5 right-1.5 text-[9px] font-black px-1 py-0.5 rounded-full leading-none bg-muted/60 text-muted-foreground border border-border/50">
                         {delta > 0 ? `+${delta}` : delta} ★
                       </span>
                     )}
