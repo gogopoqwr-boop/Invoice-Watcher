@@ -369,12 +369,12 @@ function drawEyesOnTexture(ctx: CanvasRenderingContext2D, S: number, eyeType: st
 }
 
 // ── Animated eye drawing — pure function of elapsed time t ───────────────
-function drawAnimatedEyesOnTexture(ctx: CanvasRenderingContext2D, S: number, eyeType: string, t: number) {
+export function drawAnimatedEyesOnTexture(ctx: CanvasRenderingContext2D, S: number, eyeType: string, t: number, px = 0, py = 0) {
   const cx = S / 2, cy = S / 2;
   switch (eyeType) {
 
     case 'spider': {
-      // Each eye blinks independently at a different cadence
+      // Each eye blinks independently at a different cadence; pupils shift together
       const BFREQ  = [1.3, 0.9, 1.7, 2.1, 0.7, 1.5, 1.1, 0.6];
       const BPHASE = [0, 1.2, 2.4, 0.8, 3.1, 1.8, 0.4, 2.7];
       const es = 14, ps = 7, r = S * 0.32;
@@ -382,14 +382,15 @@ function drawAnimatedEyesOnTexture(ctx: CanvasRenderingContext2D, S: number, eye
         [-r*0.45,-r*0.2],[r*0.45,-r*0.2],[-r*0.15,-r*0.42],[r*0.15,-r*0.42],
         [-r*0.55,r*0.1],[r*0.55,r*0.1],[-r*0.2,r*0.3],[r*0.2,r*0.3],
       ];
+      const pox = px * ps * 0.55, poy = py * ps * 0.55;
       positions.forEach(([ox,oy],i) => {
         const blink = Math.max(0, Math.sin(t*BFREQ[i]+BPHASE[i])*9-8);
         ctx.save(); ctx.translate(cx+ox, cy+oy); ctx.scale(1, 1-blink*0.95);
         ctx.beginPath(); ctx.arc(0,0,es,0,Math.PI*2); ctx.fillStyle='#0a1a0a'; ctx.fill();
         ctx.strokeStyle='#4ade80'; ctx.lineWidth=1.5; ctx.stroke();
         if (blink < 0.7) {
-          ctx.beginPath(); ctx.arc(0,0,ps,0,Math.PI*2); ctx.fillStyle='#4ade80'; ctx.globalAlpha=0.9; ctx.fill(); ctx.globalAlpha=1;
-          ctx.beginPath(); ctx.arc(-ps*0.3,-ps*0.3,ps*0.35,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.fill();
+          ctx.beginPath(); ctx.arc(pox,poy,ps,0,Math.PI*2); ctx.fillStyle='#4ade80'; ctx.globalAlpha=0.9; ctx.fill(); ctx.globalAlpha=1;
+          ctx.beginPath(); ctx.arc(pox-ps*0.3,poy-ps*0.3,ps*0.35,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.fill();
         }
         ctx.restore();
       });
@@ -399,11 +400,12 @@ function drawAnimatedEyesOnTexture(ctx: CanvasRenderingContext2D, S: number, eye
     case 'squid': {
       const er = 38, prW = 8;
       const prH = 26 * (1 + 0.22*Math.sin(t*1.1)); // dilating pupil
+      const pox = px * prW * 0.7, poy = py * prW * 0.5;
       ctx.beginPath(); ctx.ellipse(cx,cy,er,er*0.75,0,0,Math.PI*2); ctx.fillStyle='#001a2e'; ctx.fill();
       ctx.strokeStyle='#7dd3fc'; ctx.lineWidth=2; ctx.stroke();
       ctx.beginPath(); ctx.ellipse(cx,cy,er*0.65,er*0.55,0,0,Math.PI*2); ctx.fillStyle='#0e3a5c'; ctx.fill();
-      ctx.beginPath(); ctx.ellipse(cx,cy,prW,prH,0,0,Math.PI*2); ctx.fillStyle='#0a0a1a'; ctx.globalAlpha=0.95; ctx.fill(); ctx.globalAlpha=1;
-      ctx.beginPath(); ctx.ellipse(cx,cy,prW*0.4,prH*0.4,0,0,Math.PI*2); ctx.fillStyle='rgba(125,211,252,0.6)'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx+pox,cy+poy,prW,prH,0,0,Math.PI*2); ctx.fillStyle='#0a0a1a'; ctx.globalAlpha=0.95; ctx.fill(); ctx.globalAlpha=1;
+      ctx.beginPath(); ctx.ellipse(cx+pox,cy+poy,prW*0.4,prH*0.4,0,0,Math.PI*2); ctx.fillStyle='rgba(125,211,252,0.6)'; ctx.fill();
       ctx.beginPath(); ctx.ellipse(cx-er*0.25,cy-er*0.3,er*0.2,er*0.12,0,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.fill();
       break;
     }
@@ -411,27 +413,29 @@ function drawAnimatedEyesOnTexture(ctx: CanvasRenderingContext2D, S: number, eye
     case 'reptile': {
       const er = 40, pupilH = 28;
       const pupilW = Math.max(1.5, 8*(1-0.55*Math.abs(Math.sin(t*0.65)))); // slit narrows/widens
+      const pox = px * er * 0.28, poy = py * er * 0.18;
       ctx.beginPath(); ctx.ellipse(cx,cy,er,er*0.65,0,0,Math.PI*2); ctx.fillStyle='#1a0500'; ctx.fill();
       ctx.strokeStyle='#f59e0b'; ctx.lineWidth=2; ctx.stroke();
       ctx.beginPath(); ctx.ellipse(cx,cy,er*0.75,er*0.5,0,0,Math.PI*2); ctx.fillStyle='#2d0a00'; ctx.fill();
       ctx.beginPath(); ctx.ellipse(cx,cy,er*0.55,er*0.38,0,0,Math.PI*2); ctx.fillStyle='#8b3a00'; ctx.fill();
-      ctx.beginPath(); ctx.ellipse(cx,cy,pupilW,pupilH,0,0,Math.PI*2); ctx.fillStyle='#050505'; ctx.globalAlpha=0.95; ctx.fill(); ctx.globalAlpha=1;
-      ctx.beginPath(); ctx.ellipse(cx-pupilW*0.3,cy-pupilH*0.3,pupilW*0.4,pupilH*0.25,0,0,Math.PI*2); ctx.fillStyle='rgba(251,191,36,0.4)'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx+pox,cy+poy,pupilW,pupilH,0,0,Math.PI*2); ctx.fillStyle='#050505'; ctx.globalAlpha=0.95; ctx.fill(); ctx.globalAlpha=1;
+      ctx.beginPath(); ctx.ellipse(cx+pox-pupilW*0.3,cy+poy-pupilH*0.3,pupilW*0.4,pupilH*0.25,0,0,Math.PI*2); ctx.fillStyle='rgba(251,191,36,0.4)'; ctx.fill();
       break;
     }
 
     case 'gremlin': {
       const er = 22, pr = 11, spacing = 32;
       const blink = Math.max(0, Math.sin(t*2.1)*7-6);
+      const pox = px * pr * 0.65, poy = py * pr * 0.65;
       [-1,1].forEach(side => {
         const ex = cx+side*spacing, ey = cy-S*0.05;
         ctx.save(); ctx.translate(ex,ey); ctx.scale(1,1-blink*0.9);
         ctx.beginPath(); ctx.arc(0,0,er,0,Math.PI*2); ctx.fillStyle='#1a0020'; ctx.fill();
         ctx.strokeStyle='#f0abfc'; ctx.lineWidth=2; ctx.stroke();
         ctx.beginPath(); ctx.arc(0,0,er*0.65,0,Math.PI*2); ctx.fillStyle='#2d0040'; ctx.fill();
-        ctx.beginPath(); ctx.arc(0,0,pr,0,Math.PI*2); ctx.fillStyle='#0a0010'; ctx.fill();
+        ctx.beginPath(); ctx.arc(pox,poy,pr,0,Math.PI*2); ctx.fillStyle='#0a0010'; ctx.fill();
         if (blink < 0.75) {
-          ctx.beginPath(); ctx.arc(-pr*0.4,-pr*0.4,pr*0.35,0,Math.PI*2); ctx.fillStyle='rgba(240,171,252,0.7)'; ctx.fill();
+          ctx.beginPath(); ctx.arc(pox-pr*0.4,poy-pr*0.4,pr*0.35,0,Math.PI*2); ctx.fillStyle='rgba(240,171,252,0.7)'; ctx.fill();
           ctx.beginPath(); ctx.arc(-er*0.3,-er*0.3,er*0.25,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.22)'; ctx.fill();
         }
         ctx.restore();
@@ -449,8 +453,9 @@ function drawAnimatedEyesOnTexture(ctx: CanvasRenderingContext2D, S: number, eye
         ctx.globalAlpha=pulse*0.8; ctx.stroke(); ctx.globalAlpha=1; ctx.setLineDash([]); ctx.restore();
       });
       ctx.beginPath(); ctx.arc(cx,cy,er*0.4,0,Math.PI*2); ctx.fillStyle='#042f2e'; ctx.fill();
-      ctx.beginPath(); ctx.arc(cx,cy,er*0.28*(0.9+0.1*Math.sin(t*3.1)),0,Math.PI*2); ctx.fillStyle='#5eead4'; ctx.globalAlpha=pulse; ctx.fill(); ctx.globalAlpha=1;
-      ctx.beginPath(); ctx.arc(cx,cy,er*0.13,0,Math.PI*2); ctx.fillStyle='#042f2e'; ctx.fill();
+      const pox = px * er * 0.18, poy = py * er * 0.18;
+      ctx.beginPath(); ctx.arc(cx+pox,cy+poy,er*0.28*(0.9+0.1*Math.sin(t*3.1)),0,Math.PI*2); ctx.fillStyle='#5eead4'; ctx.globalAlpha=pulse; ctx.fill(); ctx.globalAlpha=1;
+      ctx.beginPath(); ctx.arc(cx+pox,cy+poy,er*0.13,0,Math.PI*2); ctx.fillStyle='#042f2e'; ctx.fill();
       ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot);
       ctx.beginPath(); ctx.moveTo(-er,0); ctx.lineTo(er,0); ctx.moveTo(0,-er); ctx.lineTo(0,er);
       ctx.strokeStyle='#5eead4'; ctx.lineWidth=0.6; ctx.globalAlpha=0.3; ctx.stroke(); ctx.globalAlpha=1; ctx.restore();
@@ -641,6 +646,7 @@ function drawFullFaceFrame(
   ctx: CanvasRenderingContext2D, S: number,
   faceColor: string, handsColor: string,
   text: string, _textMode: string, _geom: string, t: number,
+  px = 0, py = 0,
 ) {
   ctx.clearRect(0,0,S,S);
   ctx.fillStyle = faceColor; ctx.fillRect(0,0,S,S);
@@ -649,7 +655,7 @@ function drawFullFaceFrame(
   ctx.fillStyle=g; ctx.fillRect(0,0,S,S);
   const raw = text.trim().toUpperCase();
   if (raw.startsWith('EYE:')) {
-    drawAnimatedEyesOnTexture(ctx, S, raw.slice(4).toLowerCase(), t);
+    drawAnimatedEyesOnTexture(ctx, S, raw.slice(4).toLowerCase(), t, px, py);
   }
   // non-EYE text is static — handled by faceTex, not drawn here
 }
@@ -1159,8 +1165,13 @@ export function WatchCardModel({
     const t = state.clock.elapsedTime;
     if (animFace && t - lastAnimT.current >= 0.05) {
       lastAnimT.current = t;
+      // Derive pupil offset from the watch's current pendulum rotation so pupils
+      // appear to wander as the watch sways left/right.
+      const rotY = groupRef.current?.rotation.y ?? 0;
+      const px = Math.sin(rotY) * 0.85;
+      const py = Math.sin(groupRef.current?.rotation.x ?? 0) * 0.5;
       drawFullFaceFrame(animFace.ctx2d, 512, watchfaceColor, handsColor ?? '#1a1a1a',
-        watchfaceText ?? '', watchfaceTextMode ?? 'circular', watchfaceGeometry, t);
+        watchfaceText ?? '', watchfaceTextMode ?? 'circular', watchfaceGeometry, t, px, py);
       animFace.tex.needsUpdate = true;
     }
 

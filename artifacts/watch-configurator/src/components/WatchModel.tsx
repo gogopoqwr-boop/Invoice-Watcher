@@ -4,6 +4,7 @@ import { Text3D, Center, Billboard } from '@react-three/drei';
 import { useWatchConfig, ExtendedConfigState } from '@/hooks/use-watch-config';
 import * as THREE from 'three';
 import { useSpring, animated } from '@react-spring/three';
+import { drawAnimatedEyesOnTexture } from '@/components/WatchMiniCanvas';
 
 // typeface.js JSON font — generated from DejaVuSans-Bold.ttf via opentype.js.
 // Full Cyrillic + Latin coverage. Loaded by FontLoader (main thread fetch),
@@ -1245,7 +1246,24 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
   const θUpper = wrapUpper.to(v => v / WRAP_SEGS);
   const θLower = wrapLower.to(v => v / WRAP_SEGS);
 
-  useFrame(({ camera }, delta) => {
+  useFrame(({ camera, clock }, delta) => {
+    // ── Camera-tracking EYE: face texture — runs even when paused ───────────
+    const af = animFaceRef.current;
+    if (af && eyeWatchType) {
+      const S = 512;
+      const px = THREE.MathUtils.clamp(camera.position.x / 3.5, -1, 1);
+      const py = THREE.MathUtils.clamp(camera.position.y / 2.5, -1, 1);
+      const t = clock.elapsedTime;
+      const ctx2d = af.ctx2d;
+      ctx2d.clearRect(0, 0, S, S);
+      ctx2d.fillStyle = config.watchfaceColor; ctx2d.fillRect(0, 0, S, S);
+      const g = ctx2d.createRadialGradient(S*0.35, S*0.3, 0, S/2, S/2, S*0.55);
+      g.addColorStop(0, 'rgba(255,255,255,0.10)'); g.addColorStop(1, 'rgba(0,0,0,0.15)');
+      ctx2d.fillStyle = g; ctx2d.fillRect(0, 0, S, S);
+      drawAnimatedEyesOnTexture(ctx2d, S, eyeWatchType, t, px, py);
+      af.tex.needsUpdate = true;
+    }
+
     if (!groupRef.current) return;
     // Frozen display mode — no animation at all (used inside the gift box)
     if (paused) return;
@@ -1359,6 +1377,27 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
     [config.watchfaceColor, config.handsColor, config.watchfaceGeometry, canvasTextMode, config.watchfaceText]
   );
 
+  const isEyeWatch = !!(config.watchfaceText?.trim().toUpperCase().startsWith('EYE:'));
+  const eyeWatchType = isEyeWatch ? (config.watchfaceText!.trim().slice(4).toLowerCase()) : null;
+
+  // Persistent canvas texture for EYE: presets — redrawn every frame in useFrame
+  // with camera-tracking pupil offsets so eyes follow the viewer as they orbit.
+  const animFaceRef = useRef<{ ctx2d: CanvasRenderingContext2D; tex: THREE.CanvasTexture } | null>(null);
+  useMemo(() => {
+    if (!isEyeWatch) { animFaceRef.current = null; return; }
+    const S = 512;
+    const cv = document.createElement('canvas');
+    cv.width = S; cv.height = S;
+    const ctx2d = cv.getContext('2d')!;
+    const tex = new THREE.CanvasTexture(cv);
+    animFaceRef.current = { ctx2d, tex };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEyeWatch, config.watchfaceText]);
+
+  useEffect(() => {
+    return () => { animFaceRef.current?.tex.dispose(); };
+  }, []);
+
   const isMetal = config.watchfaceMaterial === 'metal';
   const caseMat = useMemo(() => ({
     color: config.watchfaceColor,
@@ -1391,10 +1430,10 @@ export default function WatchModel({ step = 0, lastInteractionRef, showWrist = f
         collectionName={(config as any).collectionName || null}
       />
 
-      {/* Face disc */}
+      {/* Face disc — EYE: types use animFaceRef (camera-tracking, redrawn in useFrame) */}
       <mesh position={[0, 0, faceZ]}>
         <primitive object={discGeo} />
-        <meshStandardMaterial map={faceTexture} roughness={0.25} metalness={0.05} />
+        <meshStandardMaterial map={animFaceRef.current?.tex ?? faceTexture} roughness={0.25} metalness={0.05} />
       </mesh>
 
       {/* 3D face text — rendered between dial and crystal.
