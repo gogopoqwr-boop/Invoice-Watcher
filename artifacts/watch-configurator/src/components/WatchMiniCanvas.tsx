@@ -437,7 +437,9 @@ function buildMiniTexture(
 
   const rawText = text.trim().toUpperCase();
 
-  if (!rawText.startsWith('EYE:') && rawText) {
+  if (rawText.startsWith('EYE:')) {
+    drawEyesOnTexture(ctx, S, rawText.slice(4).toLowerCase());
+  } else if (rawText) {
     ctx.fillStyle = handsColor;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -730,7 +732,6 @@ export function WatchCardModel({
     () => buildMiniBackTexture(watchfaceColor, collectionName ?? null),
     [watchfaceColor, collectionName],
   );
-  const hasEyes = (watchfaceText ?? '').trim().toUpperCase().startsWith('EYE:');
 
   useEffect(() => () => {
     bodyGeo.dispose(); faceGeo.dispose(); backGeo.dispose();
@@ -849,9 +850,6 @@ export function WatchCardModel({
         <primitive object={faceGeo} />
         <meshStandardMaterial map={faceTex} roughness={0.25} metalness={0.05} />
       </mesh>
-
-      {/* EYE: mode — 3D camera-tracking eyeballs */}
-      {hasEyes && <WatchCardEyes faceZ={faceZ} handsColor={handsColor} />}
 
       {/* Crystal — high-quality sapphire glass */}
       <mesh position={[0, 0, crystalZ]}>
