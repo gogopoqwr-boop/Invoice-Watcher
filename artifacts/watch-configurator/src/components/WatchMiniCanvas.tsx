@@ -1286,13 +1286,6 @@ export function WatchCardModel({
         />
       </mesh>
 
-      {/* Bezel ring — polished metal rim around crystal (circle only) */}
-      {watchfaceGeometry === 'circle' && (
-        <mesh position={[0, 0, crystalZ + 0.035]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[1.506, 0.072, 10, 72]} />
-          <meshStandardMaterial color={watchfaceColor} metalness={0.92} roughness={0.06} envMapIntensity={2.5} />
-        </mesh>
-      )}
 
       {/* ── Lugs — top (+1) and bottom (-1) ── */}
       {([+1, -1] as const).map((sign) => {
