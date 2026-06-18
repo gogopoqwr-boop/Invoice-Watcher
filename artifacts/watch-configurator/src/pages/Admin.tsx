@@ -811,7 +811,7 @@ function PriceSection({ title, items, prices, onChange }: {
             <span className="text-sm text-foreground">{item.label}</span>
             <div className="flex items-center gap-1 shrink-0">
               <input
-                type="number" min={0} max={50} step={1}
+                type="number" min={0} step={1}
                 value={get(item.key)}
                 onChange={e=>onChange(Array.isArray(item.key)?item.key:[item.key], e.target.value)}
                 className="w-16 rounded-lg px-2 py-1.5 text-sm text-center border border-border bg-background/60 focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono font-bold"
