@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, ordersTable, watchConfigsTable, analyticsEventsTable } from "@workspace/db";
+import { db, ordersTable, watchConfigsTable, analyticsEventsTable, botUsersTable } from "@workspace/db";
 import { eq, sql, gte, count, sum } from "drizzle-orm";
 import { buildBreakdown, formatReceiptText } from "../lib/receipt.js";
 
@@ -529,6 +529,28 @@ router.post("/bot/webhook", async (req, res) => {
       if (text.startsWith("/start")) {
         const parts = text.split(" ");
         const param = parts[1]?.trim();
+
+        // Track bot user (upsert)
+        const from = update.message.from;
+        if (from?.id) {
+          const fromWebsite = !!(param?.startsWith("pay_") || param === "orders");
+          db.insert(botUsersTable).values({
+            telegramId: String(from.id),
+            username: from.username ?? null,
+            firstName: from.first_name ?? null,
+            lastName: from.last_name ?? null,
+            fromWebsite,
+            lastSeenAt: new Date(),
+          }).onConflictDoUpdate({
+            target: botUsersTable.telegramId,
+            set: {
+              username: from.username ?? null,
+              firstName: from.first_name ?? null,
+              lastName: from.last_name ?? null,
+              lastSeenAt: new Date(),
+            },
+          }).catch(() => {});
+        }
 
         if (param?.startsWith("pay_")) {
           const token = param.slice(4);

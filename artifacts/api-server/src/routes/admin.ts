@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, watchPresetsTable, adminUsersTable, settingsTable, ordersTable, watchConfigsTable } from "@workspace/db";
+import { db, watchPresetsTable, adminUsersTable, settingsTable, ordersTable, watchConfigsTable, botUsersTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -248,6 +248,40 @@ router.get("/admin/orders/export", requireAdmin, async (req, res) => {
     res.send("\uFEFF" + csv); // BOM for Excel UTF-8
   } catch (err: any) {
     req.log.error({ err }, "admin export orders failed");
+    res.status(500).json({ error: "Failed to export" });
+  }
+});
+
+// ── Bot users CSV export ──────────────────────────────────────────────────────
+
+router.get("/admin/bot-users/export", requireAdmin, async (req, res) => {
+  try {
+    const users = await db.select().from(botUsersTable).orderBy(desc(botUsersTable.firstSeenAt));
+
+    const escape = (v: unknown) => {
+      const s = v == null ? "" : String(v);
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+
+    const header = ["ID", "Telegram ID", "Username", "Имя", "Фамилия", "С сайта", "Первый визит", "Последний визит"].map(escape).join(",");
+    const rows = users.map(u => [
+      u.id,
+      u.telegramId,
+      u.username ?? "",
+      u.firstName ?? "",
+      u.lastName ?? "",
+      u.fromWebsite ? "Да" : "Нет",
+      new Date(u.firstSeenAt).toISOString(),
+      new Date(u.lastSeenAt).toISOString(),
+    ].map(escape).join(","));
+
+    const csv = [header, ...rows].join("\r\n");
+    const filename = `bot_users_${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send("\uFEFF" + csv);
+  } catch (err: any) {
+    req.log.error({ err }, "admin export bot users failed");
     res.status(500).json({ error: "Failed to export" });
   }
 });

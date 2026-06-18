@@ -548,6 +548,28 @@ export default function Admin() {
         ════════════════════════════════════════════════ */}
         {tab === "analytics" && user.role === "admin" && (
           <div className="space-y-6">
+            {/* Bot users CSV export */}
+            <div className="liquid-glass rounded-2xl p-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="font-semibold text-sm">Пользователи бота</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Все кто запустил бот — ID, username, имя, источник</p>
+              </div>
+              <button
+                onClick={async () => {
+                  const jwt = localStorage.getItem("jwt") ?? "";
+                  const res = await fetch("/api/admin/bot-users/export", { headers: { Authorization: `Bearer ${jwt}` } });
+                  const blob = await res.blob();
+                  const a = document.createElement("a");
+                  a.href = URL.createObjectURL(blob);
+                  a.download = `bot_users_${new Date().toISOString().slice(0,10)}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(a.href);
+                }}
+                className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold border border-border/60 bg-card/60 hover:bg-card text-muted-foreground hover:text-foreground transition-all whitespace-nowrap"
+              >
+                <Download size={13} /> Скачать CSV
+              </button>
+            </div>
             {analyticsLoading ? (
               <div className="grid grid-cols-2 gap-3">{[1,2,3,4].map(i=><div key={i} className="liquid-glass rounded-2xl h-24 animate-pulse"/>)}</div>
             ) : analytics ? (
