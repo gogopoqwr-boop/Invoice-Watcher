@@ -448,6 +448,21 @@ export default function Admin() {
                           {order.telegramId && <span className="text-xs text-muted-foreground font-mono">ID:{order.telegramId}</span>}
                         </div>
                       )}
+
+                      {/* Email + address */}
+                      {((order as any).deliveryEmail || (order as any).userEmail) && (
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="text-muted-foreground">✉️</span>
+                          <span className="text-xs font-mono text-foreground break-all">{(order as any).deliveryEmail || (order as any).userEmail}</span>
+                        </div>
+                      )}
+                      {(order as any).deliveryAddress && (
+                        <div className="flex items-start gap-1.5 mb-1">
+                          <span className="text-muted-foreground shrink-0">📍</span>
+                          <span className="text-xs text-foreground leading-snug break-words">{(order as any).deliveryAddress}</span>
+                        </div>
+                      )}
+
                       <p className="text-xs text-muted-foreground font-mono mb-1">session: {String(order.sessionId??"").slice(0,8)}…</p>
                       {order.cancelComment && <p className="text-xs text-orange-600 italic mb-1">"{order.cancelComment}"</p>}
                       {order.status==="cancel_requested" && <span className="text-xs font-bold text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full inline-block mb-2">⚠️ Ожидает решения</span>}

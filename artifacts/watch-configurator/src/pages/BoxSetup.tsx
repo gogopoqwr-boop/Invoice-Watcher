@@ -86,7 +86,7 @@ export default function BoxSetup() {
     const textCharge   = config.watchfaceText ? 1 : 0;
     const handsDiscount = config.handsEnabled === false ? -1 : 0;
     const raw = base + braceletDelta + textCharge + handsDiscount + boxOption.surcharge + (giftWrap ? 2 : 0);
-    return Math.min(50, Math.max(1, raw));
+    return Math.max(1, raw);
   }, [config.priceStars, config.presetBraceletMaterial, config.braceletMaterial,
       config.watchfaceText, config.handsEnabled, boxOption.surcharge, giftWrap]);
 
