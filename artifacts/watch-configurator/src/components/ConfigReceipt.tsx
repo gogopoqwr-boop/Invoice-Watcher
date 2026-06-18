@@ -25,7 +25,7 @@ const GEOMETRY_LABELS: Record<string, string> = {
 const MATERIAL_LABELS: Record<string, string> = {
   plastic: 'Пластиковый корпус', metal: 'Металлический корпус',
 };
-const BOX_PRICES: Record<string, number> = { standard: 0, premium: 5, collector: 15 };
+const BOX_PRICES: Record<string, number> = { standard: 100, premium: 200, collector: 400 };
 const BOX_LABELS: Record<string, string> = {
   standard: 'Стандартная коробка', premium: 'Коробка Премиум', collector: 'Коробка Коллекционная',
 };
@@ -100,11 +100,11 @@ function buildBreakdown(cfg: any): { breakdown: BreakdownItem[]; total: number }
     items.push({ label: BOX_LABELS['standard'], stars: 0, isInfo: true });
   }
 
-  if (cfg.giftWrap) items.push({ label: 'Атласная лента с бантом', stars: 2 });
+  if (cfg.giftWrap) items.push({ label: 'Атласная лента с бантом', stars: 40 });
 
-  const total = Math.min(50, Math.max(1,
+  const total = Math.max(1,
     items.filter(i => !i.isInfo).reduce((s, i) => s + i.stars, 0),
-  ));
+  );
   return { breakdown: items, total };
 }
 

@@ -30,7 +30,7 @@ const BOX_OPTIONS: {
     label: 'Стандарт',
     sublabel: 'Матовый',
     desc: 'Магнитная крышка, фирменное тиснение, мягкая подушка для часов',
-    surcharge: 0,
+    surcharge: 100,
     accentColor: '#475569',
     textColor: '#cbd5e1',
   },
@@ -39,7 +39,7 @@ const BOX_OPTIONS: {
     label: 'Премиум',
     sublabel: 'Лаковый',
     desc: 'Лакированный корпус, велюровый интерьер, позолоченные петли',
-    surcharge: 5,
+    surcharge: 200,
     accentColor: '#b8860b',
     textColor: '#fde68a',
   },
@@ -48,7 +48,7 @@ const BOX_OPTIONS: {
     label: 'Коллекционер',
     sublabel: 'Дерево + латунь',
     desc: 'Массив дуба, атласный интерьер, латунная накладка с гравировкой',
-    surcharge: 15,
+    surcharge: 400,
     accentColor: '#7c5228',
     textColor: '#fbbf24',
   },
@@ -85,7 +85,7 @@ export default function BoxSetup() {
     const braceletDelta = (BRACELET_PRICES[curBracelet] ?? 0) - (BRACELET_PRICES[origBracelet] ?? 0);
     const textCharge   = config.watchfaceText ? 1 : 0;
     const handsDiscount = config.handsEnabled === false ? -1 : 0;
-    const raw = base + braceletDelta + textCharge + handsDiscount + boxOption.surcharge + (giftWrap ? 2 : 0);
+    const raw = base + braceletDelta + textCharge + handsDiscount + boxOption.surcharge + (giftWrap ? 40 : 0);
     return Math.max(1, raw);
   }, [config.priceStars, config.presetBraceletMaterial, config.braceletMaterial,
       config.watchfaceText, config.handsEnabled, boxOption.surcharge, giftWrap]);
@@ -301,7 +301,7 @@ export default function BoxSetup() {
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-muted-foreground flex items-center gap-0.5">+2 <TgStar size={11} /></span>
+                <span className="text-xs text-muted-foreground flex items-center gap-0.5">+40 <TgStar size={11} /></span>
                 <div className={cn(
                   'w-11 h-6 rounded-full transition-all duration-200 relative',
                   giftWrap ? 'bg-rose-500' : 'bg-muted'
@@ -335,7 +335,7 @@ export default function BoxSetup() {
             {([
               ['Базовая стоимость', config.priceStars != null ? <span className="flex items-center gap-0.5 font-medium">{config.priceStars} <TgStar size={11} /></span> : <span className="font-medium">…</span>],
               ['Упаковка',         boxOption.surcharge > 0 ? <span className="flex items-center gap-0.5 font-medium">+{boxOption.surcharge} <TgStar size={11} /></span> : <span className="font-medium">бесплатно</span>],
-              ['Лента',            giftWrap ? <span className="flex items-center gap-0.5 font-medium">+2 <TgStar size={11} /></span> : <span className="font-medium">—</span>],
+              ['Лента',            giftWrap ? <span className="flex items-center gap-0.5 font-medium">+40 <TgStar size={11} /></span> : <span className="font-medium">—</span>],
             ] as [string, React.ReactNode][]).map(([k, v]) => (
               <div key={k} className="flex justify-between items-center">
                 <span className="text-muted-foreground">{k}</span>
