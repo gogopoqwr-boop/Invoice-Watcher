@@ -3,6 +3,10 @@ import { db, watchPresetsTable, adminUsersTable, settingsTable } from "@workspac
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import crypto from "crypto";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET ?? "fallback_dev_secret_2024";
@@ -22,7 +26,36 @@ function requireAdmin(req: any, res: any, next: any) {
   }
 }
 
+// ── File upload (textures) ───────────────────────────────────────────────────
+
+const UPLOADS_DIR = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || ".png";
+    cb(null, `${Date.now()}-${crypto.randomBytes(6).toString("hex")}${ext}`);
+  },
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ok = /^image\/(jpeg|png|webp|gif)$/i.test(file.mimetype);
+    cb(ok ? null : new Error("Only image files allowed") as any, ok);
+  },
+});
+
+router.post("/admin/upload-texture", requireAdmin, upload.single("file"), (req: any, res: any) => {
+  if (!req.file) return res.status(400).json({ error: "No file" });
+  const url = `/api/uploads/${req.file.filename}`;
+  res.json({ url });
+});
+
 // ── Presets CRUD ─────────────────────────────────────────────────────────────
+
+const TEXTURE_FIELDS = ["customWatchfaceUrl", "skinStripeUrl", "skinFullUrl"];
 
 router.get("/admin/presets", requireAdmin, async (req, res) => {
   try {
@@ -37,7 +70,6 @@ router.get("/admin/presets", requireAdmin, async (req, res) => {
 router.post("/admin/presets", requireAdmin, async (req, res) => {
   try {
     const body = req.body;
-    // Strip undefined/null and coerce types
     const data: any = {
       name: body.name ?? "Новый пресет",
       description: body.description ?? null,
@@ -53,8 +85,12 @@ router.post("/admin/presets", requireAdmin, async (req, res) => {
       collectionName: body.collectionName ?? null,
       boxType: body.boxType ?? "standard",
       watchfaceText: body.watchfaceText ?? null,
+      watchfaceTextMode: body.watchfaceTextMode ?? "center",
       maxQuantity: Number(body.maxQuantity ?? 1000),
     };
+    for (const f of TEXTURE_FIELDS) {
+      if (f in body) data[f] = body[f] || null;
+    }
     const [preset] = await db.insert(watchPresetsTable).values(data).returning();
     res.status(201).json(preset);
   } catch (err: any) {
@@ -71,8 +107,9 @@ router.patch("/admin/presets/:id", requireAdmin, async (req, res) => {
     const fields = [
       "name","description","watchfaceGeometry","watchfaceMaterial","watchfaceColor",
       "braceletMaterial","braceletType","braceletColor","handsEnabled","handsColor",
-      "priceStars","collectionName","boxType","watchfaceText","maxQuantity",
+      "priceStars","collectionName","boxType","watchfaceText","watchfaceTextMode","maxQuantity",
       "watchfaceBackgroundType","watchfaceGradientEnd","handsCount",
+      ...TEXTURE_FIELDS,
     ];
     for (const f of fields) {
       if (f in body) updates[f] = f === "priceStars" || f === "maxQuantity" ? Number(body[f]) : body[f];

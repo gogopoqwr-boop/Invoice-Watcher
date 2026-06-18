@@ -838,6 +838,9 @@ export interface MiniWatchProps {
   paused?: boolean;
   spinRef?: React.MutableRefObject<number>;
   isDraggingRef?: React.MutableRefObject<boolean>;
+  customWatchfaceUrl?: string | null;
+  skinStripeUrl?: string | null;
+  skinFullUrl?: string | null;
 }
 
 export function MiniWatch({ watchfaceGeometry, watchfaceColor, braceletColor, braceletMaterial, handsColor, handsEnabled, watchfaceText, watchfaceTextMode, collectionName, paused }: MiniWatchProps) {
@@ -996,6 +999,9 @@ export function WatchCardModel({
   paused,
   spinRef,
   isDraggingRef,
+  customWatchfaceUrl,
+  skinStripeUrl,
+  skinFullUrl,
 }: MiniWatchProps) {
   const groupRef = useRef<THREE.Group>(null);
   const hourRef  = useRef<THREE.Group>(null);
@@ -1061,6 +1067,61 @@ export function WatchCardModel({
     crystalGeo.dispose(); faceTex.dispose(); backTex.dispose();
     animFace?.tex.dispose();
   }, [bodyGeo, faceGeo, backGeo, crystalGeo, faceTex, backTex, animFace]);
+
+  // ── URL-sourced image textures ───────────────────────────────────────────
+  const [urlFaceTex, setUrlFaceTex] = useState<THREE.Texture | null>(null);
+  const [urlStripTex, setUrlStripTex] = useState<THREE.Texture | null>(null);
+  const [urlBodyTex, setUrlBodyTex] = useState<THREE.Texture | null>(null);
+
+  useEffect(() => {
+    if (!customWatchfaceUrl) { setUrlFaceTex(null); return; }
+    const loader = new THREE.TextureLoader();
+    let disposed = false;
+    let loaded: THREE.Texture | null = null;
+    loader.load(customWatchfaceUrl, (t) => {
+      if (disposed) { t.dispose(); return; }
+      const h = watchfaceGeometry === 'circle' ? 1.5 : watchfaceGeometry === 'square' ? 1.28 : 1.1;
+      t.offset.set(0.5, 0.5);
+      t.repeat.set(0.5 / h, 0.5 / h);
+      t.needsUpdate = true;
+      loaded = t;
+      setUrlFaceTex(t);
+    });
+    return () => { disposed = true; loaded?.dispose(); setUrlFaceTex(null); };
+  }, [customWatchfaceUrl, watchfaceGeometry]);
+
+  useEffect(() => {
+    if (!skinStripeUrl) { setUrlStripTex(null); return; }
+    const loader = new THREE.TextureLoader();
+    let disposed = false;
+    let loaded: THREE.Texture | null = null;
+    loader.load(skinStripeUrl, (t) => {
+      if (disposed) { t.dispose(); return; }
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(1, 3);
+      t.needsUpdate = true;
+      loaded = t;
+      setUrlStripTex(t);
+    });
+    return () => { disposed = true; loaded?.dispose(); setUrlStripTex(null); };
+  }, [skinStripeUrl]);
+
+  useEffect(() => {
+    if (!skinFullUrl) { setUrlBodyTex(null); return; }
+    const loader = new THREE.TextureLoader();
+    let disposed = false;
+    let loaded: THREE.Texture | null = null;
+    loader.load(skinFullUrl, (t) => {
+      if (disposed) { t.dispose(); return; }
+      const h = watchfaceGeometry === 'circle' ? 1.5 : watchfaceGeometry === 'square' ? 1.28 : 1.1;
+      t.offset.set(0.5, 0.5);
+      t.repeat.set(0.5 / h, 0.5 / h);
+      t.needsUpdate = true;
+      loaded = t;
+      setUrlBodyTex(t);
+    });
+    return () => { disposed = true; loaded?.dispose(); setUrlBodyTex(null); };
+  }, [skinFullUrl, watchfaceGeometry]);
 
   // Seed hand positions from actual wall-clock time on mount
   useEffect(() => {
@@ -1183,7 +1244,13 @@ export function WatchCardModel({
       {/* ── Case body ── */}
       <mesh castShadow receiveShadow>
         <primitive object={bodyGeo} />
-        <meshStandardMaterial {...cMat} envMapIntensity={1.4} />
+        <meshStandardMaterial
+          map={urlBodyTex ?? undefined}
+          color={urlBodyTex ? '#ffffff' : cMat.color}
+          metalness={cMat.metalness}
+          roughness={cMat.roughness}
+          envMapIntensity={1.4}
+        />
       </mesh>
 
       {/* Back panel */}
@@ -1195,7 +1262,7 @@ export function WatchCardModel({
       {/* Face disc */}
       <mesh position={[0, 0, faceZ]}>
         <primitive object={faceGeo} />
-        <meshStandardMaterial map={animFace?.tex ?? faceTex} roughness={0.25} metalness={0.05} />
+        <meshStandardMaterial map={urlFaceTex ?? animFace?.tex ?? faceTex} roughness={0.25} metalness={0.05} />
       </mesh>
 
       {/* Crystal — high-quality sapphire glass */}
@@ -1260,9 +1327,10 @@ export function WatchCardModel({
           <mesh position={[0, sign * 1.20, 0]}>
             <boxGeometry args={[1.05, 2.40, 0.14]} />
             <meshStandardMaterial
-              color={braceletColor}
-              metalness={isMetal ? 0.85 : 0}
-              roughness={isMetal ? 0.10 : 0.80}
+              map={urlStripTex ?? undefined}
+              color={urlStripTex ? '#ffffff' : braceletColor}
+              metalness={isMetal && !urlStripTex ? 0.85 : 0}
+              roughness={isMetal && !urlStripTex ? 0.10 : 0.80}
               transparent={isResin}
               opacity={isResin ? 0.72 : 1}
             />

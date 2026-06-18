@@ -5,3 +5,5 @@
 - [Typeface.js Y-axis](typeface-y-axis.md) — opentype.js getPath() flips Y (drawing coords); use glyph.path.commands directly for correct THREE.js font JSON
 - [backdrop-filter kills WebGL](backdrop-filter-webgl.md) — never wrap a WebGL Canvas inside an element with backdrop-filter; use background-only styling instead
 - [WatchModel in second Canvas](watchmodel-second-canvas.md) — WatchModel uses animated.group from @react-spring/three; crashes in any Canvas other than the main Configure canvas; use MiniWatch instead
+- [Texture URL loading in WatchCardModel](texture-url-loading.md) — WatchCardModel supports customWatchfaceUrl/skinStripeUrl/skinFullUrl; loaded via TextureLoader in useEffect with disposed flag to avoid stale-set; face overrides procedural canvas tex, strap uses RepeatWrapping 1×3, body uses same UV offset as face
+- [File upload for textures](texture-upload-api.md) — multer on POST /api/admin/upload-texture (requireAdmin); saves to artifacts/api-server/uploads/; served as static at /api/uploads/*; 8MB limit, image/* only

@@ -11,9 +11,10 @@ import ConfigReceipt from "@/components/ConfigReceipt";
 import {
   Home, Package, ClipboardList, Settings2, Sparkles, TrendingUp,
   Check, RefreshCw, Users, Database, DollarSign, Bot, ChevronDown,
-  Pencil, Trash2, Plus, Eye, EyeOff, X, Save,
+  Pencil, Trash2, Plus, Eye, EyeOff, X, Save, Palette,
 } from 'lucide-react';
 import { TgStar } from '@/components/TgStar';
+import { CollectionStudio } from '@/components/CollectionStudio';
 
 // ── Status maps ───────────────────────────────────────────────────────────────
 
@@ -36,7 +37,7 @@ const NEXT_STATUSES: Record<string, string> = {
   cancel_requested: "cancelled", processing: "shipping", shipping: "arrived",
 };
 const PAGE_SIZE = 20;
-type Tab = "orders" | "analytics" | "presets" | "users" | "prices" | "bot" | "couriers";
+type Tab = "orders" | "analytics" | "presets" | "studio" | "users" | "prices" | "bot" | "couriers";
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 
@@ -361,6 +362,7 @@ export default function Admin() {
     ...(user.role === "admin" ? [
       { id: "analytics" as Tab, label: "Аналитика", adminOnly: true },
       { id: "presets"   as Tab, label: "Коллекции", adminOnly: true },
+      { id: "studio"    as Tab, label: "Студия", adminOnly: true },
       { id: "users"     as Tab, label: "Пользователи", adminOnly: true },
       { id: "prices"    as Tab, label: "Цены", adminOnly: true },
       { id: "bot"       as Tab, label: "Бот", adminOnly: true },
@@ -552,6 +554,23 @@ export default function Admin() {
                 {presets.length===0 && <div className="liquid-glass rounded-2xl p-8 text-center text-muted-foreground">Пресетов нет</div>}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════
+            STUDIO TAB
+        ════════════════════════════════════════════════ */}
+        {tab === "studio" && user.role === "admin" && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Palette size={18} className="text-primary" />
+              <h2 className="font-black text-lg">Студия коллекций</h2>
+            </div>
+            <p className="text-sm text-muted-foreground -mt-2">Загрузите текстуры, настройте параметры и сохраните новый пресет с живым 3D-превью.</p>
+            <CollectionStudio onSaved={() => {
+              setPresetsLoading(true);
+              adminFetch("/api/admin/presets").then(setPresets).finally(() => setPresetsLoading(false));
+            }} />
           </div>
         )}
 
