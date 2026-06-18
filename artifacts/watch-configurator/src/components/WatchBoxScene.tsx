@@ -3,7 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment, OrbitControls, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { useSpring } from '@react-spring/three';
-import { MiniWatch } from '@/components/WatchMiniCanvas';
+import { WatchCardModel } from '@/components/WatchMiniCanvas';
 import type { ExtendedConfigState } from '@/hooks/use-watch-config';
 // NOTE: useSpring from @react-spring/three is still used for GiftRibbon/Box3D lid,
 // but WatchInBox intentionally avoids it (spring scale never fires in a second Canvas).
@@ -259,15 +259,17 @@ function WatchInBox({ config, visible }: { config: ExtendedConfigState; visible:
   return (
     /*
       Always rendered (no visibility gate) so useFrame runs every frame.
-      Face-up: MiniWatch face-normal = +Z. Rotate -π/2 around X → face points +Y (up).
-      Extra +0.28 rad tilt so camera (above) can see the face.
+      Face-up: WatchCardModel face-normal = +Z. Rotate -π/2 around X → face points +Y (up).
+      WatchCardModel internal group starts at rotation-x=-0.32 when paused, so we
+      compensate with +0.32 here so the face ends up exactly horizontal (+slight tilt
+      toward camera for visibility).
     */
     <group
       ref={groupRef}
       position={[0, WATCH_Y, 0]}
-      rotation={[-Math.PI / 2 + 0.28, 0, 0]}
+      rotation={[-Math.PI / 2 + 0.32, 0, 0]}
     >
-      <MiniWatch
+      <WatchCardModel
         watchfaceGeometry={config.watchfaceGeometry ?? 'circle'}
         watchfaceColor={config.watchfaceColor ?? '#C0C0C0'}
         braceletColor={config.braceletColor ?? '#888888'}
