@@ -9,8 +9,8 @@ import { TgStar } from '@/components/TgStar';
 const WatchBoxScene = lazy(() => import('@/components/WatchBoxScene'));
 
 const BRACELET_PRICES: Record<string, number> = {
-  plastic_solid: 0, plastic_segmented: 1, metal_solid: 3, metal_segmented: 4,
-  resin: 2, leather: 3, cotton_fabric: 1,
+  plastic_solid: 0, plastic_segmented: 100, metal_solid: 300, metal_segmented: 400,
+  resin: 200, leather: 300, cotton_fabric: 100,
 };
 
 

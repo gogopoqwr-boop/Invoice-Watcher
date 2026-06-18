@@ -13,9 +13,9 @@ import { cn } from '@/lib/utils';
 import { TgStar } from '@/components/TgStar';
 
 const BRACELET_PRICES: Record<string, number> = {
-  plastic_solid: 0, plastic_segmented: 1,
-  metal_solid: 3,   metal_segmented: 4,
-  resin: 2, leather: 3, cotton_fabric: 1,
+  plastic_solid: 0, plastic_segmented: 100,
+  metal_solid: 300, metal_segmented: 400,
+  resin: 200, leather: 300, cotton_fabric: 100,
 };
 
 function isWebGLAvailable(): boolean {
@@ -173,7 +173,7 @@ export default function Configure() {
     const originalBracket = config.presetBraceletMaterial ?? config.braceletMaterial ?? 'metal_solid';
     const delta = (BRACELET_PRICES[config.braceletMaterial ?? 'metal_solid'] ?? 0)
                 - (BRACELET_PRICES[originalBracket] ?? 0);
-    return Math.min(50, Math.max(1, base + delta));
+    return Math.max(1, base + delta);
   }, [config.priceStars, config.presetBraceletMaterial, config.braceletMaterial]);
 
   const handleProceedToBox = () => setLocation('/box');
