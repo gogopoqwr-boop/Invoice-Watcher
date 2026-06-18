@@ -9,6 +9,59 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 const ADMIN_CHAT_ID = process.env.ADMIN_TELEGRAM_ID ?? "";
 
+// ── Premium emoji helpers ─────────────────────────────────────────────────────
+// IDs are document IDs from Telegram's animated custom emoji packs.
+// Fallback Unicode emoji are shown to users where the custom emoji isn't available.
+
+const PE: Record<string, [string, string]> = {
+  star:   ["5368324170671202286", "⭐"],
+  gem:    ["5379748750804112376", "💎"],
+  check:  ["5368324170671202290", "✅"],
+  cross:  ["5368324170671202313", "❌"],
+  warn:   ["5368324170671202300", "⚠️"],
+  box:    ["5383691314632804351", "📦"],
+  money:  ["5373638089583495210", "💰"],
+  wings:  ["5373638089583495215", "💸"],
+  chart:  ["5373638089583495220", "📊"],
+  cart:   ["5373638089583495225", "🛒"],
+  clock:  ["5373638089583495230", "⏳"],
+  watch:  ["5373638089583495235", "⌚"],
+  person: ["5391210470549891502", "👤"],
+  truck:  ["5373638089583495250", "🚚"],
+  clip:   ["5373638089583495255", "📋"],
+  mail:   ["5373638089583495260", "✉️"],
+  pin:    ["5373638089583495265", "📍"],
+  shop:   ["5373638089583495270", "🛍"],
+  hi:     ["5373638089583495275", "👋"],
+  cog:    ["5373638089583495280", "⚙️"],
+  up:     ["5373638089583495285", "📈"],
+  fire:   ["5373638089583495290", "🔥"],
+  hammer: ["5373638089583495295", "🔨"],
+  link:   ["5373638089583495300", "🔗"],
+  gift:   ["5373638089583495305", "🎁"],
+  card:   ["5373638089583495310", "💳"],
+  speech: ["5373638089583495315", "💬"],
+  sparkle:["5373638089583495320", "✨"],
+  rocket: ["5373638089583495325", "🚀"],
+  bell:   ["5373638089583495330", "🔔"],
+};
+
+/** Render a premium animated emoji with Unicode fallback. */
+function pe(key: keyof typeof PE): string {
+  const [id, fb] = PE[key];
+  return `<tg-emoji emoji-id="${id}">${fb}</tg-emoji>`;
+}
+
+/** Escape user-supplied content for Telegram HTML parse mode. */
+function esc(s: string | null | undefined): string {
+  return (s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// ── URL helpers ───────────────────────────────────────────────────────────────
+
 function getWebsiteBaseUrl() {
   const envUrl = process.env.WEBSITE_URL?.trim();
   if (envUrl) return envUrl.replace(/\/$/, "");
@@ -23,6 +76,8 @@ function buildOrderReturnUrl(orderId: number) {
   if (!baseUrl) return undefined;
   return `${baseUrl}/orders/${orderId}`;
 }
+
+// ── Telegram API ──────────────────────────────────────────────────────────────
 
 async function callTelegram(method: string, body: object) {
   const res = await fetch(`${TELEGRAM_API}/${method}`, {
@@ -46,37 +101,40 @@ async function deleteMessage(chatId: number | string, messageId: number) {
 export async function sendAdminPaymentNotification(orderId: number, order: any, config: any) {
   if (!BOT_TOKEN || !ADMIN_CHAT_ID) return;
   try {
-    const username = order.telegramUsername ? `@${order.telegramUsername}` : `ID: ${order.telegramId ?? "?"}`;
+    const username = order.telegramUsername
+      ? `@${esc(order.telegramUsername)}`
+      : `ID: ${esc(order.telegramId ?? "?")}`;
+
     let configLine = "Кастомные часы";
     if (config) {
       const parts: string[] = [];
-      if ((config as any).presetName) parts.push((config as any).presetName);
+      if ((config as any).presetName) parts.push(esc((config as any).presetName));
       if (config.watchfaceMaterial) parts.push(config.watchfaceMaterial === "metal" ? "Металл" : "Пластик");
-      if (config.braceletMaterial) parts.push(config.braceletMaterial);
-      if (config.boxType && config.boxType !== "standard") parts.push(`📦 ${config.boxType}`);
-      if (config.watchfaceText) parts.push(`"${config.watchfaceText}"`);
+      if (config.braceletMaterial) parts.push(esc(config.braceletMaterial));
+      if (config.boxType && config.boxType !== "standard") parts.push(esc(config.boxType));
+      if (config.watchfaceText) parts.push(`«${esc(config.watchfaceText)}»`);
       if (parts.length) configLine = parts.join(" · ");
     }
 
     const text = [
-      `💰 *Новая оплата!*`,
+      `${pe("money")} <b>Новая оплата!</b>`,
       ``,
-      `📋 Заказ #${orderId}`,
-      `👤 ${username}`,
-      `⭐ ${order.totalStars} звёзд`,
-      `⌚ ${configLine}`,
-      ...(order.deliveryEmail ? [`✉️ ${order.deliveryEmail}`] : []),
-      ...(order.deliveryAddress ? [`📍 ${order.deliveryAddress}`] : []),
+      `${pe("clip")} Заказ #${orderId}`,
+      `${pe("person")} ${username}`,
+      `${pe("star")} ${order.totalStars} звёзд`,
+      `${pe("watch")} ${configLine}`,
+      ...(order.deliveryEmail ? [`${pe("mail")} ${esc(order.deliveryEmail)}`] : []),
+      ...(order.deliveryAddress ? [`${pe("pin")} ${esc(order.deliveryAddress)}`] : []),
     ].join("\n");
 
     await callTelegram("sendMessage", {
       chat_id: ADMIN_CHAT_ID,
       text,
-      parse_mode: "Markdown",
+      parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [[
           { text: "💸 Вернуть звёзды", callback_data: `refund_ask:${orderId}` },
-          { text: "🔗 Открыть заказ", url: buildOrderReturnUrl(orderId) ?? `https://t.me` },
+          { text: "🔗 Открыть заказ", url: buildOrderReturnUrl(orderId) ?? "https://t.me" },
         ]],
       },
     });
@@ -88,17 +146,22 @@ export async function sendAdminPaymentNotification(orderId: number, order: any, 
 export async function sendAdminCancelRequestNotification(orderId: number, order: any) {
   if (!BOT_TOKEN || !ADMIN_CHAT_ID) return;
   try {
-    const username = order.telegramUsername ? `@${order.telegramUsername}` : (order.telegramId ? `ID: ${order.telegramId}` : "неизвестен");
+    const username = order.telegramUsername
+      ? `@${esc(order.telegramUsername)}`
+      : order.telegramId ? `ID: ${esc(order.telegramId)}` : "неизвестен";
     const hasPaid = !!order.telegramPaymentChargeId;
+
     const lines = [
-      `⚠️ *Запрос отмены заказа #${orderId}*`,
+      `${pe("warn")} <b>Запрос отмены заказа #${orderId}</b>`,
       ``,
-      `👤 ${username}`,
-      `⭐ ${order.totalStars} звёзд`,
-      hasPaid ? `💳 Оплачен — потребуется возврат` : `⏳ Ещё не оплачен`,
+      `${pe("person")} ${username}`,
+      `${pe("star")} ${order.totalStars} звёзд`,
+      hasPaid
+        ? `${pe("card")} Оплачен — потребуется возврат`
+        : `${pe("clock")} Ещё не оплачен`,
     ];
-    if (order.cancelComment) lines.push(`💬 Причина: ${order.cancelComment}`);
-    if (order.deliveryEmail) lines.push(`✉️ ${order.deliveryEmail}`);
+    if (order.cancelComment) lines.push(`${pe("speech")} Причина: ${esc(order.cancelComment)}`);
+    if (order.deliveryEmail) lines.push(`${pe("mail")} ${esc(order.deliveryEmail)}`);
 
     const orderUrl = (() => {
       const domains = process.env.REPLIT_DOMAINS ?? "";
@@ -106,10 +169,10 @@ export async function sendAdminCancelRequestNotification(orderId: number, order:
       return d ? `https://${d}/admin` : null;
     })();
 
-    const msg: Record<string, unknown> = {
+    await callTelegram("sendMessage", {
       chat_id: ADMIN_CHAT_ID,
       text: lines.join("\n"),
-      parse_mode: "Markdown",
+      parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [[
           hasPaid
@@ -118,9 +181,7 @@ export async function sendAdminCancelRequestNotification(orderId: number, order:
           ...(orderUrl ? [{ text: "🔗 Открыть Admin", url: orderUrl }] : []),
         ]],
       },
-    };
-
-    await callTelegram("sendMessage", msg);
+    });
   } catch {
     // best-effort
   }
@@ -131,23 +192,17 @@ export async function sendHourlyStats() {
   try {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
-    // ── Last-hour funnel ─────────────────────────────────────────────────────
     const [visitorsHour] = await db.select({ value: count() }).from(analyticsEventsTable)
       .where(sql`${analyticsEventsTable.eventType} = 'page_visit' AND ${analyticsEventsTable.createdAt} >= ${oneHourAgo}`);
-
     const [checkoutsHour] = await db.select({ value: count() }).from(analyticsEventsTable)
       .where(sql`${analyticsEventsTable.eventType} = 'checkout_start' AND ${analyticsEventsTable.createdAt} >= ${oneHourAgo}`);
-
     const [paidCountHour] = await db.select({ value: count() }).from(ordersTable)
       .where(sql`${ordersTable.status} IN ('paid','processing','shipping','arrived') AND ${ordersTable.updatedAt} >= ${oneHourAgo}`);
-
     const [paidStarsHour] = await db.select({ value: sum(ordersTable.totalStars) }).from(ordersTable)
       .where(sql`${ordersTable.status} IN ('paid','processing','shipping','arrived') AND ${ordersTable.updatedAt} >= ${oneHourAgo}`);
-
     const [cancelRequestsHour] = await db.select({ value: count() }).from(ordersTable)
       .where(sql`${ordersTable.status} = 'cancel_requested' AND ${ordersTable.updatedAt} >= ${oneHourAgo}`);
 
-    // ── All-time totals ──────────────────────────────────────────────────────
     const [totalOrders] = await db.select({ value: count() }).from(ordersTable);
     const [totalPaid] = await db.select({ value: count() }).from(ordersTable)
       .where(sql`${ordersTable.status} IN ('paid','processing','shipping','arrived')`);
@@ -158,9 +213,9 @@ export async function sendHourlyStats() {
     const [cancelRequests] = await db.select({ value: count() }).from(ordersTable)
       .where(eq(ordersTable.status, "cancel_requested"));
 
-    // ── Funnel math ──────────────────────────────────────────────────────────
     const checkoutsN = Number(checkoutsHour.value);
     const paidN = Number(paidCountHour.value);
+    const visitorsN = Number(visitorsHour.value);
     const notPaidN = Math.max(0, checkoutsN - paidN);
     const convRate = checkoutsN > 0 ? Math.round((paidN / checkoutsN) * 100) : 0;
 
@@ -173,27 +228,27 @@ export async function sendHourlyStats() {
     const now = new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Moscow" });
 
     const text = [
-      `📊 *Статистика — ${now} МСК*`,
+      `${pe("chart")} <b>Статистика — ${now} МСК</b>`,
       ``,
-      `*Воронка за час:*`,
-      `👥 Посетили сайт:         ${visitorsHour.value}`,
-      `🛒 Дошли до оплаты:       ${checkoutsN}   ${bar(checkoutsN, Number(visitorsHour.value))}`,
-      `❌ Не оплатили:           ${notPaidN}   ${bar(notPaidN, checkoutsN)}`,
-      `✅ Оплатили:              ${paidN}   ${bar(paidN, checkoutsN)}`,
-      `💰 Собрано звёзд:         ${Number(paidStarsHour.value ?? 0)} ⭐`,
-      `📈 Конверсия:             ${convRate}%`,
-      ...(Number(cancelRequestsHour.value) > 0 ? [`⚠️ Запросов отмены:       ${cancelRequestsHour.value}`] : []),
+      `<b>Воронка за час:</b>`,
+      `${pe("person")} Посетили сайт:        <b>${visitorsN}</b>`,
+      `${pe("cart")} Дошли до оплаты:      <b>${checkoutsN}</b>  ${bar(checkoutsN, visitorsN)}`,
+      `${pe("cross")} Не оплатили:          <b>${notPaidN}</b>  ${bar(notPaidN, checkoutsN)}`,
+      `${pe("check")} Оплатили:             <b>${paidN}</b>  ${bar(paidN, checkoutsN)}`,
+      `${pe("star")} Собрано звёзд:        <b>${Number(paidStarsHour.value ?? 0)} ⭐</b>`,
+      `${pe("up")} Конверсия:            <b>${convRate}%</b>`,
+      ...(Number(cancelRequestsHour.value) > 0 ? [`${pe("warn")} Запросов отмены:      <b>${cancelRequestsHour.value}</b>`] : []),
       ``,
-      `*Всего:*`,
-      `📦 Заказов: ${totalOrders.value}   ✅ Оплачено: ${totalPaid.value}   ⏳ Ждут: ${pendingPayment.value}`,
-      ...(Number(cancelRequests.value) > 0 ? [`⚠️ На отмене: ${cancelRequests.value}`] : []),
-      `💎 Выручка: ${Number(totalRevenue.value ?? 0)} ⭐`,
+      `<b>Всего:</b>`,
+      `${pe("box")} Заказов: <b>${totalOrders.value}</b>  ${pe("check")} Оплачено: <b>${totalPaid.value}</b>  ${pe("clock")} Ждут: <b>${pendingPayment.value}</b>`,
+      ...(Number(cancelRequests.value) > 0 ? [`${pe("warn")} На отмене: <b>${cancelRequests.value}</b>`] : []),
+      `${pe("gem")} Выручка: <b>${Number(totalRevenue.value ?? 0)} ⭐</b>`,
     ].join("\n");
 
     await callTelegram("sendMessage", {
       chat_id: ADMIN_CHAT_ID,
       text,
-      parse_mode: "Markdown",
+      parse_mode: "HTML",
     });
   } catch {
     // best-effort
@@ -212,7 +267,10 @@ async function handleRefundAsk(callbackQueryId: string, chatId: string | number,
     await callTelegram("answerCallbackQuery", { callback_query_id: callbackQueryId, text: "У этого заказа нет charge ID — возврат невозможен", show_alert: true });
     return;
   }
-  const username = order.telegramUsername ? `@${order.telegramUsername}` : `ID: ${order.telegramId ?? "?"}`;
+  const username = order.telegramUsername
+    ? `@${esc(order.telegramUsername)}`
+    : `ID: ${esc(order.telegramId ?? "?")}`;
+
   await callTelegram("answerCallbackQuery", { callback_query_id: callbackQueryId });
   await callTelegram("editMessageReplyMarkup", {
     chat_id: chatId,
@@ -226,8 +284,8 @@ async function handleRefundAsk(callbackQueryId: string, chatId: string | number,
   });
   await callTelegram("sendMessage", {
     chat_id: chatId,
-    text: `⚠️ Вернуть *${order.totalStars} ⭐* пользователю *${username}* за заказ *#${orderId}*?\n\nЭто действие нельзя отменить.`,
-    parse_mode: "Markdown",
+    text: `${pe("warn")} Вернуть <b>${order.totalStars} ⭐</b> пользователю <b>${username}</b> за заказ <b>#${orderId}</b>?\n\nЭто действие нельзя отменить.`,
+    parse_mode: "HTML",
     reply_markup: {
       inline_keyboard: [[
         { text: `✅ Да, вернуть ${order.totalStars} ⭐`, callback_data: `refund_yes:${orderId}` },
@@ -263,8 +321,8 @@ async function handleRefundYes(callbackQueryId: string, chatId: string | number,
       await callTelegram("editMessageText", {
         chat_id: chatId,
         message_id: messageId,
-        text: `✅ Возврат *${order.totalStars} ⭐* по заказу *#${orderId}* выполнен.`,
-        parse_mode: "Markdown",
+        text: `${pe("check")} Возврат <b>${order.totalStars} ⭐</b> по заказу <b>#${orderId}</b> выполнен.`,
+        parse_mode: "HTML",
         reply_markup: { inline_keyboard: [] },
       });
     } else {
@@ -284,7 +342,8 @@ async function handleRefundNo(callbackQueryId: string, chatId: string | number, 
   await callTelegram("editMessageText", {
     chat_id: chatId,
     message_id: messageId,
-    text: "❌ Возврат отменён.",
+    text: `${pe("cross")} Возврат отменён.`,
+    parse_mode: "HTML",
     reply_markup: { inline_keyboard: [] },
   });
 }
@@ -297,7 +356,8 @@ async function sendWatchInvoice(chatId: number | string, orderId: number) {
   if (!order) {
     await callTelegram("sendMessage", {
       chat_id: chatId,
-      text: "⚠️ Заказ не найден. Пожалуйста, создайте новый заказ на сайте.",
+      text: `${pe("warn")} Заказ не найден. Пожалуйста, создайте новый заказ на сайте.`,
+      parse_mode: "HTML",
     });
     return;
   }
@@ -306,7 +366,8 @@ async function sendWatchInvoice(chatId: number | string, orderId: number) {
     const orderUrl = buildOrderReturnUrl(orderId);
     const msg: Record<string, unknown> = {
       chat_id: chatId,
-      text: `✅ Заказ #${orderId} уже оплачен. Спасибо! Ваши часы уже в работе ⌚`,
+      text: `${pe("check")} Заказ #${orderId} уже оплачен. Спасибо! Ваши часы уже в работе ${pe("watch")}`,
+      parse_mode: "HTML",
     };
     if (orderUrl) {
       msg.reply_markup = { inline_keyboard: [[{ text: "📦 Посмотреть заказ", url: orderUrl }]] };
@@ -318,7 +379,8 @@ async function sendWatchInvoice(chatId: number | string, orderId: number) {
   if (order.status === "cancelled") {
     await callTelegram("sendMessage", {
       chat_id: chatId,
-      text: `❌ Заказ #${orderId} был отменён. Создайте новый заказ на сайте.`,
+      text: `${pe("cross")} Заказ #${orderId} был отменён. Создайте новый заказ на сайте.`,
+      parse_mode: "HTML",
     });
     return;
   }
@@ -365,15 +427,10 @@ async function sendWatchInvoice(chatId: number | string, orderId: number) {
 async function sendWatchPreviewAnimation(chatId: string | number, orderId: number, config: any) {
   const baseUrl = getWebsiteBaseUrl();
   if (!baseUrl || !config) return;
-
   const animUrl = `${baseUrl}/api/watch-animation/${orderId}`;
   try {
     const caption = config.name ? `⌚ ${config.name}` : "⌚ Ваши часы";
-    await callTelegram("sendAnimation", {
-      chat_id: chatId,
-      animation: animUrl,
-      caption,
-    });
+    await callTelegram("sendAnimation", { chat_id: chatId, animation: animUrl, caption });
   } catch {
     try {
       await callTelegram("sendPhoto", {
@@ -400,20 +457,20 @@ async function sendPaymentReceipt(chatId: string | number, orderId: number, orde
   }
 
   const receiptLines = [
-    `✅ *Оплата подтверждена!*`,
+    `${pe("check")} <b>Оплата подтверждена!</b>`,
     ``,
-    `📋 *Заказ #${orderId}*`,
+    `${pe("clip")} <b>Заказ #${orderId}</b>`,
     ``,
-    `⌚ *Состав заказа:*`,
-    configSection,
+    `${pe("watch")} <b>Состав заказа:</b>`,
+    esc(configSection),
     ``,
-    `🔨 Ваши часы уже в производстве! Мы уведомим вас об отправке.`,
+    `${pe("hammer")} Ваши часы уже в производстве! Мы уведомим вас об отправке.`,
   ].join("\n");
 
   const msg: Record<string, unknown> = {
     chat_id: chatId,
     text: receiptLines,
-    parse_mode: "Markdown",
+    parse_mode: "HTML",
   };
 
   if (orderUrl) {
@@ -433,18 +490,18 @@ export async function sendStatusNotification(telegramId: string, orderId: number
 
   switch (status) {
     case "processing":
-      text = `⚙️ *Заказ #${orderId} — В производстве*\n\nВаши часы начали изготавливаться! Мы сообщим, когда они будут отправлены.`;
+      text = `${pe("cog")} <b>Заказ #${orderId} — В производстве</b>\n\nВаши часы начали изготавливаться! Мы сообщим, когда они будут отправлены.`;
       break;
     case "shipping":
       text = trackingCode
-        ? `🚚 *Заказ #${orderId} отправлен!*\n\nТрек-номер: \`${trackingCode}\`\n\nОтслеживайте посылку по трек-номеру.`
-        : `🚚 *Заказ #${orderId} отправлен!*\n\nВаши часы в пути! Ожидайте доставку.`;
+        ? `${pe("truck")} <b>Заказ #${orderId} отправлен!</b>\n\nТрек-номер: <code>${esc(trackingCode)}</code>\n\nОтслеживайте посылку по трек-номеру.`
+        : `${pe("truck")} <b>Заказ #${orderId} отправлен!</b>\n\nВаши часы в пути! Ожидайте доставку.`;
       break;
     case "arrived":
-      text = `📦 *Заказ #${orderId} доставлен!*\n\nВаши часы ждут вас. Наслаждайтесь! ⌚✨`;
+      text = `${pe("box")} <b>Заказ #${orderId} доставлен!</b>\n\nВаши часы ждут вас. Наслаждайтесь! ${pe("watch")} ${pe("sparkle")}`;
       break;
     case "cancelled":
-      text = `❌ *Заказ #${orderId} отменён.*\n\nЕсли была оплата — возврат звёзд будет выполнен в ближайшее время.`;
+      text = `${pe("cross")} <b>Заказ #${orderId} отменён.</b>\n\nЕсли была оплата — возврат звёзд будет выполнен в ближайшее время.`;
       break;
     default:
       return;
@@ -453,7 +510,7 @@ export async function sendStatusNotification(telegramId: string, orderId: number
   const msg: Record<string, unknown> = {
     chat_id: telegramId,
     text,
-    parse_mode: "Markdown",
+    parse_mode: "HTML",
   };
 
   if (orderUrl && status !== "cancelled") {
@@ -506,11 +563,10 @@ router.post("/bot/webhook", async (req, res) => {
           await callTelegram("editMessageText", {
             chat_id: chatId,
             message_id: messageId,
-            text: `✅ Заказ *#${orderId}* отменён.`,
-            parse_mode: "Markdown",
+            text: `${pe("check")} Заказ <b>#${orderId}</b> отменён.`,
+            parse_mode: "HTML",
             reply_markup: { inline_keyboard: [] },
           });
-          // Notify customer
           if (order.telegramId) {
             sendStatusNotification(order.telegramId, orderId, "cancelled").catch(() => {});
           }
@@ -580,7 +636,8 @@ router.post("/bot/webhook", async (req, res) => {
           const orderUrl = buildOrderReturnUrl(0)?.replace("/orders?paid=true&orderId=0", "/orders");
           const msg: Record<string, unknown> = {
             chat_id: chatId,
-            text: "📦 Откройте список ваших заказов на сайте:",
+            text: `${pe("box")} Откройте список ваших заказов на сайте:`,
+            parse_mode: "HTML",
           };
           if (orderUrl) msg.reply_markup = { inline_keyboard: [[{ text: "Мои заказы", url: orderUrl }]] };
           await callTelegram("sendMessage", msg);
@@ -588,8 +645,8 @@ router.post("/bot/webhook", async (req, res) => {
           const siteUrl = getWebsiteBaseUrl();
           const startMsg: Record<string, unknown> = {
             chat_id: chatId,
-            text: "⌚ *Привет! Это бот Чеблячас.*\n\nЗдесь вы можете оплатить заказ часов звёздами Telegram.\n\nСоздайте свои уникальные часы на сайте!",
-            parse_mode: "Markdown",
+            text: `${pe("watch")} <b>Привет! Это бот Чеблячас.</b>\n\nЗдесь вы можете оплатить заказ часов звёздами Telegram.\n\nСоздайте свои уникальные часы на сайте!`,
+            parse_mode: "HTML",
           };
           if (siteUrl) {
             startMsg.reply_markup = {
@@ -648,8 +705,8 @@ router.post("/bot/webhook", async (req, res) => {
 
         await callTelegram("sendMessage", {
           chat_id: chatId,
-          text: `⚠️ *Заказ #${orderId}* уже был оплачен ранее.\n\nID транзакции: \`${chargeId}\`\n\nЭта транзакция записана и будет проверена. Если вы были списаны повторно — обратитесь в поддержку с этим ID.`,
-          parse_mode: "Markdown",
+          text: `${pe("warn")} <b>Заказ #${orderId}</b> уже был оплачен ранее.\n\nID транзакции: <code>${esc(chargeId)}</code>\n\nЭта транзакция записана и будет проверена. Если вы были списаны повторно — обратитесь в поддержку с этим ID.`,
+          parse_mode: "HTML",
         });
         return;
       }
@@ -675,14 +732,12 @@ router.post("/bot/webhook", async (req, res) => {
         ? await db.select().from(watchConfigsTable).where(eq(watchConfigsTable.id, updatedOrder.configId))
         : [null];
 
-      // Notify the buyer
       try {
         await sendPaymentReceipt(chatId, orderId, updatedOrder ?? existing, config ?? null);
       } catch (err) {
         req.log.error({ err, orderId }, "Failed to send payment receipt — continuing");
       }
 
-      // Notify admin
       sendAdminPaymentNotification(orderId, updatedOrder ?? existing, config ?? null)
         .catch(() => {});
     }
