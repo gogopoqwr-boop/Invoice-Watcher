@@ -1,161 +1,255 @@
-# Чеблячас — Watch Configurator
+# НА_УТРАХ_4 — Watch Configurator
 
-A full-stack 3D watch configurator. Users design a custom watch, pay via Telegram Stars, and track their order.
+A full-stack 3D watch configurator. Users design a custom watch, pay via Telegram Stars, and track their order through fulfillment.
+
+→ **[Architecture & Stack](docs/architecture.md)**  
+→ **[3D Models & Rendering](docs/3d-models.md)**  
+→ **[Payment System](docs/payment.md)**  
+→ **[Orders & Tracking](docs/orders.md)**  
+→ **[Admin Panel & Analytics](docs/admin-panel.md)**
 
 ---
 
-## Prerequisites
+## Requirements
 
-- **Node.js 20+**
-- **pnpm** (`npm install -g pnpm`)
-- **PostgreSQL** database (Replit provides one automatically via the Database tab)
+| Tool | Minimum version |
+|------|----------------|
+| Node.js | 24.x |
+| pnpm | 9.x |
+| PostgreSQL | 15+ |
+
+Install pnpm globally if you don't have it:
+
+```bash
+npm install -g pnpm@latest
+```
 
 ---
 
 ## Environment Variables
 
-Set these in Replit's **Secrets** tab (or your `.env` locally):
+Create a `.env` file in the repo root (or set these as Secrets in your deployment platform). All variables are required for production.
 
-| Variable | Required | Description |
-|---|---|---|
-| `DATABASE_URL` | Yes | PostgreSQL connection string (auto-set by Replit DB) |
-| `JWT_SECRET` | Yes | Any long random string, used to sign admin JWT tokens |
-| `TELEGRAM_BOT_TOKEN` | Yes | Bot token from [@BotFather](https://t.me/BotFather) |
-| `TELEGRAM_BOT_USERNAME` | Yes | Your bot's username without `@` (e.g. `cheblyachas_bot`) |
-| `VITE_TELEGRAM_BOT_USERNAME` | Yes | Same as above — exposed to the frontend |
+```env
+# PostgreSQL connection string — Replit provides this automatically
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+
+# Secret for signing admin/courier JWTs — use a long random string
+JWT_SECRET=replace-with-64-random-chars
+
+# Telegram bot token from @BotFather
+TELEGRAM_BOT_TOKEN=123456789:AABBCCDDEEFFaabbccddeeff
+
+# Telegram bot username without @ — used to build deep links
+TELEGRAM_BOT_USERNAME=your_bot_username
+
+# Same username exposed to the Vite frontend build
+VITE_TELEGRAM_BOT_USERNAME=your_bot_username
+
+# Public URL of the frontend — used in bot messages and QR codes
+WEBSITE_URL=https://your-app.replit.app
+
+# Port for the API server (default 8080)
+PORT=8080
+
+# Set to "production" for deployed instances
+NODE_ENV=production
+```
+
+> On Replit: `DATABASE_URL` is provisioned automatically. `JWT_SECRET` and `TELEGRAM_BOT_TOKEN` are set via the Secrets tab. `REPLIT_DOMAINS` is injected at runtime so the server can auto-detect its public URL for the Telegram webhook.
 
 ---
 
-## Local / Dev Setup
+## First-time Setup
 
-### 1. Install dependencies
+Run all of these in order from the repo root.
+
+### 1. Install all workspace dependencies
 
 ```bash
 pnpm install
 ```
 
-### 2. Set up the database schema
+Installs dependencies for every package in the monorepo in a single pass.
+
+### 2. Push the database schema
 
 ```bash
 pnpm --filter @workspace/db run push
 ```
 
-This applies the Drizzle ORM schema to your PostgreSQL database. The API server automatically seeds presets and admin users on first start.
+Runs `drizzle-kit push` against `DATABASE_URL` and creates all tables. Safe to run multiple times — additive only in development.
 
-### 3. Start the dev servers
-
-Run both servers in separate terminals (or use the Replit workflow buttons):
+### 3. Seed initial data
 
 ```bash
-# Terminal 1 — API server (port 8080)
-PORT=8080 pnpm --filter @workspace/api-server run dev
-
-# Terminal 2 — Frontend (port 5000)
-PORT=5000 BASE_PATH=/ pnpm --filter @workspace/watch-configurator run dev
+pnpm --filter @workspace/scripts run seed
 ```
 
-The frontend proxies `/api/*` requests to `localhost:8080` automatically.
+Inserts:
+- **6 watch presets** — Midnight Steel, Arctic Frost, Crimson Core, Carbon Ghost, Gold Rush, Ocean Drive
+- **Admin user** — `admin` / `FutureAfterWatch3s` (role: admin)
+- **Courier user** — `courier1` / `courier123` (role: courier)
+- **150 sample analytics events**
 
-Open `http://localhost:5000` in your browser.
+> **Change the default passwords immediately on any public deployment.**
 
-### Default admin credentials (auto-seeded)
+### 4. Regenerate the API client (only needed after spec changes)
 
-| Username | Password | Role |
-|---|---|---|
-| `admin` | `FutureAfterWatch3s` | Admin |
-| `courier1` | `courier123` | Courier |
+The generated hooks and Zod validators are checked in, so this step is only required after editing `lib/api-spec/openapi.yaml`:
+
+```bash
+pnpm --filter @workspace/api-spec run codegen
+```
 
 ---
 
-## Other Useful Commands
+## Running in Development
+
+Start both services. Each needs its own terminal (or Replit workflow):
 
 ```bash
-# Full typecheck across all packages
-pnpm run typecheck
+# API server — port 8080
+PORT=8080 pnpm --filter @workspace/api-server run dev
 
-# Build all packages
-pnpm run build
-
-# Regenerate API client hooks + Zod validators from OpenAPI spec
-# Run this after any change to lib/api-spec/openapi.yaml
-pnpm --filter @workspace/api-spec run codegen
-
-# Push DB schema changes after editing lib/db/src/schema.ts
-pnpm --filter @workspace/db run push
+# Frontend — port 5000
+PORT=5000 BASE_PATH=/ pnpm --filter @workspace/watch-configurator run dev
 ```
+
+The frontend Vite config proxies `/api/*` to `localhost:8080`, so there are no CORS issues in dev.
+
+The API server rebuilds on every file change via `esbuild`. The frontend uses Vite HMR.
+
+---
+
+## Building for Production
+
+```bash
+pnpm run build
+```
+
+This runs TypeScript typecheck across all packages, then builds:
+
+| Package | Output |
+|---------|--------|
+| `@workspace/api-server` | `artifacts/api-server/dist/index.cjs` (esbuild CJS bundle) |
+| `@workspace/watch-configurator` | `artifacts/watch-configurator/dist/` (static SPA) |
+
+### Start the production API server
+
+```bash
+NODE_ENV=production PORT=8080 pnpm --filter @workspace/api-server run start
+```
+
+### Serve the frontend
+
+The built frontend is a static SPA. Serve the `artifacts/watch-configurator/dist/` directory from any static host. On Replit, the deploy pipeline handles this automatically.
+
+---
+
+## Common Commands
+
+| Command | What it does |
+|---------|-------------|
+| `pnpm install` | Install all workspace dependencies |
+| `pnpm --filter @workspace/db run push` | Apply DB schema changes to PostgreSQL |
+| `pnpm --filter @workspace/scripts run seed` | Seed presets, admin users, analytics |
+| `pnpm --filter @workspace/api-spec run codegen` | Regenerate API hooks + Zod schemas from OpenAPI spec |
+| `pnpm --filter @workspace/api-server run dev` | Start API server in dev mode (port 8080) |
+| `pnpm --filter @workspace/watch-configurator run dev` | Start frontend in dev mode |
+| `pnpm run typecheck` | Full TypeScript check across all packages |
+| `pnpm run build` | Typecheck + build all packages |
 
 ---
 
 ## Project Structure
 
 ```
-/
-├── lib/
-│   ├── api-spec/openapi.yaml       # API contract — source of truth
-│   ├── api-client-react/           # Generated TanStack Query hooks (don't edit)
-│   ├── api-zod/                    # Generated Zod validators (don't edit)
-│   └── db/src/schema/             # Drizzle ORM schema
+.
+├── artifacts/
+│   ├── api-server/                    # Express 5 API server
+│   │   └── src/
+│   │       ├── index.ts               # Entry: registers Telegram webhook, starts expiration worker
+│   │       └── routes/
+│   │           ├── auth.ts            # POST /auth/login, GET /auth/me
+│   │           ├── presets.ts         # GET/POST/PATCH/DELETE /presets
+│   │           ├── configurations.ts  # POST /configurations
+│   │           ├── orders.ts          # GET/POST /orders, PATCH /orders/:id/status
+│   │           ├── analytics.ts       # GET /analytics/summary, /analytics/time-series
+│   │           ├── admin.ts           # Admin-only routes (users, prices, presets)
+│   │           └── bot.ts             # POST /bot/webhook — Telegram bot handler
+│   │
+│   ├── watch-configurator/            # React 19 + Vite frontend
+│   │   └── src/
+│   │       ├── pages/
+│   │       │   ├── Home.tsx           # Landing — ЧАСЫ / МЕРЧ choice
+│   │       │   ├── CollectionPage.tsx # 3D preset cards per collection
+│   │       │   ├── Configure.tsx      # Full 3D configurator + step panel
+│   │       │   ├── Payment.tsx        # Telegram Stars QR + deep link
+│   │       │   ├── Orders.tsx         # Session order history
+│   │       │   ├── OrderDetail.tsx    # Single order with status timeline
+│   │       │   ├── Login.tsx          # Admin/courier login
+│   │       │   └── Admin.tsx          # Admin panel (orders + analytics)
+│   │       ├── components/
+│   │       │   ├── WatchModel.tsx     # High-fidelity R3F 3D model (configurator)
+│   │       │   ├── WatchMiniCanvas.tsx# Card-sized 3D preview with WebGL pooling
+│   │       │   ├── WatchSVG.tsx       # 2D SVG fallback when WebGL unavailable
+│   │       │   └── WatchBoxScene.tsx  # Animated gift-box scene
+│   │       └── hooks/
+│   │           ├── use-watch-config.tsx # Global configurator state (localStorage)
+│   │           └── use-auth.tsx         # JWT auth state
+│   │
+│   └── mockup-sandbox/                # Isolated component preview server (dev only)
 │
-└── artifacts/
-    ├── api-server/src/
-    │   ├── routes/                 # Express route handlers
-    │   └── lib/                    # Shared server utilities
-    └── watch-configurator/src/
-        ├── pages/                  # React pages
-        ├── components/             # WatchModel (3D), WatchSVG (fallback)
-        └── hooks/                  # use-watch-config, use-auth
+├── lib/
+│   ├── db/src/schema/                 # Drizzle ORM schema (source of truth for DB shape)
+│   │   ├── orders.ts
+│   │   ├── watchConfigs.ts
+│   │   ├── watchPresets.ts
+│   │   ├── adminUsers.ts
+│   │   ├── analyticsEvents.ts
+│   │   └── settings.ts
+│   ├── api-spec/openapi.yaml          # OpenAPI 3.1 spec — source of truth for all contracts
+│   ├── api-client-react/src/generated/# Generated TanStack Query hooks (do not edit)
+│   └── api-zod/                       # Generated Zod validators (do not edit)
+│
+└── scripts/                           # Seed script
 ```
 
 ---
 
-## Deploying to Production
+## Deploying on Replit
 
-This project is configured for **Replit Autoscale** deployment (stateless, scales with traffic).
+1. Import the repo into a Replit project
+2. Open the **Database** tab → create a PostgreSQL database → `DATABASE_URL` is injected automatically
+3. Open the **Secrets** tab → add `JWT_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `VITE_TELEGRAM_BOT_USERNAME`
+4. Run setup commands in the Shell tab:
+   ```bash
+   pnpm install
+   pnpm --filter @workspace/db run push
+   pnpm --filter @workspace/scripts run seed
+   ```
+5. Ensure two workflows are configured and running:
+   - **API Server**: `PORT=8080 pnpm --filter @workspace/api-server run dev`
+   - **Watch Configurator**: `PORT=5000 BASE_PATH=/ pnpm --filter @workspace/watch-configurator run dev`
+6. Click **Deploy → Publish** — Replit builds, hosts, and issues a TLS certificate automatically
+7. The Telegram webhook is registered automatically on first server start using `REPLIT_DOMAINS`
 
-### Step 1 — Verify the app works
-
-Make sure both workflows (`API Server` and `Watch Configurator`) are running without errors in the Replit console.
-
-### Step 2 — Check your secrets
-
-Ensure all required secrets are set in the **Secrets** tab — especially `JWT_SECRET` and `TELEGRAM_BOT_TOKEN`.
-
-### Step 3 — Publish
-
-Click the **Deploy** button (top-right in Replit) → **Publish**. Replit will:
-
-1. Run the build command (`pnpm run build`)
-2. Start the production server
-3. Issue a TLS certificate
-4. Assign a `.replit.app` domain
-
-The production run command (configured in `.replit`) starts the API server on port 8080 and serves the built frontend.
-
-### Step 4 — Register the Telegram webhook
-
-After your first deploy, the API server auto-registers the Telegram bot webhook using the `REPLIT_DOMAINS` environment variable. You can verify it worked by calling:
-
-```
-GET https://your-app.replit.app/api/bot/webhook-info
-```
-
-### Choosing a region (optional)
-
-Before your **first** publish, open the **Advanced** section of the Deploy panel to select a geographic region (EU, US, etc.). This choice is **permanent** — it cannot be changed after the first deployment. Region selection requires a Core plan or above.
-
-### Re-deploying
-
-Push your changes and click **Redeploy** in the Deploy panel. Schema changes to the database should be applied manually before redeploying:
+### Schema changes after deployment
 
 ```bash
 pnpm --filter @workspace/db run push
+# Then redeploy or restart the server
 ```
 
 ---
 
-## Architecture Notes
+## Further Reading
 
-- **Contract-first API** — edit `lib/api-spec/openapi.yaml`, then run codegen. Never write fetch calls by hand.
-- **WebGL fallback** — `WatchModel.tsx` checks for WebGL support at mount time; `WatchSVG.tsx` is shown as a fallback (Replit preview sandbox has no GPU — this is expected).
-- **Auth** — admin JWT stored in `localStorage["jwt"]`; the generated `customFetch` sends it automatically.
-- **Payments** — Telegram Stars via bot invoice API (`XTR` currency). Payment expiration worker auto-cancels unpaid orders after 10 minutes.
+| Topic | Doc |
+|-------|-----|
+| Monorepo architecture, codegen pipeline, DB schema | [docs/architecture.md](docs/architecture.md) |
+| 3D watch geometry, WebGL management, animations | [docs/3d-models.md](docs/3d-models.md) |
+| Telegram Stars payment flow, bot webhook | [docs/payment.md](docs/payment.md) |
+| Order lifecycle, status machine, tracking | [docs/orders.md](docs/orders.md) |
+| Admin panel, RBAC, couriers, analytics | [docs/admin-panel.md](docs/admin-panel.md) |
