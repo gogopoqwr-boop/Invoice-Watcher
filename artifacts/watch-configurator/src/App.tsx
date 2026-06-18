@@ -108,7 +108,7 @@ function Router() {
 
 function ThemeTogglePortal() {
   const [location] = useLocation();
-  if (location.startsWith('/collections')) return null;
+  if (location.startsWith('/collections') || location.startsWith('/preset/')) return null;
   return (
     <div className="fixed bottom-5 right-5 z-50">
       <ThemeToggle />
