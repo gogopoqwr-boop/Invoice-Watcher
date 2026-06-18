@@ -1,4 +1,4 @@
-import React, { Suspense, useState, useMemo, useRef, useEffect } from 'react';
+import React, { Suspense, useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
@@ -155,9 +155,16 @@ export default function Configure() {
 
   const activeCombo = BRACELET_COMBOS.find(c => c.id === activeComboid) ?? BRACELET_COMBOS[0];
 
+  const [showCustomColor, setShowCustomColor] = useState(false);
+
   const handleSelectCombo = (combo: typeof BRACELET_COMBOS[number]) => {
     updateConfig({ braceletColor: combo.color, braceletMaterial: combo.material });
+    setShowCustomColor(false);
   };
+
+  const handleCustomColor = useCallback((color: string) => {
+    updateConfig({ braceletColor: color });
+  }, [updateConfig]);
 
   // Price = preset base price ± bracelet material delta vs. preset default
   const livePrice = useMemo(() => {
@@ -267,7 +274,7 @@ export default function Configure() {
 
             <div className="grid grid-cols-3 gap-2">
               {BRACELET_COMBOS.map(combo => {
-                const active = activeCombo.id === combo.id;
+                const active = activeCombo.id === combo.id && !showCustomColor;
                 const originalMat = config.presetBraceletMaterial ?? config.braceletMaterial ?? 'metal_solid';
                 const delta = (BRACELET_PRICES[combo.material] ?? 0) - (BRACELET_PRICES[originalMat] ?? 0);
                 return (
@@ -281,7 +288,6 @@ export default function Configure() {
                         : 'border border-border/60 bg-card/60 hover:bg-card/80'
                     )}
                   >
-                    {/* Price delta badge */}
                     {delta !== 0 && (
                       <span className="absolute top-1.5 right-1.5 text-[9px] font-black px-1 py-0.5 rounded-full leading-none bg-muted/60 text-muted-foreground border border-border/50">
                         {delta > 0 ? `+${delta}` : delta} ★
@@ -305,7 +311,81 @@ export default function Configure() {
                   </button>
                 );
               })}
+
+              {/* Custom color swatch */}
+              <label
+                className={cn(
+                  'flex flex-col items-center gap-2 p-3 rounded-2xl transition-all duration-100 text-center cursor-pointer',
+                  showCustomColor
+                    ? 'ring-2 ring-primary bg-primary/10 shadow-sm'
+                    : 'border border-border/60 bg-card/60 hover:bg-card/80'
+                )}
+                onClick={() => setShowCustomColor(true)}
+              >
+                <div
+                  className="w-9 h-9 rounded-full border-2 shadow-sm shrink-0 flex items-center justify-center overflow-hidden"
+                  style={{
+                    background: showCustomColor
+                      ? config.braceletColor ?? '#888'
+                      : 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)',
+                    borderColor: showCustomColor ? 'var(--primary)' : 'rgba(0,0,0,0.14)',
+                  }}
+                >
+                  {!showCustomColor && (
+                    <span className="text-white text-[10px] font-black drop-shadow-md">+</span>
+                  )}
+                </div>
+                <div>
+                  <p className={cn('text-[11px] font-bold leading-tight', showCustomColor ? 'text-primary' : 'text-foreground')}>
+                    Свой цвет
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Любой</p>
+                </div>
+              </label>
             </div>
+
+            {/* Custom color picker row */}
+            {showCustomColor && (
+              <div className="mt-3 flex items-center gap-3 px-3 py-3 rounded-2xl border border-border/60 bg-card/60">
+                <label className="relative cursor-pointer shrink-0">
+                  <input
+                    type="color"
+                    value={config.braceletColor ?? '#888888'}
+                    onChange={e => handleCustomColor(e.target.value)}
+                    className="sr-only"
+                  />
+                  <div
+                    className="w-10 h-10 rounded-xl border-2 border-border/60 shadow-sm"
+                    style={{ background: config.braceletColor ?? '#888888' }}
+                  />
+                </label>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-foreground">Цвет ремешка</p>
+                  <p className="text-[10px] text-muted-foreground font-mono uppercase mt-0.5">
+                    {(config.braceletColor ?? '#888888').toUpperCase()}
+                  </p>
+                </div>
+                <div className="shrink-0 flex flex-col gap-1">
+                  <p className="text-[10px] text-muted-foreground mb-1">Материал</p>
+                  <div className="flex gap-1">
+                    {(['leather', 'cotton_fabric', 'metal_solid', 'resin'] as const).map(mat => (
+                      <button
+                        key={mat}
+                        onClick={() => updateConfig({ braceletMaterial: mat })}
+                        className={cn(
+                          'px-2 py-1 rounded-lg text-[10px] font-semibold transition-all',
+                          config.braceletMaterial === mat
+                            ? 'bg-primary text-white'
+                            : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                        )}
+                      >
+                        {MAT_LABELS[mat]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
 

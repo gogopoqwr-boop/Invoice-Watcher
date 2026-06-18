@@ -3,6 +3,7 @@ import { useParams, useLocation, Link } from 'wouter';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useListPresets, useGetMyOrders } from '@workspace/api-client-react';
 import { useWatchConfig } from '@/hooks/use-watch-config';
+import { useFavorites, useRecentlyViewed } from '@/hooks/use-favorites';
 import WatchMiniCanvas from '@/components/WatchMiniCanvas';
 import { BRACELET_COMBOS } from '@/components/WatchFullscreenViewer';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -459,6 +460,10 @@ export default function CollectionPage() {
   const hasOrders = Array.isArray(myOrders) && (myOrders as any[]).length > 0;
   const particlesRef = useParticles();
 
+  const { isFavorite, toggle: toggleFav, count: favCount } = useFavorites();
+  const { recent, addViewed } = useRecentlyViewed();
+  const [showFavs, setShowFavs] = useState(false);
+
   const [buyModal, setBuyModal] = useState<any | null>(null);
   const [buyStrapColor, setBuyStrapColor] = useState('');
   const [buyStrapMat, setBuyStrapMat] = useState('leather');
@@ -656,11 +661,13 @@ export default function CollectionPage() {
     const inv = inventory[collectionKey];
     const soldOut = inv ? inv.sold >= inv.max : false;
     const [expanding, setExpanding] = useState(false);
+    const faved = isFavorite(preset.id);
 
     const handleCardClick = (e: React.MouseEvent<HTMLButtonElement>) => {
       const root = e.currentTarget.closest('[data-card-root]') as HTMLElement | null;
       if (!root) return;
       setExpanding(true);
+      addViewed(preset.id);
       const rect = root.getBoundingClientRect();
       try {
         sessionStorage.setItem('presetOriginRect', JSON.stringify({
@@ -698,6 +705,18 @@ export default function CollectionPage() {
             style={{ background: `linear-gradient(135deg, ${preset.watchfaceColor}22, ${preset.braceletColor}18)` }}
           >
             <WatchMiniCanvas preset={preset} paused={false} forceMount />
+
+            {/* Favorite heart button */}
+            <button
+              className="absolute top-2 left-2 z-10 w-7 h-7 flex items-center justify-center rounded-full transition-all active:scale-90"
+              style={{ background: faved ? 'rgba(239,68,68,0.85)' : 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.12)' }}
+              onClick={e => { e.stopPropagation(); toggleFav(preset.id); }}
+              aria-label={faved ? 'Убрать из избранного' : 'В избранное'}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill={faved ? '#fff' : 'none'} stroke={faved ? '#fff' : 'rgba(255,255,255,0.8)'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </button>
 
             {/* Price badge */}
             {preset.priceStars != null && (
@@ -778,6 +797,22 @@ export default function CollectionPage() {
             </span>
           </Link>
           <div className="flex items-center gap-2">
+            {/* Favorites filter */}
+            <button
+              onClick={() => setShowFavs(v => !v)}
+              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-foreground/8 transition-colors relative"
+              style={{ color: showFavs ? '#ef4444' : undefined }}
+              aria-label="Избранное"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill={showFavs ? '#ef4444' : 'none'} stroke={showFavs ? '#ef4444' : 'currentColor'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground/50" aria-hidden="true">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+              {favCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full text-[8px] font-black flex items-center justify-center text-white" style={{ background: '#ef4444' }}>
+                  {favCount}
+                </span>
+              )}
+            </button>
             {/* Search icon */}
             <button
               onClick={searchOpen ? closeSearch : openSearch}
@@ -868,6 +903,52 @@ export default function CollectionPage() {
         </div>
       </div>
 
+      {/* ── Favorites overlay ── */}
+      <AnimatePresence>
+        {showFavs && (
+          <motion.div
+            key="fav-overlay"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24 }}
+            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+            className="fixed inset-0 z-40 overflow-y-auto pt-20 pb-28 px-5"
+            style={{ background: 'var(--background)' }}
+          >
+            <div className="max-w-3xl mx-auto">
+              <div className="flex items-center gap-3 mb-6">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                <h2 className="text-xl font-black tracking-tight">Избранное</h2>
+                <span className="text-sm text-muted-foreground">({favCount})</span>
+                <button
+                  onClick={() => setShowFavs(false)}
+                  className="ml-auto text-muted-foreground hover:text-foreground transition-colors text-sm font-semibold"
+                >
+                  Закрыть ×
+                </button>
+              </div>
+              {favCount === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/40 mb-4" aria-hidden="true">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                  <p className="text-muted-foreground text-sm">Нет избранных моделей</p>
+                  <p className="text-muted-foreground/60 text-xs mt-1">Нажмите ♥ на карточке, чтобы добавить</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {allPresets.filter((p: any) => isFavorite(p.id)).map((preset: any, idx: number) => (
+                    <PresetCard key={preset.id} preset={preset} idx={idx} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Content */}
       {isLoading ? (
         <div className="flex items-center justify-center h-full">
@@ -908,6 +989,41 @@ export default function CollectionPage() {
                   {group.items.length} моделей · только предзаказ
                 </p>
               </div>
+
+              {/* Recently viewed strip */}
+              {(() => {
+                const recentPresets = recent
+                  .map(id => allPresets.find((p: any) => p.id === id))
+                  .filter(Boolean)
+                  .filter((p: any) => !group.items.find((gi: any) => gi.id === p.id));
+                if (recentPresets.length === 0) return null;
+                return (
+                  <div className="flex-none px-5 pb-3">
+                    <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground/60 mb-2">Недавно смотрели</p>
+                    <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                      {recentPresets.map((preset: any) => (
+                        <button
+                          key={preset.id}
+                          onClick={() => {
+                            addViewed(preset.id);
+                            try {
+                              sessionStorage.setItem('presetOriginRect', '{}');
+                            } catch { /* ignore */ }
+                            setLocation(`/preset/${preset.id}`);
+                          }}
+                          className="flex-none flex items-center gap-2 px-3 py-1.5 rounded-xl liquid-glass text-left hover:bg-white/5 transition-colors"
+                        >
+                          <div
+                            className="w-5 h-5 rounded-full border border-border/40 shrink-0"
+                            style={{ background: `linear-gradient(135deg, ${preset.watchfaceColor ?? '#888'}, ${preset.braceletColor ?? '#444'})` }}
+                          />
+                          <span className="text-[11px] font-semibold text-foreground/80 whitespace-nowrap">{preset.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Cards */}
               <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-none px-5 pb-28 min-h-0">
