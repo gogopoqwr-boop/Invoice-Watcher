@@ -163,6 +163,7 @@ export default function PresetViewer() {
     if (!preset) return;
     updateConfig({
       presetId: preset.id,
+      collectionName: preset.collectionName ?? undefined,
       watchfaceGeometry: preset.watchfaceGeometry,
       watchfaceMaterial: preset.watchfaceMaterial,
       watchfaceColor: preset.watchfaceColor,
