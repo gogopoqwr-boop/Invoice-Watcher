@@ -46,10 +46,9 @@ const PE: Record<string, [string, string]> = {
   bell:   ["5373638089583495330", "🔔"],
 };
 
-/** Render a premium animated emoji with Unicode fallback. */
+/** Return the plain Unicode fallback emoji (bots cannot send custom tg-emoji). */
 function pe(key: keyof typeof PE): string {
-  const [id, fb] = PE[key];
-  return `<tg-emoji emoji-id="${id}">${fb}</tg-emoji>`;
+  return PE[key][1];
 }
 
 /** Escape user-supplied content for Telegram HTML parse mode. */
@@ -85,7 +84,11 @@ async function callTelegram(method: string, body: object) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  return res.json();
+  const json = await res.json() as { ok: boolean; description?: string; result?: unknown };
+  if (!json.ok) {
+    throw new Error(`Telegram ${method} failed: ${json.description ?? JSON.stringify(json)}`);
+  }
+  return json.result;
 }
 
 async function deleteMessage(chatId: number | string, messageId: number) {
