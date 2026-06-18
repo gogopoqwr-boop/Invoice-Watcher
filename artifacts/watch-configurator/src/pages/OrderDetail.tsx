@@ -250,6 +250,7 @@ export default function OrderDetail() {
               boxType={(cfg as any)?.boxType ?? 'standard'}
               open={boxOpen}
               autoOpen
+              compact
               onToggle={() => setBoxOpen(v => !v)}
               className="absolute inset-0 rounded-none"
             />

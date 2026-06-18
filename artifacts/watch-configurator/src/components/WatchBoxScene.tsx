@@ -411,11 +411,12 @@ export interface WatchBoxSceneProps {
   open?: boolean;
   autoOpen?: boolean;
   giftWrap?: boolean;
+  compact?: boolean;
   className?: string;
   onToggle?: () => void;
 }
 
-export default function WatchBoxScene({ config, boxType = 'standard', open = false, autoOpen = false, giftWrap = false, className, onToggle }: WatchBoxSceneProps) {
+export default function WatchBoxScene({ config, boxType = 'standard', open = false, autoOpen = false, giftWrap = false, compact = false, className, onToggle }: WatchBoxSceneProps) {
   const [autoOpened, setAutoOpened] = useState(false);
   useEffect(() => {
     if (!autoOpen) return;
@@ -519,7 +520,7 @@ export default function WatchBoxScene({ config, boxType = 'standard', open = fal
       onPointerUp={onToggle ? handlePointerUp : undefined}
     >
       <Canvas
-        camera={{ position: [1.5, 4.5, 12.5], fov: 42 }}
+        camera={{ position: compact ? [0.8, 6.5, 17.5] : [1.5, 4.5, 12.5], fov: compact ? 36 : 42 }}
         gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
         style={{ background: 'transparent' }}
       >
