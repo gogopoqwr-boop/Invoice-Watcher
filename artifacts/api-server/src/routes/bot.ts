@@ -582,6 +582,16 @@ router.post("/bot/webhook", async (req, res) => {
       const chatId = update.message.chat.id;
       const text: string = update.message.text;
 
+      if ((text === "/stats" || text.startsWith("/stats ")) && String(chatId) === ADMIN_CHAT_ID) {
+        await sendHourlyStats();
+        return;
+      }
+
+      if ((text === "/stats" || text.startsWith("/stats ")) && String(chatId) !== ADMIN_CHAT_ID) {
+        await callTelegram("sendMessage", { chat_id: chatId, text: "⛔ Нет доступа." });
+        return;
+      }
+
       if (text.startsWith("/start")) {
         const parts = text.split(" ");
         const param = parts[1]?.trim();
@@ -747,6 +757,20 @@ router.post("/bot/webhook", async (req, res) => {
   }
 });
 
+async function registerBotCommands() {
+  if (!BOT_TOKEN) return;
+  try {
+    await callTelegram("setMyCommands", {
+      commands: [
+        { command: "stats", description: "📊 Текущая статистика (только для админа)" },
+      ],
+      scope: { type: "chat", chat_id: Number(ADMIN_CHAT_ID) },
+    });
+  } catch {
+    // best-effort — commands are cosmetic
+  }
+}
+
 router.post("/bot/register-webhook", async (req, res) => {
   try {
     const webhookUrl = req.body.url as string;
@@ -755,6 +779,7 @@ router.post("/bot/register-webhook", async (req, res) => {
       url: `${webhookUrl}/api/bot/webhook`,
       allowed_updates: ["message", "pre_checkout_query", "callback_query"],
     });
+    await registerBotCommands();
     res.json(result);
   } catch (err) {
     req.log.error({ err }, "Failed to register webhook");
