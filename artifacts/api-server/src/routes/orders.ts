@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, ordersTable, watchConfigsTable } from "@workspace/db";
 import { eq, desc, and, count, sql } from "drizzle-orm";
 import { randomBytes } from "crypto";
-import { sendStatusNotification } from "./bot.js";
+import { sendStatusNotification, sendAdminCancelRequestNotification } from "./bot.js";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -144,6 +144,12 @@ router.patch("/orders/:id/status", async (req, res) => {
     if (updated.telegramId && ["processing", "shipping", "arrived", "cancelled"].includes(status)) {
       sendStatusNotification(updated.telegramId, id, status)
         .catch(err => req.log.error({ err, orderId: id, status }, "Failed to send status notification"));
+    }
+
+    // Notify admin on cancellation request
+    if (status === "cancel_requested") {
+      sendAdminCancelRequestNotification(id, updated)
+        .catch(err => req.log.error({ err, orderId: id }, "Failed to send admin cancel notification"));
     }
   } catch (err) {
     req.log.error({ err }, "Failed to update order status");

@@ -85,20 +85,69 @@ export async function sendAdminPaymentNotification(orderId: number, order: any, 
   }
 }
 
+export async function sendAdminCancelRequestNotification(orderId: number, order: any) {
+  if (!BOT_TOKEN || !ADMIN_CHAT_ID) return;
+  try {
+    const username = order.telegramUsername ? `@${order.telegramUsername}` : (order.telegramId ? `ID: ${order.telegramId}` : "неизвестен");
+    const hasPaid = !!order.telegramPaymentChargeId;
+    const lines = [
+      `⚠️ *Запрос отмены заказа #${orderId}*`,
+      ``,
+      `👤 ${username}`,
+      `⭐ ${order.totalStars} звёзд`,
+      hasPaid ? `💳 Оплачен — потребуется возврат` : `⏳ Ещё не оплачен`,
+    ];
+    if (order.cancelComment) lines.push(`💬 Причина: ${order.cancelComment}`);
+    if (order.deliveryEmail) lines.push(`✉️ ${order.deliveryEmail}`);
+
+    const orderUrl = (() => {
+      const domains = process.env.REPLIT_DOMAINS ?? "";
+      const d = domains.split(",")[0]?.trim();
+      return d ? `https://${d}/admin` : null;
+    })();
+
+    const msg: Record<string, unknown> = {
+      chat_id: ADMIN_CHAT_ID,
+      text: lines.join("\n"),
+      parse_mode: "Markdown",
+      reply_markup: {
+        inline_keyboard: [[
+          hasPaid
+            ? { text: "💸 Одобрить и вернуть ⭐", callback_data: `refund_ask:${orderId}` }
+            : { text: "✅ Одобрить отмену", callback_data: `cancel_approve:${orderId}` },
+          ...(orderUrl ? [{ text: "🔗 Открыть Admin", url: orderUrl }] : []),
+        ]],
+      },
+    };
+
+    await callTelegram("sendMessage", msg);
+  } catch {
+    // best-effort
+  }
+}
+
 export async function sendHourlyStats() {
   if (!BOT_TOKEN || !ADMIN_CHAT_ID) return;
   try {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
+    // ── Last-hour funnel ─────────────────────────────────────────────────────
     const [visitorsHour] = await db.select({ value: count() }).from(analyticsEventsTable)
       .where(sql`${analyticsEventsTable.eventType} = 'page_visit' AND ${analyticsEventsTable.createdAt} >= ${oneHourAgo}`);
 
-    const [ordersHour] = await db.select({ value: count() }).from(ordersTable)
-      .where(gte(ordersTable.createdAt, oneHourAgo));
+    const [checkoutsHour] = await db.select({ value: count() }).from(analyticsEventsTable)
+      .where(sql`${analyticsEventsTable.eventType} = 'checkout_start' AND ${analyticsEventsTable.createdAt} >= ${oneHourAgo}`);
 
-    const [paidHour] = await db.select({ value: sum(ordersTable.totalStars) }).from(ordersTable)
+    const [paidCountHour] = await db.select({ value: count() }).from(ordersTable)
       .where(sql`${ordersTable.status} IN ('paid','processing','shipping','arrived') AND ${ordersTable.updatedAt} >= ${oneHourAgo}`);
 
+    const [paidStarsHour] = await db.select({ value: sum(ordersTable.totalStars) }).from(ordersTable)
+      .where(sql`${ordersTable.status} IN ('paid','processing','shipping','arrived') AND ${ordersTable.updatedAt} >= ${oneHourAgo}`);
+
+    const [cancelRequestsHour] = await db.select({ value: count() }).from(ordersTable)
+      .where(sql`${ordersTable.status} = 'cancel_requested' AND ${ordersTable.updatedAt} >= ${oneHourAgo}`);
+
+    // ── All-time totals ──────────────────────────────────────────────────────
     const [totalOrders] = await db.select({ value: count() }).from(ordersTable);
     const [totalPaid] = await db.select({ value: count() }).from(ordersTable)
       .where(sql`${ordersTable.status} IN ('paid','processing','shipping','arrived')`);
@@ -106,21 +155,38 @@ export async function sendHourlyStats() {
       .where(sql`${ordersTable.status} IN ('paid','processing','shipping','arrived')`);
     const [pendingPayment] = await db.select({ value: count() }).from(ordersTable)
       .where(eq(ordersTable.status, "payment_pending"));
+    const [cancelRequests] = await db.select({ value: count() }).from(ordersTable)
+      .where(eq(ordersTable.status, "cancel_requested"));
+
+    // ── Funnel math ──────────────────────────────────────────────────────────
+    const checkoutsN = Number(checkoutsHour.value);
+    const paidN = Number(paidCountHour.value);
+    const notPaidN = Math.max(0, checkoutsN - paidN);
+    const convRate = checkoutsN > 0 ? Math.round((paidN / checkoutsN) * 100) : 0;
+
+    const bar = (n: number, total: number, len = 8) => {
+      if (total === 0) return "░".repeat(len);
+      const filled = Math.round((n / total) * len);
+      return "█".repeat(filled) + "░".repeat(len - filled);
+    };
 
     const now = new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Moscow" });
 
     const text = [
       `📊 *Статистика — ${now} МСК*`,
       ``,
-      `*За последний час:*`,
-      `👥 Посещений: ${visitorsHour.value}`,
-      `📦 Новых заказов: ${ordersHour.value}`,
-      `💰 Оплачено звёзд: ${Number(paidHour.value ?? 0)} ⭐`,
+      `*Воронка за час:*`,
+      `👥 Посетили сайт:         ${visitorsHour.value}`,
+      `🛒 Дошли до оплаты:       ${checkoutsN}   ${bar(checkoutsN, Number(visitorsHour.value))}`,
+      `❌ Не оплатили:           ${notPaidN}   ${bar(notPaidN, checkoutsN)}`,
+      `✅ Оплатили:              ${paidN}   ${bar(paidN, checkoutsN)}`,
+      `💰 Собрано звёзд:         ${Number(paidStarsHour.value ?? 0)} ⭐`,
+      `📈 Конверсия:             ${convRate}%`,
+      ...(Number(cancelRequestsHour.value) > 0 ? [`⚠️ Запросов отмены:       ${cancelRequestsHour.value}`] : []),
       ``,
       `*Всего:*`,
-      `📦 Заказов: ${totalOrders.value}`,
-      `✅ Оплачено: ${totalPaid.value}`,
-      `⏳ Ожидают оплаты: ${pendingPayment.value}`,
+      `📦 Заказов: ${totalOrders.value}   ✅ Оплачено: ${totalPaid.value}   ⏳ Ждут: ${pendingPayment.value}`,
+      ...(Number(cancelRequests.value) > 0 ? [`⚠️ На отмене: ${cancelRequests.value}`] : []),
       `💎 Выручка: ${Number(totalRevenue.value ?? 0)} ⭐`,
     ].join("\n");
 
@@ -427,6 +493,28 @@ router.post("/bot/webhook", async (req, res) => {
         await handleRefundYes(cq.id, chatId, messageId, orderId);
       } else if (data.startsWith("refund_no:")) {
         await handleRefundNo(cq.id, chatId, messageId);
+      } else if (data.startsWith("cancel_approve:")) {
+        const orderId = parseInt(data.split(":")[1], 10);
+        const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId));
+        if (!order) {
+          await callTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "Заказ не найден", show_alert: true });
+        } else {
+          await db.update(ordersTable)
+            .set({ status: "cancelled", updatedAt: new Date() })
+            .where(eq(ordersTable.id, orderId));
+          await callTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "✅ Заказ отменён", show_alert: true });
+          await callTelegram("editMessageText", {
+            chat_id: chatId,
+            message_id: messageId,
+            text: `✅ Заказ *#${orderId}* отменён.`,
+            parse_mode: "Markdown",
+            reply_markup: { inline_keyboard: [] },
+          });
+          // Notify customer
+          if (order.telegramId) {
+            sendStatusNotification(order.telegramId, orderId, "cancelled").catch(() => {});
+          }
+        }
       } else {
         await callTelegram("answerCallbackQuery", { callback_query_id: cq.id });
       }
