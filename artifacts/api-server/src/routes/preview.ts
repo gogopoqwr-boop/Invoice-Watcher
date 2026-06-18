@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, watchConfigsTable, ordersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { generateWatchBoxSVG } from "../lib/watchBoxSvg.js";
-import { generateBoxOpeningGif } from "../lib/watchBoxGif.js";
+import { generateWatch3dRotatingGif } from "../lib/watch3dGif.js";
 
 const router = Router();
 
@@ -37,7 +37,7 @@ router.get("/watch-animation/:id", async (req, res) => {
     let gif = gifCache.get(cacheKey);
 
     if (!gif) {
-      gif = await generateBoxOpeningGif(config ?? {}, 360, 44, 55);
+      gif = await generateWatch3dRotatingGif(config ?? {}, 360, 48, 55);
       if (gifCache.size >= 30) {
         const firstKey = gifCache.keys().next().value;
         if (firstKey !== undefined) gifCache.delete(firstKey);
