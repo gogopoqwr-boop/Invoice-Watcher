@@ -1,0 +1,19 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+  "secrets": [
+    {
+      "name": "TELEGRAM_BOT_TOKEN",
+      "description": "Telegram bot token from @BotFather — needed for Telegram Stars payment flow and order notifications. App boots without it but payment features won't work.",
+      "requiredAtBoot": false,
+      "generatedForDevelopment": false
+    },
+    {
+      "name": "JWT_SECRET",
+      "description": "Secret key for signing admin/courier JWT sessions. A dev placeholder is in .env.base44-defaults; override with a real secret for production.",
+      "requiredAtBoot": false,
+      "generatedForDevelopment": false
+    }
+  ]
+}
