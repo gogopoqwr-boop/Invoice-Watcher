@@ -30,7 +30,7 @@ services:
         condition: service_healthy
     command: >-
       sh -c "npm install -g pnpm@9 &&
-      pnpm install --frozen-lockfile &&
+      pnpm install --no-frozen-lockfile &&
       pnpm --filter @workspace/db run push &&
       pnpm --filter @workspace/scripts run seed"
 
