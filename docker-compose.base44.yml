@@ -48,6 +48,7 @@ services:
       - PORT=8080
       - NODE_ENV=development
       - WEBSITE_URL=https://3000-${BASE44_PUBLIC_HOST_SUFFIX}
+      - REPLIT_DOMAINS=3000-${BASE44_PUBLIC_HOST_SUFFIX}
     depends_on:
       db:
         condition: service_healthy
